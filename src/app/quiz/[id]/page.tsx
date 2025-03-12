@@ -8,6 +8,18 @@ import { EcgLine } from '../components/EcgLine';
 import { QuizTimer } from '../components/QuizTimer';
 import { QuizResults } from '../components/QuizResults';
 import { QuizComponentData } from '../interfaces/Quiz';
+import { useRouter } from 'next/navigation';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../../../components/ui/dialog";
+import { Button } from "../../../components/ui/button";
+
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 
 interface PageProps {
   params: Promise<{
@@ -17,6 +29,7 @@ interface PageProps {
 
 export default function QuizPage({ params }: PageProps) {
   const resolvedParams = use(params);
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [quizData, setQuizData] = useState<QuizComponentData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,6 +43,7 @@ export default function QuizPage({ params }: PageProps) {
   const [isTimeCritical, setIsTimeCritical] = useState(false);
   const [timerActive, setTimerActive] = useState(true);
   const [performance, setPerformance] = useState({ stars: 0, message: '' });
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -41,7 +55,12 @@ export default function QuizPage({ params }: PageProps) {
     const fetchQuiz = async () => {
       try {
         const data = await quizService.getQuiz(parseInt(resolvedParams.id));
-        setQuizData(data);
+        // Mélanger les questions après avoir reçu les données
+        const shuffledData = {
+          ...data,
+          questions: shuffleArray(data.questions)
+        };
+        setQuizData(shuffledData);
         setTimeLeft(data.timePerQuestion);
         setError(null);
       } catch (err) {
@@ -162,6 +181,11 @@ export default function QuizPage({ params }: PageProps) {
     setPerformance({ stars: 0, message: '' });
   };
 
+  const handleQuit = () => {
+    setDialogOpen(false);
+    router.push('/quiz');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-6 md:py-12 px-4 sm:px-6">
       <EcgLine />
@@ -187,6 +211,40 @@ export default function QuizPage({ params }: PageProps) {
         {!quizComplete ? (
           <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-6 relative">
             <div className="flex justify-between items-center mb-6">
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <button 
+                    className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-full transition-all duration-200 shadow-sm hover:shadow cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4 rotate-180" />
+                    <span>Retour aux quiz</span>
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="bg-white rounded-xl shadow-lg border-none p-6">
+                  <DialogHeader className="mb-4">
+                    <DialogTitle className="text-xl font-bold text-gray-800">Quitter le quiz ?</DialogTitle>
+                    <DialogDescription className="text-gray-600 mt-2">
+                      Êtes-vous sûr de vouloir quitter ? Votre progression sera perdue.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex justify-end gap-3 mt-6">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setDialogOpen(false)}
+                      className="bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
+                    >
+                      Annuler
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      onClick={handleQuit}
+                      className="bg-red-500 hover:bg-red-600 text-white"
+                    >
+                      Quitter le quiz
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <div className="bg-blue-100 text-blue-800 font-medium px-3 py-1 rounded-full text-sm">
                 Question {currentQuestionIndex + 1}/{quizData.questions.length}
               </div>
