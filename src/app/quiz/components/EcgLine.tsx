@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 
 export const EcgLine = () => (
-  <div className="absolute inset-x-0 top-0 h-3 overflow-hidden bg-gray-100">
+  <div className="absolute inset-x-0 top-2 h-3 overflow-hidden bg-gray-100">
     <svg 
       viewBox="0 0 800 20" 
       className="w-full h-full"

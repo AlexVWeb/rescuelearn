@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Award, CheckCircle, XCircle, AlertTriangle, Activity, ChevronRight } from 'lucide-react';
 import { quizService } from '../services/quizService';
@@ -10,12 +10,13 @@ import { QuizResults } from '../components/QuizResults';
 import { QuizComponentData } from '../interfaces/Quiz';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function QuizPage({ params }: PageProps) {
+  const resolvedParams = use(params);
   const [mounted, setMounted] = useState(false);
   const [quizData, setQuizData] = useState<QuizComponentData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,18 +40,20 @@ export default function QuizPage({ params }: PageProps) {
 
     const fetchQuiz = async () => {
       try {
-        const data = await quizService.getQuiz(parseInt(params.id));
+        const data = await quizService.getQuiz(parseInt(resolvedParams.id));
         setQuizData(data);
         setTimeLeft(data.timePerQuestion);
-      } catch {
-        setError("Erreur lors du chargement du quiz");
+        setError(null);
+      } catch (err) {
+        console.error('Erreur lors du chargement du quiz:', err);
+        setError("Erreur lors du chargement du quiz. Veuillez vérifier que l'ID est correct.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchQuiz();
-  }, [params.id, mounted]);
+  }, [resolvedParams.id, mounted]);
 
   useEffect(() => {
     if (!mounted || !quizData || !timerActive || quizComplete || showFeedback) return;
@@ -161,9 +164,8 @@ export default function QuizPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 md:py-12 px-4 sm:px-6">
-      <div className="relative max-w-4xl mx-auto">
-        <EcgLine />
-        
+      <EcgLine />
+      <div className="relative max-w-4xl mx-auto">        
         <div className="text-center mb-8">
           <div className="inline-flex items-center space-x-2 mb-2">
             <Heart className="w-6 h-6 text-red-600" />
@@ -188,19 +190,21 @@ export default function QuizPage({ params }: PageProps) {
               <div className="bg-blue-100 text-blue-800 font-medium px-3 py-1 rounded-full text-sm">
                 Question {currentQuestionIndex + 1}/{quizData.questions.length}
               </div>
-              
-              <div className="flex items-center space-x-2">
-                <Award className="w-5 h-5 text-yellow-500" />
-                <span className="text-gray-700 font-medium">{score}/{currentQuestionIndex}</span>
+
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Award className="w-5 h-5 text-yellow-500" />
+                  <span className="text-gray-700 font-medium">{score}/{currentQuestionIndex}</span>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <QuizTimer 
+                    timeLeft={timeLeft}
+                    totalTime={quizData.timePerQuestion}
+                    isTimeCritical={isTimeCritical}
+                  />  
+                </div>
               </div>
-            </div>
-            
-            <div className="absolute top-4 right-4 md:top-8 md:right-8">
-              <QuizTimer 
-                timeLeft={timeLeft}
-                totalTime={quizData.timePerQuestion}
-                isTimeCritical={isTimeCritical}
-              />
             </div>
             
             <div className="mb-8">
