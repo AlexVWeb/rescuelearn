@@ -6,6 +6,8 @@ import { Heart, Activity, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Quiz, QuizCollection } from './interfaces/Quiz';
 import { EcgLine } from './components/EcgLine';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { useRouter } from 'next/navigation';
 
 // Variants pour les animations Framer Motion
 const containerVariants = {
@@ -34,6 +36,9 @@ const QuizCatalogue = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedQuizId, setSelectedQuizId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -61,6 +66,13 @@ const QuizCatalogue = () => {
 
     fetchQuizzes();
   }, [currentPage, mounted]);
+
+  const handleQuizStart = (difficulty: 'easy' | 'medium' | 'hard') => {
+    if (selectedQuizId) {
+      router.push(`/quiz/${selectedQuizId}?difficulty=${difficulty}`);
+      setIsModalOpen(false);
+    }
+  };
 
   if (!mounted) {
     return null;
@@ -124,12 +136,15 @@ const QuizCatalogue = () => {
                     </div>
                   </div>
 
-                  <Link 
-                    href={`/quiz/${quiz.id}`}
+                  <button 
+                    onClick={() => {
+                      setSelectedQuizId(quiz.id);
+                      setIsModalOpen(true);
+                    }}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg flex items-center justify-center transition-colors"
                   >
                     Commencer le quiz
-                  </Link>
+                  </button>
                 </div>
               </motion.div>
             ))}
@@ -165,6 +180,40 @@ const QuizCatalogue = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de sélection de difficulté */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="bg-white rounded-xl shadow-lg p-6">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-gray-800 mb-4">Choisissez votre niveau</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <button
+              onClick={() => handleQuizStart('easy')}
+              className="w-full p-4 bg-green-50 hover:bg-green-100 border-2 border-green-200 rounded-lg text-left transition-colors"
+            >
+              <h3 className="font-semibold text-green-800 mb-1">Mode Facile</h3>
+              <p className="text-sm text-gray-600">Affichage des mauvaises réponses et sans chronomètre</p>
+            </button>
+
+            <button
+              onClick={() => handleQuizStart('medium')}
+              className="w-full p-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 rounded-lg text-left transition-colors"
+            >
+              <h3 className="font-semibold text-blue-800 mb-1">Mode Intermédiaire</h3>
+              <p className="text-sm text-gray-600">Avec chronomètre et affichage des mauvaises réponses</p>
+            </button>
+
+            <button
+              onClick={() => handleQuizStart('hard')}
+              className="w-full p-4 bg-red-50 hover:bg-red-100 border-2 border-red-200 rounded-lg text-left transition-colors"
+            >
+              <h3 className="font-semibold text-red-800 mb-1">Mode Difficile</h3>
+              <p className="text-sm text-gray-600">Avec chronomètre, sans affichage des mauvaises réponses ni de la progression</p>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

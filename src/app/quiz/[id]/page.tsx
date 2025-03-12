@@ -8,7 +8,7 @@ import { EcgLine } from '../components/EcgLine';
 import { QuizTimer } from '../components/QuizTimer';
 import { QuizResults } from '../components/QuizResults';
 import { QuizComponentData } from '../interfaces/Quiz';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../../../components/ui/dialog";
 import { Button } from "../../../components/ui/button";
 
@@ -30,6 +30,8 @@ interface PageProps {
 export default function QuizPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const difficulty = (searchParams.get('difficulty') || 'medium') as 'easy' | 'medium' | 'hard';
   const [mounted, setMounted] = useState(false);
   const [quizData, setQuizData] = useState<QuizComponentData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,7 @@ export default function QuizPage({ params }: PageProps) {
   const [quizComplete, setQuizComplete] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
   const [isTimeCritical, setIsTimeCritical] = useState(false);
-  const [timerActive, setTimerActive] = useState(true);
+  const [timerActive, setTimerActive] = useState(difficulty !== 'easy');
   const [performance, setPerformance] = useState({ stars: 0, message: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -177,7 +179,7 @@ export default function QuizPage({ params }: PageProps) {
     setQuizComplete(false);
     setTimeLeft(quizData.timePerQuestion);
     setIsTimeCritical(false);
-    setTimerActive(true);
+    setTimerActive(difficulty !== 'easy');
     setPerformance({ stars: 0, message: '' });
   };
 
@@ -196,7 +198,7 @@ export default function QuizPage({ params }: PageProps) {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{quizData.title}</h1>
           </div>
           
-          {!quizComplete && (
+          {!quizComplete && difficulty !== 'hard' && (
             <div className="h-2 bg-gray-200 rounded-full overflow-hidden mt-4">
               <motion.div 
                 className="h-full bg-blue-600"
@@ -250,18 +252,22 @@ export default function QuizPage({ params }: PageProps) {
               </div>
 
               <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <Award className="w-5 h-5 text-yellow-500" />
-                  <span className="text-gray-700 font-medium">{score}/{currentQuestionIndex}</span>
-                </div>
+                {difficulty !== 'hard' && (
+                  <div className="flex items-center space-x-2">
+                    <Award className="w-5 h-5 text-yellow-500" />
+                    <span className="text-gray-700 font-medium">{score}/{currentQuestionIndex}</span>
+                  </div>
+                )}
 
-                <div className="flex items-center space-x-2">
-                  <QuizTimer 
-                    timeLeft={timeLeft}
-                    totalTime={quizData.timePerQuestion}
-                    isTimeCritical={isTimeCritical}
-                  />  
-                </div>
+                {difficulty !== 'easy' && (
+                  <div className="flex items-center space-x-2">
+                    <QuizTimer 
+                      timeLeft={timeLeft}
+                      totalTime={quizData.timePerQuestion}
+                      isTimeCritical={isTimeCritical}
+                    />  
+                  </div>
+                )}
               </div>
             </div>
             
@@ -303,7 +309,7 @@ export default function QuizPage({ params }: PageProps) {
                             ? 'border-blue-600 bg-blue-50' 
                             : 'border-gray-200 hover:border-blue-400'
                         } ${
-                          showFeedback && option.id === currentQuestion.correctAnswer
+                          showFeedback && difficulty !== 'hard' && option.id === currentQuestion.correctAnswer
                             ? 'border-green-600 bg-green-50'
                             : showFeedback && selectedOption === option.id && option.id !== currentQuestion.correctAnswer
                             ? 'border-red-600 bg-red-50'
@@ -318,13 +324,13 @@ export default function QuizPage({ params }: PageProps) {
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-700'
                             } ${
-                              showFeedback && option.id === currentQuestion.correctAnswer
+                              showFeedback && difficulty !== 'hard' && option.id === currentQuestion.correctAnswer
                                 ? 'bg-green-600 text-white'
                                 : showFeedback && selectedOption === option.id && option.id !== currentQuestion.correctAnswer
                                 ? 'bg-red-600 text-white'
                                 : ''
                             }`}>
-                              {showFeedback && option.id === currentQuestion.correctAnswer ? (
+                              {showFeedback && difficulty !== 'hard' && option.id === currentQuestion.correctAnswer ? (
                                 <CheckCircle className="w-4 h-4" />
                               ) : showFeedback && selectedOption === option.id && option.id !== currentQuestion.correctAnswer ? (
                                 <XCircle className="w-4 h-4" />
@@ -343,7 +349,7 @@ export default function QuizPage({ params }: PageProps) {
             </div>
             
             <AnimatePresence>
-              {showFeedback && (
+              {showFeedback && difficulty !== 'hard' && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -404,6 +410,7 @@ export default function QuizPage({ params }: PageProps) {
             passingScore={quizData.passingScore}
             performance={performance}
             onRestart={restartQuiz}
+            difficulty={difficulty}
           />
         )}
         

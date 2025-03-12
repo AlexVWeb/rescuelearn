@@ -11,10 +11,22 @@ interface QuizResultsProps {
     message: string;
   };
   onRestart: () => void;
+  difficulty: 'easy' | 'medium' | 'hard';
 }
 
-export const QuizResults = ({ score, totalQuestions, passingScore, performance, onRestart }: QuizResultsProps) => {
+export const QuizResults = ({ score, totalQuestions, passingScore, performance, onRestart, difficulty }: QuizResultsProps) => {
   const router = useRouter();
+
+  const getDifficultyBadge = () => {
+    switch (difficulty) {
+      case 'easy':
+        return <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium mb-4">Mode Facile</span>;
+      case 'medium':
+        return <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-4">Mode Intermédiaire</span>;
+      case 'hard':
+        return <span className="inline-block px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium mb-4">Mode Difficile</span>;
+    }
+  };
 
   return (
     <motion.div 
@@ -23,6 +35,8 @@ export const QuizResults = ({ score, totalQuestions, passingScore, performance, 
       className="bg-white rounded-xl shadow-lg p-6 md:p-8 max-w-3xl mx-auto"
     >
       <div className="text-center mb-8">
+        {getDifficultyBadge()}
+        
         <motion.div 
           className="inline-block"
           animate={{ rotate: [0, 10, -10, 10, 0] }}
