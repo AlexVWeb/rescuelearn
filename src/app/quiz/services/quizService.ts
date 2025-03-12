@@ -4,10 +4,20 @@ import { ApiQuiz, QuizComponentData } from '../interfaces/Quiz';
 // Utilisation de la variable d'environnement avec le préfixe NEXT_PUBLIC_
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
+// Fonction pour mélanger un tableau de manière aléatoire (algorithme Fisher-Yates)
+const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 const transformApiQuizToComponentData = (apiQuiz: ApiQuiz): QuizComponentData => {
   return {
     title: apiQuiz.title,
-    questions: apiQuiz.questions.map(question => ({
+    questions: shuffleArray(apiQuiz.questions).map(question => ({
       id: question.id,
       text: question.text,
       options: question.options.map(option => ({
