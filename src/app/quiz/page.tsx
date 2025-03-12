@@ -29,13 +29,19 @@ const itemVariants = {
 
 // Composant principal
 const QuizCatalogue = () => {
+  const [mounted, setMounted] = useState(false);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Charger les quiz depuis l'API
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     const fetchQuizzes = async () => {
       try {
         setLoading(true);
@@ -54,7 +60,11 @@ const QuizCatalogue = () => {
     };
 
     fetchQuizzes();
-  }, [currentPage]);
+  }, [currentPage, mounted]);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8 relative">

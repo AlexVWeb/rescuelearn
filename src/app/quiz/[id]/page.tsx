@@ -16,6 +16,7 @@ interface PageProps {
 }
 
 export default function QuizPage({ params }: PageProps) {
+  const [mounted, setMounted] = useState(false);
   const [quizData, setQuizData] = useState<QuizComponentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +30,13 @@ export default function QuizPage({ params }: PageProps) {
   const [timerActive, setTimerActive] = useState(true);
   const [performance, setPerformance] = useState({ stars: 0, message: '' });
 
-  // Charger les données du quiz
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     const fetchQuiz = async () => {
       try {
         const data = await quizService.getQuiz(parseInt(params.id));
@@ -44,11 +50,10 @@ export default function QuizPage({ params }: PageProps) {
     };
 
     fetchQuiz();
-  }, [params.id]);
+  }, [params.id, mounted]);
 
-  // Timer
   useEffect(() => {
-    if (!quizData || !timerActive || quizComplete || showFeedback) return;
+    if (!mounted || !quizData || !timerActive || quizComplete || showFeedback) return;
 
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -67,7 +72,11 @@ export default function QuizPage({ params }: PageProps) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [currentQuestionIndex, timerActive, quizComplete, showFeedback, quizData]);
+  }, [currentQuestionIndex, timerActive, quizComplete, showFeedback, quizData, mounted]);
+
+  if (!mounted) {
+    return null;
+  }
 
   if (loading) {
     return (
