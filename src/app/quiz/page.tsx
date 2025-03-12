@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Heart, Activity, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 import { Quiz, QuizCollection } from './interfaces/Quiz';
 import { EcgLine } from './components/EcgLine';
 
@@ -113,12 +114,12 @@ const QuizCatalogue = () => {
                     </div>
                   </div>
 
-                  <button 
+                  <Link 
+                    href={`/quiz/${quiz.id}`}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg flex items-center justify-center transition-colors"
-                    onClick={() => window.location.href = `/quiz/${quiz.id}`}
                   >
                     Commencer le quiz
-                  </button>
+                  </Link>
                 </div>
               </motion.div>
             ))}
@@ -129,6 +130,28 @@ const QuizCatalogue = () => {
         {!loading && !error && quizzes.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-600">Aucun quiz disponible pour le moment.</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && !error && quizzes.length > 0 && (
+          <div className="mt-8 flex justify-center space-x-4">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+              disabled={currentPage === 1}
+            >
+              Page précédente
+            </button>
+            <span className="px-4 py-2 bg-gray-100 rounded-lg">
+              Page {currentPage}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => prev + 1)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+            >
+              Page suivante
+            </button>
           </div>
         )}
       </div>
