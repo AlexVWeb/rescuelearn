@@ -1,0 +1,77 @@
+# Règles spécifiques pour API Platform
+# Ces règles sont automatiquement incluses lorsque vous travaillez avec des fichiers liés à API Platform
+
+[back/src/ApiResource/**, back/config/api_platform/**]
+description = """
+Bonnes pratiques pour API Platform:
+- Utiliser les State Processors et Providers pour la logique métier
+- Respecter les principes REST (méthodes HTTP, codes de statut)
+- Utiliser les groupes de sérialisation pour contrôler les données exposées
+- Structurer les opérations API selon les besoins métier
+- Implémenter correctement la pagination, le filtrage et le tri
+- Documenter les API avec OpenAPI/Swagger
+"""
+
+@file back/src/Entity/examples/ApiResourceExample.php
+
+# Ce fichier fictif sert d'exemple pour la création d'entités avec API Platform
+[back/src/Entity/examples/ApiResourceExample.php]
+content = """
+<?php
+
+namespace App\Entity;
+
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
+use ApiPlatform\Metadata\Delete;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ORM\Entity]
+#[ApiResource(
+    operations: [
+        new Get(normalizationContext: ['groups' => ['resource:read', 'resource:item:read']]),
+        new GetCollection(normalizationContext: ['groups' => ['resource:read']]),
+        new Post(
+            denormalizationContext: ['groups' => ['resource:write']],
+            securityPostDenormalize: "is_granted('ROLE_ADMIN') or object.owner == user"
+        ),
+        new Put(
+            denormalizationContext: ['groups' => ['resource:write']],
+            security: "is_granted('ROLE_ADMIN') or object.owner == user"
+        ),
+        new Delete(security: "is_granted('ROLE_ADMIN')"),
+    ],
+    normalizationContext: ['groups' => ['resource:read']],
+    denormalizationContext: ['groups' => ['resource:write']],
+    paginationClientItemsPerPage: true
+)]
+class ResourceExample
+{
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    #[Groups(['resource:read'])]
+    private ?int $id = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['resource:read', 'resource:write'])]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 3, max: 255)]
+    private ?string $name = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    #[Groups(['resource:read', 'resource:write'])]
+    private ?string $description = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[Groups(['resource:read', 'resource:item:read'])]
+    private ?User $owner = null;
+
+    // Getters and setters...
+}
+""" 

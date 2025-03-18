@@ -1,0 +1,115 @@
+# Règles spécifiques pour DDEV
+# Ces règles sont automatiquement incluses lorsque vous travaillez avec des fichiers liés à DDEV
+
+[back/.ddev/**, **.ddev.yml]
+description = """
+Utilisation de DDEV pour le développement local du back-end:
+- DDEV fournit un environnement de développement local basé sur Docker
+- Il configure automatiquement PHP, MySQL, et d'autres services nécessaires
+- Toutes les commandes Symfony doivent être exécutées via DDEV
+"""
+
+[back/**]
+description = """
+Commandes DDEV essentielles pour le projet:
+- 'ddev start' - Démarrer l'environnement DDEV
+- 'ddev stop' - Arrêter l'environnement DDEV
+- 'ddev exec bin/console [commande]' - Exécuter une commande Symfony
+- 'ddev exec composer [commande]' - Exécuter une commande Composer
+- 'ddev describe' - Afficher les informations sur l'environnement
+- 'ddev mysql' - Accéder à la ligne de commande MySQL
+- 'ddev exec bin/phpunit' - Exécuter les tests avec PHPUnit
+"""
+
+[back/.env*, back/.env.*.local]
+description = """
+Gestion des variables d'environnement avec DDEV:
+- DDEV génère automatiquement certaines variables comme DATABASE_URL
+- Les variables d'environnement spécifiques devraient être définies dans .ddev/config.yaml
+- Les variables sensibles peuvent être ajoutées à .ddev/.env
+- La surcharge de la configuration peut se faire via .ddev/docker-compose.*.yaml
+"""
+
+@file back/.ddev/examples/example-commands.md
+
+# Ce fichier fictif sert d'exemple pour les commandes DDEV courantes
+[back/.ddev/examples/example-commands.md]
+content = """
+# Commandes DDEV pour RescueLearn
+
+## Démarrage et arrêt
+```bash
+# Démarrer l'environnement DDEV
+ddev start
+
+# Arrêter l'environnement DDEV
+ddev stop
+
+# Redémarrer l'environnement DDEV
+ddev restart
+```
+
+## Commandes Symfony
+```bash
+# Créer une migration de base de données
+ddev exec bin/console make:migration
+
+# Appliquer les migrations
+ddev exec bin/console doctrine:migrations:migrate
+
+# Créer une entité
+ddev exec bin/console make:entity
+
+# Vider le cache
+ddev exec bin/console cache:clear
+```
+
+## Commandes Composer
+```bash
+# Installer les dépendances
+ddev exec composer install
+
+# Ajouter un package
+ddev exec composer require [package-name]
+
+# Mettre à jour les dépendances
+ddev exec composer update
+```
+
+## Base de données
+```bash
+# Accéder à la ligne de commande MySQL
+ddev mysql
+
+# Créer la base de données (si nécessaire)
+ddev exec bin/console doctrine:database:create
+
+# Réinitialiser la base de données (ATTENTION: supprime toutes les données)
+ddev exec bin/console doctrine:schema:drop --force --full-database
+ddev exec bin/console doctrine:migrations:migrate -n
+```
+
+## Tests
+```bash
+# Exécuter tous les tests
+ddev exec bin/phpunit
+
+# Exécuter un test spécifique
+ddev exec bin/phpunit tests/specific/TestFile.php
+```
+
+## Utilités
+```bash
+# Ouvrir le projet dans le navigateur
+ddev launch
+
+# Afficher les informations sur l'environnement
+ddev describe
+
+# Exécuter une commande shell
+ddev exec [command]
+
+# Accéder au shell
+ddev ssh
+```
+""" 

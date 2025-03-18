@@ -1,0 +1,142 @@
+# Règles spécifiques pour Next.js et React
+# Ces règles sont automatiquement incluses lorsque vous travaillez avec des fichiers du front-end
+
+[front/src/app/**, front/src/components/**]
+description = """
+Bonnes pratiques pour Next.js avec App Router:
+- Utiliser les Server Components par défaut
+- Préférer les Client Components (use client) uniquement quand nécessaire
+- Utiliser les fonctions de data fetching de Next.js (fetch avec { cache, revalidate })
+- Respecter la structure de dossiers de Next.js App Router:
+  - layout.tsx - pour les layouts partagés
+  - page.tsx - pour les pages de contenu
+  - loading.tsx - pour les états de chargement
+  - error.tsx - pour la gestion des erreurs
+  - route.ts - pour les API Routes
+"""
+
+@file front/src/components/examples/ComponentExample.tsx
+
+# Ce fichier fictif sert d'exemple pour la création de composants React
+[front/src/components/examples/ComponentExample.tsx]
+content = """
+'use client';
+
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+
+interface ComponentExampleProps {
+  /** Description de la propriété title */
+  title: string;
+  /** Description de la propriété description (optionnelle) */
+  description?: string;
+  /** Description de la propriété children */
+  children: React.ReactNode;
+  /** Description de la propriété className (optionnelle) */
+  className?: string;
+}
+
+/**
+ * Composant d'exemple pour illustrer les bonnes pratiques
+ */
+export function ComponentExample({
+  title,
+  description,
+  children,
+  className,
+}: ComponentExampleProps) {
+  const [isActive, setIsActive] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Effet de montage
+    return () => {
+      // Nettoyage lors du démontage
+    };
+  }, []);
+
+  return (
+    <div className={cn('rounded-lg border p-4', className)}>
+      <h3 className="text-xl font-semibold">{title}</h3>
+      {description && <p className="text-sm text-gray-500">{description}</p>}
+      <div className="mt-4">{children}</div>
+      <button
+        className={cn(
+          'mt-2 rounded-md px-4 py-2 transition-colors',
+          isActive
+            ? 'bg-blue-600 text-white hover:bg-blue-700'
+            : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+        )}
+        onClick={() => setIsActive(!isActive)}
+        type="button"
+        aria-pressed={isActive}
+      >
+        {isActive ? 'Actif' : 'Inactif'}
+      </button>
+    </div>
+  );
+}
+"""
+
+@file front/src/app/examples/PageExample.tsx
+
+# Ce fichier fictif sert d'exemple pour la création de pages Next.js avec App Router
+[front/src/app/examples/PageExample.tsx]
+content = """
+// Ce composant est un Server Component par défaut
+import { Suspense } from 'react';
+import { Metadata } from 'next';
+import { ComponentExample } from '@/components/examples/ComponentExample';
+
+export const metadata: Metadata = {
+  title: 'Exemple de page | RescueLearn',
+  description: 'Description pour les moteurs de recherche',
+};
+
+// Fonction de récupération de données côté serveur
+async function getData() {
+  // Utilisation de fetch avec options de cache Next.js
+  const res = await fetch('https://api.example.com/data', {
+    cache: 'force-cache', // Équivalent à getStaticProps
+    // Ou utiliser: { next: { revalidate: 60 } } pour ISR
+  });
+  
+  if (!res.ok) {
+    throw new Error('Échec de la récupération des données');
+  }
+  
+  return res.json();
+}
+
+// Composant de contenu avec chargement asynchrone
+async function Content() {
+  const data = await getData();
+  
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-4">Données dynamiques</h2>
+      <pre className="bg-gray-100 p-4 rounded">{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <main className="container mx-auto py-8">
+      <h1 className="text-3xl font-bold mb-6">Exemple de page</h1>
+      
+      <ComponentExample 
+        title="Composant Client"
+        description="Ce composant utilise 'use client' pour les interactions côté client"
+      >
+        <p>Contenu interactif du composant</p>
+      </ComponentExample>
+      
+      <div className="mt-8">
+        <Suspense fallback={<div>Chargement des données...</div>}>
+          <Content />
+        </Suspense>
+      </div>
+    </main>
+  );
+}
+""" 

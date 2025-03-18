@@ -1,0 +1,119 @@
+# Règles pour le projet RescueLearn
+# Ces règles définissent comment l'IA devrait se comporter lors de l'interaction avec ce projet.
+
+# Règles globales pour l'ensemble du projet
+[**]
+description = """
+RescueLearn est une application d'apprentissage basée sur une architecture full-stack:
+- Back-end: API REST en Symfony 7.2 (PHP 8.2+)
+- Front-end: Next.js (React) avec TypeScript et Tailwind CSS
+- L'application utilise API Platform pour la gestion des API
+"""
+
+# Règles spécifiques au back-end (Symfony)
+[back/**]
+description = """
+Le back-end est construit avec Symfony 7.2 suivant ces conventions:
+- Utilisation d'API Platform pour les API REST
+- Les entités sont dans src/Entity/ avec les annotations API Platform
+- Les contrôleurs sont dans src/Controller/
+- Les repositories sont dans src/Repository/
+- Les ressources API sont dans src/ApiResource/
+- Les tests sont dans tests/
+- L'environnement de développement utilise DDEV pour la conteneurisation
+- Les commandes Symfony doivent être exécutées via DDEV (ddev exec bin/console)
+"""
+
+[back/.ddev/**]
+description = """
+Configuration DDEV pour le développement local:
+- DDEV est utilisé pour créer un environnement de développement local isolé
+- La configuration se trouve dans le dossier .ddev
+- Utiliser 'ddev start' pour démarrer l'environnement
+- Utiliser 'ddev exec bin/console' pour exécuter les commandes Symfony
+- Les services PHP, MySQL, et éventuellement d'autres sont gérés par DDEV
+"""
+
+[back/src/Entity/**]
+description = """
+Règles pour les entités Doctrine/API Platform:
+- Utiliser les attributs PHP 8+ pour la configuration
+- Suivre les principes DDD (Domain-Driven Design)
+- Ajouter les attributs API Platform pour l'exposition REST
+- Maintenir des validations strictes avec Symfony Validator
+"""
+
+[back/src/Controller/**]
+description = """
+Règles pour les contrôleurs Symfony:
+- Suivre le modèle Action-Domain-Responder (ADR)
+- Utiliser l'injection de dépendances
+- Retourner des réponses JSON pour les API
+- Utiliser des groupes de sérialisation pour les réponses
+"""
+
+[back/src/Repository/**]
+description = """
+Règles pour les repositories Doctrine:
+- Utiliser les méthodes de requêtage Doctrine
+- Optimiser les requêtes pour éviter les problèmes N+1
+- Implémenter des méthodes personnalisées avec DQL ou Query Builder
+"""
+
+# Règles spécifiques au front-end (Next.js/React)
+[front/**]
+description = """
+Le front-end est construit avec Next.js (React) et suit ces conventions:
+- Architecture App Router de Next.js
+- TypeScript pour le typage statique
+- Tailwind CSS pour le styling
+- Composants React fonctionnels avec hooks
+- Gestion d'état avec React hooks et Context API
+- Axios pour les appels API
+"""
+
+[front/src/app/**]
+description = """
+Règles pour les pages et layouts Next.js:
+- Respecter l'architecture des dossiers de l'App Router
+- Mettre en œuvre les fonctionnalités Server Components
+- Optimiser le SEO avec les métadonnées
+- Implémenter le SSR (Server-Side Rendering) quand nécessaire
+"""
+
+[front/src/components/**]
+description = """
+Règles pour les composants React:
+- Privilégier les composants fonctionnels avec hooks
+- Créer des composants réutilisables et modulaires
+- Utiliser Tailwind CSS pour le styling
+- Implémenter l'accessibilité (ARIA, contraste, etc.)
+- Suivre les principes des composants contrôlés vs non-contrôlés
+"""
+
+[front/src/lib/**]
+description = """
+Règles pour les utilitaires et services:
+- Implementer des fonctions pures quand possible
+- Créer des hooks personnalisés pour la logique réutilisable
+- Centraliser la logique d'appel API
+- Utiliser TypeScript pour définir des interfaces et types
+"""
+
+[*.test.ts, *.test.tsx, *.spec.ts, *.spec.tsx, back/tests/**]
+description = """
+Règles pour les tests:
+- Ecrire des tests unitaires avec Jest/PHPUnit
+- Utiliser React Testing Library pour les tests front-end
+- Suivre le pattern Arrange-Act-Assert
+- Simuler les appels API avec des mocks
+- Viser une bonne couverture de tests
+"""
+
+[*.scss, *.css]
+description = """
+Règles pour le CSS:
+- Privilégier l'approche utilitaire de Tailwind CSS
+- Maintenir la cohérence avec le design system
+- Assurer la compatibilité mobile-first et responsive
+""" 

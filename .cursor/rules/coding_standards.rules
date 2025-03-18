@@ -1,0 +1,54 @@
+# Règles générales pour les standards de codage
+# Ces règles s'appliquent à l'ensemble du projet
+
+[**]
+description = """
+Standards de codage généraux:
+- Respecter les conventions de nommage selon le langage
+- Ajouter des commentaires pour clarifier le code complexe
+- Éviter les duplications de code (DRY - Don't Repeat Yourself)
+- Favoriser l'immutabilité quand possible
+- Gérer correctement les erreurs et les exceptions
+"""
+
+[**.php]
+description = """
+Standards de codage PHP:
+- Suivre les PSR-1, PSR-2, PSR-4 et PSR-12
+- Utiliser le typage strict avec les types de retour
+- Favoriser l'injection de dépendances
+- Utiliser des interfaces quand pertinent
+- Documenter les méthodes avec PHPDoc
+- Préférer les constantes de classe aux chaînes littérales
+"""
+
+[**.{ts,tsx}]
+description = """
+Standards de codage TypeScript:
+- Utiliser des types explicites plutôt que 'any'
+- Préférer les interfaces pour les objets de données
+- Utiliser les types d'union et d'intersection quand approprié
+- Documenter avec JSDoc pour les fonctions complexes
+- Utiliser les génériques pour les fonctions réutilisables
+- Préférer les fonctions pures et immuables
+- Utiliser les hooks React selon leurs règles (dépendances, etc.)
+"""
+
+[**.yml, **.yaml]
+description = """
+Standards YAML:
+- Utiliser 2 espaces pour l'indentation
+- Utiliser des tirets pour les listes
+- Utiliser des valeurs explicites (true/false au lieu de yes/no)
+- Éviter les longues lignes (< 80 caractères)
+"""
+
+[**.md]
+description = """
+Standards Markdown:
+- Utiliser un titre principal unique (# Titre)
+- Structurer avec des sous-titres logiques
+- Utiliser des listes pour améliorer la lisibilité
+- Inclure des exemples de code avec les blocs ``` appropriés
+- Inclure des liens vers la documentation pertinente
+""" 

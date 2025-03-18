@@ -1,0 +1,26 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title mb-4">{{ page_title }}</h1>
+                
+                {{ form_start(form, {'attr': {'class': 'needs-validation'}}) }}
+                    {{ form_row(form.json) }}
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-save"></i> Importer
+                        </button>
+                        <a href="/admin?crudAction=index&crudControllerFqcn=App%5CController%5CAdmin%5CQuizCrudController" class="btn btn-secondary">
+                            <i class="fa fa-arrow-left"></i> Retour
+                        </a>
+                    </div>
+                {{ form_end(form) }}
+            </div>
+        </div>
+    </div>
+{% endblock %} 
