@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Règles spécifiques pour Next.js et React
 # Ces règles sont automatiquement incluses lorsque vous travaillez avec des fichiers du front-end
 

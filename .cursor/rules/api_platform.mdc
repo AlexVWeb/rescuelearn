@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Règles spécifiques pour API Platform
 # Ces règles sont automatiquement incluses lorsque vous travaillez avec des fichiers liés à API Platform
 

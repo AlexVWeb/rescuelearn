@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Règles générales pour les standards de codage
 # Ces règles s'appliquent à l'ensemble du projet
 
