@@ -1,0 +1,13 @@
+easy_admin:
+    # Design configuration
+    design:
+        brand_color: '#2C3E50'
+        menu:
+            - { label: 'Dashboard', route: 'admin', icon: 'home' }
+            # Ajoutez ici vos entités à administrer
+            # - { entity: 'App\Entity\YourEntity', label: 'Your Entity', icon: 'list' }
+
+    # Configuration de la sécurité
+    security:
+        # Le rôle requis pour accéder à l'interface d'administration
+        role: 'ROLE_ADMIN' 
