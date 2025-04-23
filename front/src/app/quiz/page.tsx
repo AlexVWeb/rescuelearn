@@ -38,6 +38,7 @@ const QuizCatalogue = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedQuizId, setSelectedQuizId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRandomMode, setIsRandomMode] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -69,7 +70,7 @@ const QuizCatalogue = () => {
 
   const handleQuizStart = (difficulty: 'easy' | 'medium' | 'hard') => {
     if (selectedQuizId) {
-      router.push(`/quiz/${selectedQuizId}?difficulty=${difficulty}`);
+      router.push(`/quiz/${selectedQuizId}?difficulty=${difficulty}&random=${isRandomMode}`);
       setIsModalOpen(false);
     }
   };
@@ -188,6 +189,24 @@ const QuizCatalogue = () => {
             <DialogTitle className="text-2xl font-bold text-gray-800 mb-4">Choisissez votre niveau</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-4">
+              <div>
+                <h3 className="font-semibold text-gray-800">Mode Random</h3>
+                <p className="text-sm text-gray-600">Les questions seront affichées dans un ordre aléatoire</p>
+              </div>
+              <button
+                onClick={() => setIsRandomMode(!isRandomMode)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isRandomMode ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isRandomMode ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
             <button
               onClick={() => handleQuizStart('easy')}
               className="w-full p-4 bg-green-50 hover:bg-green-100 border-2 border-green-200 rounded-lg text-left transition-colors"

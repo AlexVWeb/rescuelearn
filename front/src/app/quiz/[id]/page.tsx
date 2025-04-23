@@ -23,6 +23,7 @@ export default function QuizPage({ params }: PageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const difficulty = (searchParams.get('difficulty') || 'medium') as 'easy' | 'medium' | 'hard';
+  const isRandomMode = searchParams.get('random') === 'true';
   const [mounted, setMounted] = useState(false);
   const [quizData, setQuizData] = useState<QuizComponentData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,13 +43,27 @@ export default function QuizPage({ params }: PageProps) {
   }, []);
 
   useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!mounted) return;
 
     const fetchQuiz = async () => {
       try {
         const data = await quizService.getQuiz(parseInt(resolvedParams.id));
-        if (data.modeRandom) {
-        // Mélanger les questions après avoir reçu les données
+        if (isRandomMode) {
+          // Mélanger les questions après avoir reçu les données
           const shuffledData = {
             ...data,
             questions: shuffleArray(data.questions)
@@ -68,7 +83,7 @@ export default function QuizPage({ params }: PageProps) {
     };
 
     fetchQuiz();
-  }, [resolvedParams.id, mounted]);
+  }, [resolvedParams.id, mounted, isRandomMode]);
 
   const handleAnswerSubmit = useCallback((optionId: string | null) => {
     if (!quizData) return;
@@ -212,7 +227,7 @@ export default function QuizPage({ params }: PageProps) {
                     className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-full transition-all duration-200 shadow-sm hover:shadow cursor-pointer"
                   >
                     <ChevronRight className="w-4 h-4 rotate-180" />
-                    <span>Retour aux quiz</span>
+                    <span className='text-sm'>Retour aux quiz</span>
                   </button>
                 </DialogTrigger>
                 <DialogContent className="bg-white rounded-xl shadow-lg border-none p-6">
