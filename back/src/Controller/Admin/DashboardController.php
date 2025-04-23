@@ -25,7 +25,7 @@ class DashboardController extends AbstractDashboardController
     public function configureDashboard(): Dashboard
     {
         return Dashboard::new()
-            ->setTitle('Symfony Geoloc Admin');
+            ->setTitle('RescueLearn Admin');
     }
 
     public function configureMenuItems(): iterable

@@ -39,6 +39,7 @@ const QuizCatalogue = () => {
   const [selectedQuizId, setSelectedQuizId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRandomMode, setIsRandomMode] = useState(false);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const router = useRouter();
 
   useEffect(() => {
@@ -57,6 +58,7 @@ const QuizCatalogue = () => {
         }
         const data: QuizCollection = await response.json();
         setQuizzes(data.member);
+        setTotalPages(Math.ceil(data.totalItems / 10));
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Une erreur est survenue');
@@ -121,19 +123,31 @@ const QuizCatalogue = () => {
             {quizzes.map((quiz) => (
               <motion.div
                 key={quiz.id}
-                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col min-h-[320px] border border-gray-100"
                 variants={itemVariants}
               >
-                <div className="p-6">
-                  <h3 className="font-bold text-gray-800 text-lg mb-4">{quiz.title}</h3>
-                  
-                  <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
-                    <div className="flex items-center">
-                      <Activity className="w-4 h-4 mr-1" />
-                      <span>{quiz.timePerQuestion}s par question</span>
+                <div className="p-6 flex flex-col h-full">
+                  <div className="flex-grow">
+                    <div className="bg-blue-50 -mx-6 -mt-6 p-6 border-b border-blue-100 mb-6">
+                      <h3 className="font-bold text-gray-800 text-xl leading-tight min-h-[56px] flex items-center">{quiz.title}</h3>
                     </div>
-                    <div className="flex items-center">
-                      <span>Score minimum : {quiz.passingScore}%</span>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center bg-gray-50 p-3 rounded-lg">
+                        <Activity className="w-5 h-5 text-blue-600 mr-3" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Temps par question</p>
+                          <p className="text-sm text-gray-600">{quiz.timePerQuestion} secondes</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center bg-gray-50 p-3 rounded-lg">
+                        <Heart className="w-5 h-5 text-red-500 mr-3" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Score minimum requis</p>
+                          <p className="text-sm text-gray-600">{quiz.passingScore}%</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -142,7 +156,7 @@ const QuizCatalogue = () => {
                       setSelectedQuizId(quiz.id);
                       setIsModalOpen(true);
                     }}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg flex items-center justify-center transition-colors"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg flex items-center justify-center transition-colors mt-6 font-medium"
                   >
                     Commencer le quiz
                   </button>
@@ -160,7 +174,7 @@ const QuizCatalogue = () => {
         )}
 
         {/* Pagination */}
-        {!loading && !error && quizzes.length > 0 && (
+        {!loading && !error && quizzes.length > 0 && totalPages > 1 && (
           <div className="mt-8 flex justify-center space-x-4">
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
@@ -170,11 +184,12 @@ const QuizCatalogue = () => {
               Page précédente
             </button>
             <span className="px-4 py-2 bg-gray-100 rounded-lg">
-              Page {currentPage}
+              Page {currentPage} sur {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(prev => prev + 1)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+              disabled={currentPage === totalPages}
             >
               Page suivante
             </button>

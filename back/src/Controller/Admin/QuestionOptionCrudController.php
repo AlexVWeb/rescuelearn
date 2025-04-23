@@ -18,7 +18,6 @@ class QuestionOptionCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         yield AssociationField::new('question', 'Question');
-        yield TextField::new('optionId', 'ID de l\'option');
         yield TextareaField::new('text', 'Texte de l\'option');
     }
 } 
