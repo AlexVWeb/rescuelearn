@@ -50,7 +50,7 @@ const QuizCatalogue = () => {
     const fetchQuizzes = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`https://symfony-geoloc.ddev.site/api/quizzes?page=${currentPage}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/quizzes?page=${currentPage}`);
         if (!response.ok) {
           throw new Error('Erreur lors du chargement des quiz');
         }

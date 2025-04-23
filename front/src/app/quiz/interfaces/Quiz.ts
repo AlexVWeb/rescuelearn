@@ -30,7 +30,7 @@ export interface ApiQuiz {
 
 // Interfaces pour le composant
 export interface QuizOption {
-  id: string;
+  id: number;
   text: string;
 }
 

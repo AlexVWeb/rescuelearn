@@ -11,10 +11,10 @@ const transformApiQuizToComponentData = (apiQuiz: ApiQuiz): QuizComponentData =>
       id: question.id,
       text: question.text,
       options: question.options.map(option => ({
-        id: option.optionId.toLowerCase(),
+        id: option.id,
         text: option.text
       })),
-      correctAnswer: question.correctAnswer.toLowerCase(),
+      correctAnswer: question.correctAnswer,
       explanation: question.explanation
     })),
     timePerQuestion: apiQuiz.timePerQuestion,

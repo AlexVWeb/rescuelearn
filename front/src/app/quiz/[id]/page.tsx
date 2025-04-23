@@ -60,7 +60,8 @@ export default function QuizPage({ params }: PageProps) {
         // Mélanger les questions après avoir reçu les données
         const shuffledData = {
           ...data,
-          questions: shuffleArray(data.questions)
+          //questions: shuffleArray(data.questions)
+          questions: data.questions
         };
         setQuizData(shuffledData);
         setTimeLeft(data.timePerQuestion);
@@ -296,46 +297,48 @@ export default function QuizPage({ params }: PageProps) {
                   transition={{ duration: 0.3 }}
                   className="space-y-3"
                 >
-                  {currentQuestion.options.map((option, idx) => (
+                  {currentQuestion.options.map((option, idx) => {
+                    const optionId = option.id.toString();
+                    return (
                     <motion.div
-                      key={option.id}
+                      key={optionId}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: idx * 0.1 }}
                     >
                       <div
                         className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          selectedOption === option.id 
+                          selectedOption === optionId 
                             ? 'border-blue-600 bg-blue-50' 
                             : 'border-gray-200 hover:border-blue-400'
                         } ${
-                          showFeedback && difficulty !== 'hard' && option.id === currentQuestion.correctAnswer
+                          showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
                             ? 'border-green-600 bg-green-50'
-                            : showFeedback && selectedOption === option.id && option.id !== currentQuestion.correctAnswer
+                            : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer
                             ? 'border-red-600 bg-red-50'
                             : ''
                         }`}
-                        onClick={() => handleOptionSelect(option.id)}
+                        onClick={() => handleOptionSelect(optionId)}
                       >
                         <div className="flex items-start">
                           <div className="mr-3 mt-0.5">
                             <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                              selectedOption === option.id
+                              selectedOption === optionId
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-700'
                             } ${
-                              showFeedback && difficulty !== 'hard' && option.id === currentQuestion.correctAnswer
+                              showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
                                 ? 'bg-green-600 text-white'
-                                : showFeedback && selectedOption === option.id && option.id !== currentQuestion.correctAnswer
+                                : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer
                                 ? 'bg-red-600 text-white'
                                 : ''
                             }`}>
-                              {showFeedback && difficulty !== 'hard' && option.id === currentQuestion.correctAnswer ? (
+                              {showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer ? (
                                 <CheckCircle className="w-4 h-4" />
-                              ) : showFeedback && selectedOption === option.id && option.id !== currentQuestion.correctAnswer ? (
+                              ) : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer ? (
                                 <XCircle className="w-4 h-4" />
                               ) : (
-                                <span className="text-sm font-medium">{option.id.toUpperCase()}</span>
+                                <span className="text-sm font-medium">{idx + 1}</span>
                               )}
                             </div>
                           </div>
@@ -343,7 +346,7 @@ export default function QuizPage({ params }: PageProps) {
                         </div>
                       </div>
                     </motion.div>
-                  ))}
+                  )})}
                 </motion.div>
               </AnimatePresence>
             </div>

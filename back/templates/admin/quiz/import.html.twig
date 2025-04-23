@@ -313,8 +313,8 @@
                     }
                     
                     // Vérification du niveau
-                    if (parsed.level !== undefined && (typeof parsed.level !== 'number' || parsed.level <= 0)) {
-                        throw new Error('Le niveau (level) doit être un ID valide (nombre positif)');
+                    if (parsed.level !== undefined && (typeof parsed.level !== 'string')) {
+                        throw new Error('Le niveau (level) doit être un nom de niveau valide');
                     }
                     
                     // Vérification des catégories
