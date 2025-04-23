@@ -153,15 +153,14 @@ class QuizCrudController extends AbstractCrudController
                     // Parcours des questions
                     foreach ($json['questions'] as $questionData) {
                         $question = new Question();
-                        $question->setText($questionData['text']);
+                        $question->setText($questionData['question']);
                         $question->setCorrectAnswer($questionData['correctAnswer']);
                         $question->setExplanation($questionData['explanation']);
                         $question->setQuiz($quiz);
 
                         foreach ($questionData['options'] as $optionData) {
                             $option = new QuestionOption();
-                            $option->setText($optionData['text']);
-                            $option->setOptionId($optionData['id']);
+                            $option->setText($optionData);
                             $option->setQuestion($question);
                             $this->entityManager->persist($option);
                         }
