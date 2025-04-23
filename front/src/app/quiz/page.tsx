@@ -3,10 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Heart, Activity, Loader2 } from 'lucide-react';
-import Link from 'next/link';
 import { Quiz, QuizCollection } from './interfaces/Quiz';
 import { EcgLine } from './components/EcgLine';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
 
 // Variants pour les animations Framer Motion
