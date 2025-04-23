@@ -18,7 +18,9 @@ const transformApiQuizToComponentData = (apiQuiz: ApiQuiz): QuizComponentData =>
       explanation: question.explanation
     })),
     timePerQuestion: apiQuiz.timePerQuestion,
-    passingScore: apiQuiz.passingScore
+    passingScore: apiQuiz.passingScore,
+    modeRandom: apiQuiz.modeRandom,
+    level: apiQuiz.level.name
   };
 };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, useCallback, use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Award, CheckCircle, XCircle, AlertTriangle, Activity, ChevronRight } from 'lucide-react';
 import { quizService } from '../services/quizService';
@@ -9,18 +9,9 @@ import { QuizTimer } from '../components/QuizTimer';
 import { QuizResults } from '../components/QuizResults';
 import { QuizComponentData } from '../interfaces/Quiz';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../../../components/ui/dialog";
-import { Button } from "../../../components/ui/button";
-
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
-
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { shuffleArray } from '../utils/utils';
 interface PageProps {
   params: Promise<{
     id: string;
@@ -43,7 +34,6 @@ export default function QuizPage({ params }: PageProps) {
   const [quizComplete, setQuizComplete] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
   const [isTimeCritical, setIsTimeCritical] = useState(false);
-  const [timerActive, setTimerActive] = useState(difficulty !== 'easy');
   const [performance, setPerformance] = useState({ stars: 0, message: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -57,13 +47,16 @@ export default function QuizPage({ params }: PageProps) {
     const fetchQuiz = async () => {
       try {
         const data = await quizService.getQuiz(parseInt(resolvedParams.id));
+        if (data.modeRandom) {
         // Mélanger les questions après avoir reçu les données
-        const shuffledData = {
-          ...data,
-          //questions: shuffleArray(data.questions)
-          questions: data.questions
-        };
-        setQuizData(shuffledData);
+          const shuffledData = {
+            ...data,
+            questions: shuffleArray(data.questions)
+          };
+          setQuizData(shuffledData);
+        } else {
+          setQuizData(data);
+        }
         setTimeLeft(data.timePerQuestion);
         setError(null);
       } catch (err) {
@@ -77,8 +70,19 @@ export default function QuizPage({ params }: PageProps) {
     fetchQuiz();
   }, [resolvedParams.id, mounted]);
 
+  const handleAnswerSubmit = useCallback((optionId: string | null) => {
+    if (!quizData) return;
+    
+    setShowFeedback(true);
+    
+    if (optionId === quizData.questions[currentQuestionIndex].correctAnswer) {
+      setScore(prevScore => prevScore + 1);
+    }
+  }, [quizData, currentQuestionIndex]);
+
   useEffect(() => {
-    if (!mounted || !quizData || !timerActive || quizComplete || showFeedback) return;
+    if (!mounted || !quizData || quizComplete || showFeedback) return;
+    if (difficulty === 'easy') return; // Désactive complètement le chronomètre en mode facile
 
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -97,7 +101,7 @@ export default function QuizPage({ params }: PageProps) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [currentQuestionIndex, timerActive, quizComplete, showFeedback, quizData, mounted]);
+  }, [currentQuestionIndex, quizComplete, showFeedback, quizData, mounted, handleAnswerSubmit, difficulty]);
 
   if (!mounted) {
     return null;
@@ -131,15 +135,6 @@ export default function QuizPage({ params }: PageProps) {
     }
   };
 
-  const handleAnswerSubmit = (optionId: string | null) => {
-    setTimerActive(false);
-    setShowFeedback(true);
-    
-    if (optionId === currentQuestion.correctAnswer) {
-      setScore(prevScore => prevScore + 1);
-    }
-  };
-
   const goToNextQuestion = () => {
     if (currentQuestionIndex === quizData.questions.length - 1) {
       setQuizComplete(true);
@@ -168,7 +163,6 @@ export default function QuizPage({ params }: PageProps) {
       setShowFeedback(false);
       setTimeLeft(quizData.timePerQuestion);
       setIsTimeCritical(false);
-      setTimerActive(true);
     }
   };
 
@@ -180,8 +174,6 @@ export default function QuizPage({ params }: PageProps) {
     setQuizComplete(false);
     setTimeLeft(quizData.timePerQuestion);
     setIsTimeCritical(false);
-    setTimerActive(difficulty !== 'easy');
-    setPerformance({ stars: 0, message: '' });
   };
 
   const handleQuit = () => {
@@ -298,7 +290,7 @@ export default function QuizPage({ params }: PageProps) {
                   className="space-y-3"
                 >
                   {currentQuestion.options.map((option, idx) => {
-                    const optionId = option.id.toString();
+                    const optionId = idx.toString();
                     return (
                     <motion.div
                       key={optionId}

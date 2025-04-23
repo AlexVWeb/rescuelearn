@@ -14,6 +14,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
@@ -69,7 +70,8 @@ class QuizCrudController extends AbstractCrudController
         yield TextField::new('title', 'Titre');
         yield IntegerField::new('timePerQuestion', 'Temps par question (sec)');
         yield IntegerField::new('passingScore', 'Score de réussite (%)');
-
+        yield BooleanField::new('modeRandom', 'Mode aléatoire');
+        
         yield FormField::addPanel('Questions');
         yield CollectionField::new('questions', 'Questions')
             ->setEntryType(QuestionType::class)
@@ -103,11 +105,7 @@ class QuizCrudController extends AbstractCrudController
                     $quiz->setTitle($json['title']);
                     $quiz->setTimePerQuestion($json['timePerQuestion']);
                     $quiz->setPassingScore($json['passingScore']);
-                    $quiz->setModeRandom(false);
-
-                    // Pré-chargement des niveaux et catégories existants
-                    $levels = [];
-                    $categories = [];
+                    $quiz->setModeRandom($json['modeRandom']);
 
                     // Détecter le niveau global et les catégories globales du quiz
                     $quizLevel = null;

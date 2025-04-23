@@ -26,6 +26,8 @@ export interface ApiQuiz {
   timePerQuestion: number;
   passingScore: number;
   questions: ApiQuestion[];
+  modeRandom: boolean;
+  level: QuizLevel;
 }
 
 // Interfaces pour le composant
@@ -47,6 +49,8 @@ export interface QuizComponentData {
   questions: QuizQuestion[];
   timePerQuestion: number;
   passingScore: number;
+  modeRandom: boolean;
+  level: string;
 }
 
 export interface Quiz {
@@ -57,6 +61,8 @@ export interface Quiz {
   questions: QuizQuestion[];
   timePerQuestion: number;
   passingScore: number;
+  modeRandom: boolean;
+  level: string;
 }
 
 export interface QuizCollection {
@@ -70,4 +76,11 @@ export interface QuizCollection {
 export interface QuizPerformance {
   stars: number;
   message: string;
-} 
+}
+
+export interface QuizLevel {
+  "@id": string;
+  "@type": string;
+  id: number;
+  name: string;
+}
