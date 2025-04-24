@@ -39,8 +39,6 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToCrud('Quiz', 'fa fa-question-circle', Quiz::class);
         yield MenuItem::linkToCrud('Questions', 'fa fa-list', Question::class);
         yield MenuItem::linkToCrud('Options', 'fa fa-check-square', QuestionOption::class);
-        
-        yield MenuItem::section('Catégories et Niveaux');
         yield MenuItem::linkToCrud('Catégories', 'fa fa-tags', CategoryQuestion::class);
         yield MenuItem::linkToCrud('Niveaux', 'fa fa-layer-group', LevelQuestion::class);
 
