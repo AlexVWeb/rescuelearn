@@ -1,0 +1,373 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+    <style>
+        .page-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.75rem;
+        }
+        
+        .CodeMirror {
+            height: 450px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+            font-size: 14px;
+            border: 1px solid #ced4da;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .json-error {
+            color: #dc3545;
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background-color: rgba(220, 53, 69, 0.1);
+            border-radius: 0.5rem;
+            display: none;
+        }
+        
+        .json-valid {
+            color: #28a745;
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background-color: rgba(40, 167, 69, 0.1);
+            border-radius: 0.5rem;
+            display: none;
+        }
+        
+        .import-help {
+            margin-bottom: 1.5rem;
+            padding: 1.25rem;
+            background-color: #f8f9fa;
+            border-radius: 0.5rem;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .import-help h5 {
+            color: #3498db;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 0.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .btn-primary {
+            background-color: #3498db;
+            border-color: #3498db;
+            padding: 0.5rem 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+        
+        .btn-secondary {
+            background-color: #95a5a6;
+            border-color: #95a5a6;
+            padding: 0.5rem 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+            border-color: #7f8c8d;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-error {
+            background-color: #dc3545;
+        }
+        
+        .status-valid {
+            background-color: #28a745;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .json-structure {
+            margin-top: 1rem;
+            background-color: rgba(52, 152, 219, 0.1);
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        
+        .json-structure h6 {
+            color: #3498db;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .json-structure pre {
+            margin: 0;
+            font-size: 0.85rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="container mt-5">
+        <div class="card">
+            <div class="card-body p-4">
+                <h1 class="page-title">{{ page_title }}</h1>
+                
+                <div class="import-help">
+                    <h5><i class="fa fa-info-circle"></i> Instructions</h5>
+                    <p class="mb-1">Collez votre JSON de cartes d'apprentissage dans l'éditeur ci-dessous. Le format doit être conforme à la structure attendue.</p>
+                    <p class="mb-1">L'éditeur validera automatiquement la syntaxe JSON avant soumission.</p>
+                    
+                    <div class="json-structure">
+                        <h6>Structure requise :</h6>
+                        <pre><code>
+{
+  "theme": "Thème demandé",                  <span class="text-muted">// Obligatoire</span>
+  "cartes": [                               <span class="text-muted">// Obligatoire, au moins une carte</span>
+    {
+      "niveau": "PSE1",                     <span class="text-muted">// Obligatoire</span>
+      "info": "Information claire...",      <span class="text-muted">// Obligatoire</span>
+      "reference": "Page XX du référentiel" <span class="text-muted">// Obligatoire</span>
+    }
+  ]
+}
+                        </code></pre>
+                    </div>
+                </div>
+                
+                {{ form_start(form, {'attr': {'class': 'needs-validation', 'id': 'import-form'}}) }}
+                    <div class="form-group mb-4">
+                        <label for="json-editor">{{ form_label(form.json) }}</label>
+                        <div id="json-editor" class="mb-2"></div>
+                        
+                        <div class="json-error" id="json-error">
+                            <span class="status-indicator status-error"></span>
+                            <span id="error-message">JSON invalide. Veuillez corriger la syntaxe avant de soumettre.</span>
+                        </div>
+                        
+                        <div class="json-valid" id="json-valid">
+                            <span class="status-indicator status-valid"></span>
+                            JSON valide - Prêt à être importé
+                        </div>
+                        
+                        {{ form_widget(form.json, {'attr': {'class': 'd-none', 'id': 'json-hidden-input'}}) }}
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="submit-button" disabled>
+                            <i class="fa fa-save me-2"></i> Importer
+                        </button>
+                        <a href="/admin?crudAction=index&crudControllerFqcn=App%5CController%5CAdmin%5CLearningCardCrudController" class="btn btn-secondary">
+                            <i class="fa fa-arrow-left me-2"></i> Retour
+                        </a>
+                    </div>
+                {{ form_end(form) }}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/selection/active-line.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Format JSON exemple pour un affichage plus clair
+            const defaultJSON = `{
+  "theme": "Premiers secours",
+  "cartes": [
+    {
+      "niveau": "PSE1",
+      "info": "En cas d'arrêt cardiaque, commencer immédiatement les compressions thoraciques à un rythme de 100-120 par minute.",
+      "reference": "Section 3.2 du référentiel"
+    }
+  ]
+}`;
+            
+            // Récupération de la valeur initiale du champ JSON
+            const hiddenInput = document.getElementById('json-hidden-input');
+            let initialValue = defaultJSON;
+            
+            // Seulement essayer d'accéder à la valeur si l'élément existe
+            if (hiddenInput && hiddenInput.value && hiddenInput.value.trim() !== '') {
+                initialValue = hiddenInput.value;
+            }
+            
+            // Initialisation de l'éditeur CodeMirror
+            const editor = CodeMirror(document.getElementById('json-editor'), {
+                value: initialValue,
+                mode: {name: "javascript", json: true},
+                theme: "dracula",
+                lineNumbers: true,
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                indentUnit: 2,
+                tabSize: 2,
+                lineWrapping: false,
+                styleActiveLine: true,
+                viewportMargin: Infinity,
+                gutters: ["CodeMirror-linenumbers"],
+                extraKeys: {
+                    "Tab": function(cm) {
+                        if (cm.somethingSelected()) {
+                            cm.indentSelection("add");
+                        } else {
+                            cm.replaceSelection("  ", "end");
+                        }
+                    }
+                }
+            });
+            
+            // Élements du DOM
+            const jsonError = document.getElementById('json-error');
+            const jsonValid = document.getElementById('json-valid');
+            const errorMessage = document.getElementById('error-message');
+            const submitButton = document.getElementById('submit-button');
+            const importForm = document.getElementById('import-form');
+            
+            // Fonction pour formater automatiquement le JSON
+            function formatJSON() {
+                try {
+                    const jsonContent = editor.getValue();
+                    if (!jsonContent.trim()) return;
+                    
+                    const parsed = JSON.parse(jsonContent);
+                    const formatted = JSON.stringify(parsed, null, 2);
+                    editor.setValue(formatted);
+                } catch (e) {
+                    // Si le JSON n'est pas valide, on ne fait rien
+                }
+            }
+            
+            // Fonction de validation JSON
+            function validateJSON() {
+                const jsonContent = editor.getValue();
+                try {
+                    if (!jsonContent.trim()) {
+                        throw new Error('Le JSON ne peut pas être vide');
+                    }
+                    
+                    const parsed = JSON.parse(jsonContent);
+                    
+                    // Validation de la structure du thème
+                    if (!parsed.theme) {
+                        throw new Error('Le thème est obligatoire (propriété "theme")');
+                    }
+                    
+                    // Validation des cartes
+                    if (!Array.isArray(parsed.cartes) || parsed.cartes.length === 0) {
+                        throw new Error('Le JSON doit contenir un tableau de cartes non vide (propriété "cartes")');
+                    }
+                    
+                    // Validation de chaque carte
+                    parsed.cartes.forEach((c, index) => {
+                        if (!c.niveau) {
+                            throw new Error(`La carte ${index + 1} doit avoir un niveau (propriété "niveau")`);
+                        }
+                        if (!c.info) {
+                            throw new Error(`La carte ${index + 1} doit avoir une information (propriété "info")`);
+                        }
+                        if (!c.reference) {
+                            throw new Error(`La carte ${index + 1} doit avoir une référence (propriété "reference")`);
+                        }
+                    });
+                    
+                    // JSON valide
+                    jsonError.style.display = 'none';
+                    jsonValid.style.display = 'block';
+                    submitButton.disabled = false;
+                    return true;
+                } catch (e) {
+                    // JSON invalide
+                    errorMessage.textContent = e.message;
+                    jsonError.style.display = 'block';
+                    jsonValid.style.display = 'none';
+                    submitButton.disabled = true;
+                    return false;
+                }
+            }
+            
+            // Ajouter un bouton pour formater le JSON
+            const formatButton = document.createElement('button');
+            formatButton.className = 'btn btn-sm btn-outline-secondary mt-2';
+            formatButton.innerHTML = '<i class="fa fa-indent"></i> Formater le JSON';
+            formatButton.onclick = function(e) {
+                e.preventDefault();
+                formatJSON();
+                validateJSON();
+            };
+            document.getElementById('json-editor').parentNode.appendChild(formatButton);
+            
+            // Valider lors de chaque changement de l'éditeur
+            editor.on('change', function() {
+                validateJSON();
+                // S'assurer que l'élément existe avant de définir sa valeur
+                if (hiddenInput) {
+                    hiddenInput.value = editor.getValue();
+                }
+            });
+            
+            // Valider le formulaire avant soumission
+            if (importForm) {
+                importForm.addEventListener('submit', function(e) {
+                    if (!validateJSON()) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    
+                    if (hiddenInput) {
+                        hiddenInput.value = editor.getValue();
+                    }
+                    return true;
+                });
+            }
+            
+            // Ajuster CodeMirror lors du redimensionnement de la fenêtre
+            window.addEventListener('resize', function() {
+                editor.refresh();
+            });
+            
+            // Validation initiale
+            validateJSON();
+            
+            // Focus sur l'éditeur
+            setTimeout(function() {
+                editor.focus();
+                editor.refresh();
+            }, 100);
+        });
+    </script>
+{% endblock %} 

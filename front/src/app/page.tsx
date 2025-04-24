@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
-import { Heart, AlertTriangle } from 'lucide-react';
+import { Heart, AlertTriangle, BookOpen } from 'lucide-react';
 import Link from 'next/link';
+import { LearningBar } from '@/components/learning/LearningBar';
 
 export const metadata: Metadata = {
   title: 'Accueil | RescueLearn',
@@ -44,7 +45,7 @@ export default function Home() {
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
             Nos fonctionnalités
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <Link 
               href="/quiz" 
               className="bg-white p-8 rounded-xl shadow-sm aspect-square flex flex-col items-center justify-center text-center transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-blue-50"
@@ -70,9 +71,25 @@ export default function Home() {
                 Entraînez-vous à la classification des victimes dans des situations d&apos;urgence à nombreuses victimes. Développez vos réflexes et votre prise de décision.
               </p>
             </Link>
+
+            <Link 
+              href="/learning" 
+              className="bg-white p-8 rounded-xl shadow-sm aspect-square flex flex-col items-center justify-center text-center transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-green-50"
+            >
+              <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center mb-6">
+                <BookOpen className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Cartes d&apos;Apprentissage</h3>
+              <p className="text-gray-600">
+                Découvrez nos cartes d&apos;apprentissage interactives. Mélangez-les aléatoirement ou filtrez-les par thème et niveau pour un apprentissage personnalisé.
+              </p>
+            </Link>
           </div>
         </div>
       </section>
+
+      {/* Learning Bar */}
+      <LearningBar />
     </div>
   );
 }

@@ -40,20 +40,20 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: "https://rescuelearn.fr",
     siteName: "RescueLearn",
-    title: "RescueLearn - Plateforme d'Apprentissage du Secourisme",
+    title: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
     description: "Apprenez, testez et améliorez vos connaissances en secourisme avec RescueLearn.",
     images: [
       {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "RescueLearn - Plateforme d'Apprentissage du Secourisme",
+        alt: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "RescueLearn - Plateforme d'Apprentissage du Secourisme",
+    title: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
     description: "Apprenez, testez et améliorez vos connaissances en secourisme avec RescueLearn.",
     images: ["/twitter-image.jpg"],
     creator: "@rescuelearn",
@@ -96,6 +96,7 @@ export default function RootLayout({
                 <Link href="/" className="text-gray-700 hover:text-blue-600">Accueil</Link>
                 <Link href="/quiz" className="text-gray-700 hover:text-blue-600">Quiz</Link>
                 <Link href="/snv" className="text-gray-700 hover:text-blue-600">SNV</Link>
+                <Link href="/learning" className="text-gray-700 hover:text-blue-600">Cartes d&apos;apprentissage</Link>
               </div>
             </div>
           </nav>
@@ -123,6 +124,7 @@ export default function RootLayout({
                 <ul className="mt-4 space-y-2">
                   <li><Link href="/quiz" className="text-sm text-gray-500 hover:text-blue-600">Quiz</Link></li>
                   <li><Link href="/snv" className="text-sm text-gray-500 hover:text-blue-600">Scénarios SNV</Link></li>
+                  <li><Link href="/learning" className="text-sm text-gray-500 hover:text-blue-600">Cartes d&apos;apprentissage</Link></li>
                 </ul>
               </div>
             </div>

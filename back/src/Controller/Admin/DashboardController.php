@@ -15,7 +15,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-
+use App\Entity\LearningCard;
 class DashboardController extends AbstractDashboardController
 {
     #[Route('/admin', name: 'admin')]
@@ -45,5 +45,8 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::section('SNV');
         yield MenuItem::linkToCrud('Scénarios', 'fa fa-scroll', SNVScenario::class);
         yield MenuItem::linkToCrud('Victimes', 'fa fa-user-injured', SNVVictim::class);
+
+        yield MenuItem::section('Cartes d\'apprentissage');
+        yield MenuItem::linkToCrud('Cartes', 'fa fa-book', LearningCard::class);
     }
 }
