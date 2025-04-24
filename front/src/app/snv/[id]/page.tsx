@@ -67,7 +67,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
   }, [scenarioId, difficulty, isRandomMode, timeLimit]);
 
   useEffect(() => {
-    if (timeLeft > 0 && !gameOver && difficulty !== 'easy') {
+    if (timeLeft > 0 && !gameOver && difficulty !== 'easy' && !showExplanation) {
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 10) {
@@ -85,7 +85,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [timeLeft, gameOver, difficulty]);
+  }, [timeLeft, gameOver, difficulty, showExplanation]);
 
   const getTimeLimit = (difficulty: string, timeLimit: number) => {
     switch (difficulty) {
