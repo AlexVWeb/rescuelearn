@@ -95,6 +95,7 @@ export default function RootLayout({
               <div className="flex items-center space-x-4">
                 <Link href="/" className="text-gray-700 hover:text-blue-600">Accueil</Link>
                 <Link href="/quiz" className="text-gray-700 hover:text-blue-600">Quiz</Link>
+                <Link href="/snv" className="text-gray-700 hover:text-blue-600">SNV</Link>
               </div>
             </div>
           </nav>
@@ -115,6 +116,7 @@ export default function RootLayout({
                 <h3 className="text-lg font-semibold text-gray-900">Navigation</h3>
                 <ul className="mt-4 space-y-2">
                   <li><Link href="/quiz" className="text-sm text-gray-500 hover:text-blue-600">Quiz</Link></li>
+                  <li><Link href="/snv" className="text-sm text-gray-500 hover:text-blue-600">Scénarios SNV</Link></li>
                 </ul>
               </div>
             </div>

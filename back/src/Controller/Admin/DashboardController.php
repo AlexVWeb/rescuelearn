@@ -7,6 +7,8 @@ use App\Entity\LevelQuestion;
 use App\Entity\Question;
 use App\Entity\QuestionOption;
 use App\Entity\Quiz;
+use App\Entity\SNVScenario;
+use App\Entity\SNVVictim;
 use App\Entity\User;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
@@ -41,5 +43,9 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::section('Catégories et Niveaux');
         yield MenuItem::linkToCrud('Catégories', 'fa fa-tags', CategoryQuestion::class);
         yield MenuItem::linkToCrud('Niveaux', 'fa fa-layer-group', LevelQuestion::class);
+
+        yield MenuItem::section('SNV');
+        yield MenuItem::linkToCrud('Scénarios', 'fa fa-scroll', SNVScenario::class);
+        yield MenuItem::linkToCrud('Victimes', 'fa fa-user-injured', SNVVictim::class);
     }
 }

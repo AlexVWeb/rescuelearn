@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { Heart } from 'lucide-react';
+import { Heart, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -46,6 +46,16 @@ export default function Home() {
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Quiz Interactifs</h3>
               <p className="text-gray-600">
                 Testez vos connaissances avec nos quiz interactifs et progressifs. Apprenez à votre rythme et suivez votre progression.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
+                <AlertTriangle className="w-6 h-6 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Scénarios SNV</h3>
+              <p className="text-gray-600">
+                Entraînez-vous à la classification des victimes dans des situations d&apos;urgence à nombreuses victimes. Développez vos réflexes et votre prise de décision.
               </p>
             </div>
           </div>
