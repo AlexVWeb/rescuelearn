@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
+import { MobileMenu } from "@/components/MobileMenu";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -84,7 +85,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={inter.className}>
-        <header className="bg-white shadow-sm">
+        <header className="bg-white shadow-sm sticky top-0 z-40">
           <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
               <div className="flex items-center">
@@ -92,11 +93,18 @@ export default function RootLayout({
                   <span className="text-2xl font-bold text-blue-600">RescueLearn</span>
                 </Link>
               </div>
-              <div className="flex items-center space-x-4">
-                <Link href="/" className="text-gray-700 hover:text-blue-600">Accueil</Link>
-                <Link href="/quiz" className="text-gray-700 hover:text-blue-600">Quiz</Link>
-                <Link href="/snv" className="text-gray-700 hover:text-blue-600">SNV</Link>
-                <Link href="/learning" className="text-gray-700 hover:text-blue-600">Cartes d&apos;apprentissage</Link>
+              
+              {/* Menu desktop */}
+              <div className="hidden md:flex items-center space-x-8">
+                <Link href="/" className="text-gray-700 hover:text-blue-600 transition-colors">Accueil</Link>
+                <Link href="/quiz" className="text-gray-700 hover:text-blue-600 transition-colors">Quiz</Link>
+                <Link href="/snv" className="text-gray-700 hover:text-blue-600 transition-colors">SNV</Link>
+                <Link href="/learning" className="text-gray-700 hover:text-blue-600 transition-colors">Cartes d&apos;apprentissage</Link>
+              </div>
+
+              {/* Menu mobile */}
+              <div className="flex items-center md:hidden">
+                <MobileMenu />
               </div>
             </div>
           </nav>
