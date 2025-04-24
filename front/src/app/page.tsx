@@ -15,7 +15,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Apprenez les gestes qui sauvent avec <span className="text-blue-600">RescueLearn</span>
+              Apprenez et maintenez vos connaissances en secourisme avec <span className="text-blue-600">RescueLearn</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
               Votre plateforme complète pour l&apos;apprentissage du secourisme. Quiz interactifs et scénarios SNV pour maîtriser les gestes qui sauvent.
