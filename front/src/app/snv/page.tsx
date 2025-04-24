@@ -231,9 +231,6 @@ const SNVCatalogue = () => {
                     <h3 className="font-semibold text-green-800 mb-1">Mode Facile</h3>
                     <p className="text-sm text-gray-600">Temps illimité et affichage des explications</p>
                   </div>
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                    <span className="text-green-600 font-bold">1</span>
-                  </div>
                 </div>
               </button>
 
@@ -246,9 +243,6 @@ const SNVCatalogue = () => {
                     <div>
                       <h3 className="font-semibold text-yellow-800 mb-1">Mode Intermédiaire</h3>
                       <p className="text-sm text-gray-600">Temps limité et affichage des explications</p>
-                    </div>
-                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center group-hover:bg-yellow-200 transition-colors">
-                      <span className="text-yellow-600 font-bold">2</span>
                     </div>
                   </div>
                 </button>
@@ -282,9 +276,6 @@ const SNVCatalogue = () => {
                   <div>
                     <h3 className="font-semibold text-red-800 mb-1">Mode Difficile</h3>
                     <p className="text-sm text-gray-600">10 secondes par victime et pas d&apos;explications</p>
-                  </div>
-                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                    <span className="text-red-600 font-bold">3</span>
                   </div>
                 </div>
               </button>
