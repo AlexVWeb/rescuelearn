@@ -7,6 +7,7 @@ import { LearningFilters } from './components/LearningFilters';
 import { learningCardService } from './services/learningCardService';
 import { ApiLearningCard, ApiLearningCardFilters } from './interfaces/LearningCard';
 
+
 type SortOption = 'random' | 'alphabetical';
 
 export default function LearningPage() {
@@ -134,6 +135,7 @@ export default function LearningPage() {
                 niveau={card.niveau}
                 info={card.info}
                 reference={card.reference}
+                pdfUrl={'/referenciels/PSE1_PSE2.pdf'}
               />
             ))}
           </div>

@@ -45,6 +45,13 @@ export function LearningBar() {
     }
   }, [cards]);
 
+  const handleReferenceClick = (e: React.MouseEvent, reference: string) => {
+    e.stopPropagation();
+    const pageMatch = reference.match(/Page (\d+)/);
+    const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
+    window.open(`/referenciels/PSE1_PSE2.pdf#page=${pageNumber}`, '_blank');
+  };
+
   if (!isVisible || isLoading || error || !Array.isArray(cards) || cards.length === 0) {
     return null;
   }
@@ -79,7 +86,12 @@ export function LearningBar() {
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-gray-600">{currentCard.info}</p>
-                <p className="mt-1 text-xs text-gray-500">{currentCard.reference}</p>
+                <p 
+                  className="mt-1 text-xs text-blue-600 cursor-pointer hover:text-blue-800"
+                  onClick={(e) => handleReferenceClick(e, currentCard.reference)}
+                >
+                  {currentCard.reference}
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
