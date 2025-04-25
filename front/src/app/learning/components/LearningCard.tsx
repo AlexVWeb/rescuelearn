@@ -43,9 +43,6 @@ export function LearningCard({ theme, niveau, info, reference, pdfUrl, className
               {niveau}
             </span>
           </div>
-          <div className="rounded-full bg-blue-100 p-2">
-            <Info className="h-5 w-5 text-blue-600" />
-          </div>
         </div>
 
         <div className="mt-4">
