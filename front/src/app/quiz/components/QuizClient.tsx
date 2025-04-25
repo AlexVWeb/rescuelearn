@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 
-const QuizCatalogue = dynamic(() => import('../quiz/page'), {
+const QuizCatalogue = dynamic(() => import('../page'), {
   ssr: false,
   loading: () => (
     <div className="min-h-screen flex items-center justify-center">

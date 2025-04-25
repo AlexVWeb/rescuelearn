@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { Heart, AlertTriangle, BookOpen } from 'lucide-react';
 import Link from 'next/link';
-import { LearningBar } from '@/components/learning/LearningBar';
+import { LearningBar } from './learning/components/LearningBar';
 
 export const metadata: Metadata = {
   title: 'Accueil | RescueLearn',
