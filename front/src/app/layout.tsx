@@ -121,7 +121,7 @@ export default function RootLayout({
                   Votre plateforme complète pour l&apos;apprentissage du secourisme.
                 </p>
                 <p className="mt-4 text-sm text-gray-500">
-                  {"L'ensemble des quiz et scénarios SNV sont inspirés uniquement du référentiel de recommandations de la DGSCGC."}
+                  {"L'ensemble des quiz et scénarios SNV sont inspirés uniquement du référentiel de recommandations de la DGSCGC et sont générés par des IA en analysant les référentiels."}
                 </p>
                 <p className="mt-4 text-sm text-gray-500">
                   <Link href="https://mobile.interieur.gouv.fr/content/download/111134/888083/file/2024%20PSE.pdf" className="text-blue-600 hover:text-blue-700">Télécharger le référentiel</Link>
