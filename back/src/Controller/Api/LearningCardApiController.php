@@ -87,6 +87,7 @@ class LearningCardApiController extends AbstractController
                 'niveau' => $card->getNiveau(),
                 'info' => $card->getInfo(),
                 'reference' => $card->getReference(),
+                'pdfUrl' => $card->getReferenciel()?->getPdfUrl(),
             ];
         }, $cards);
 

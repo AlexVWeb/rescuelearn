@@ -29,6 +29,10 @@ class LearningCard
     #[Assert\NotBlank]
     private ?string $reference = null;
 
+    #[ORM\ManyToOne(targetEntity: Referenciel::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Referenciel $referenciel = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -75,6 +79,17 @@ class LearningCard
     public function setReference(string $reference): static
     {
         $this->reference = $reference;
+        return $this;
+    }
+
+    public function getReferenciel(): ?Referenciel
+    {
+        return $this->referenciel;
+    }
+
+    public function setReferenciel(?Referenciel $referenciel): static
+    {
+        $this->referenciel = $referenciel;
         return $this;
     }
 } 

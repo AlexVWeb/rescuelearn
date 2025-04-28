@@ -4,6 +4,7 @@ export interface ApiLearningCard {
   niveau: string;
   info: string;
   reference: string;
+  pdfUrl?: string;
 }
 
 export interface ApiLearningCardResponse {

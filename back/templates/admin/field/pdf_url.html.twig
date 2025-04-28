@@ -1,0 +1,7 @@
+{% if field.value %}
+    <a href="/{{ field.value }}" target="_blank" class="text-primary">
+        <i class="fa fa-file-pdf"></i> Voir le PDF
+    </a>
+{% else %}
+    <span class="text-muted">Aucun fichier</span>
+{% endif %} 

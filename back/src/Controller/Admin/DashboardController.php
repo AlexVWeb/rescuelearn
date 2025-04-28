@@ -10,12 +10,14 @@ use App\Entity\Quiz;
 use App\Entity\SNVScenario;
 use App\Entity\SNVVictim;
 use App\Entity\User;
+use App\Entity\Referenciel;
+use App\Entity\LearningCard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use App\Entity\LearningCard;
+
 class DashboardController extends AbstractDashboardController
 {
     #[Route('/admin', name: 'admin')]
@@ -48,5 +50,8 @@ class DashboardController extends AbstractDashboardController
 
         yield MenuItem::section('Cartes d\'apprentissage');
         yield MenuItem::linkToCrud('Cartes', 'fa fa-book', LearningCard::class);
+
+        yield MenuItem::section('Référentiels');
+        yield MenuItem::linkToCrud('Référentiels', 'fa fa-file-pdf', Referenciel::class);
     }
 }
