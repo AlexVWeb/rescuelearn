@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { ApiLearningCard } from '@/app/learning/interfaces/LearningCard';
 import { learningCardService } from '@/app/learning/services/learningCardService';
+import { shuffleArray } from '@/app/quiz/utils/utils';
 
 export function LearningBar() {
   const [cards, setCards] = useState<ApiLearningCard[]>([]);
@@ -18,8 +19,9 @@ export function LearningBar() {
       try {
         setIsLoading(true);
         setError(null);
-        const fetchedCards = await learningCardService.getAllCards();
-        
+        let fetchedCards = await learningCardService.getAllCards();
+        fetchedCards = shuffleArray(fetchedCards);
+        console.log(fetchedCards);
         if (Array.isArray(fetchedCards)) {
           setCards(fetchedCards);
         } else {
