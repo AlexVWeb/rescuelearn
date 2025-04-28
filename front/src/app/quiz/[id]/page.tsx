@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useCallback, use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Award, CheckCircle, XCircle, AlertTriangle, Activity, ChevronRight } from 'lucide-react';
+import { Award, CheckCircle, XCircle, AlertTriangle, ChevronRight } from 'lucide-react';
 import { quizService } from '../services/quizService';
-import { EcgLine } from '../components/EcgLine';
 import { QuizTimer } from '../components/QuizTimer';
 import { QuizResults } from '../components/QuizResults';
 import { QuizComponentData } from '../interfaces/Quiz';
@@ -12,6 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { shuffleArray } from '../utils/utils';
+
 interface PageProps {
   params: Promise<{
     id: string;
@@ -40,6 +40,23 @@ export default function QuizPage({ params }: PageProps) {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const header = document.body.getElementsByTagName('header')[0];
+    const footer = document.body.getElementsByTagName('footer')[0];
+    if (header && footer) {
+      header.classList.add("hidden");
+      footer.classList.add("hidden");
+    }
+    return () => {
+      if (header) {
+        header.classList.remove("hidden");
+      }
+      if (footer) {
+        footer.classList.remove("hidden");
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -197,104 +214,86 @@ export default function QuizPage({ params }: PageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 md:py-12 px-4 sm:px-6">
-      <EcgLine />
-      <div className="relative max-w-4xl mx-auto">        
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center space-x-2 mb-2">
-            <Heart className="w-6 h-6 text-red-600" />
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{quizData.title}</h1>
-          </div>
-          
-          {!quizComplete && difficulty !== 'hard' && (
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden mt-4">
-              <motion.div 
-                className="h-full bg-blue-600"
-                initial={{ width: `${progress}%`, backgroundColor: '#3B82F6' }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.5 }}
-              />
-            </div>
-          )}
-        </div>
-        
-        {!quizComplete ? (
-          <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-6 relative">
-            <div className="flex justify-between items-center mb-6">
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <button 
-                    className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-full transition-all duration-200 shadow-sm hover:shadow cursor-pointer"
-                  >
-                    <ChevronRight className="w-4 h-4 rotate-180" />
-                    <span className='text-sm'>Retour aux quiz</span>
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="bg-white rounded-xl shadow-lg border-none p-6">
-                  <DialogHeader className="mb-4">
-                    <DialogTitle className="text-xl font-bold text-gray-800">Quitter le quiz ?</DialogTitle>
-                    <DialogDescription className="text-gray-600 mt-2">
-                      Êtes-vous sûr de vouloir quitter ? Votre progression sera perdue.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="flex justify-end gap-3 mt-6">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setDialogOpen(false)}
-                      className="bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
-                    >
-                      Annuler
-                    </Button>
-                    <Button 
-                      variant="destructive" 
-                      onClick={handleQuit}
-                      className="bg-red-500 hover:bg-red-600 text-white"
-                    >
-                      Quitter le quiz
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <div className="bg-blue-100 text-blue-800 font-medium px-3 py-1 rounded-full text-sm">
-                Question {currentQuestionIndex + 1}/{quizData.questions.length}
-              </div>
-
-              <div className="flex items-center space-x-4">
-                {difficulty !== 'hard' && (
-                  <div className="flex items-center space-x-2">
-                    <Award className="w-5 h-5 text-yellow-500" />
-                    <span className="text-gray-700 font-medium">{score}/{currentQuestionIndex}</span>
-                  </div>
-                )}
-
-                {difficulty !== 'easy' && (
-                  <div className="flex items-center space-x-2">
-                    <QuizTimer 
-                      timeLeft={timeLeft}
-                      totalTime={quizData.timePerQuestion}
-                      isTimeCritical={isTimeCritical}
-                    />  
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="mb-8">
-              <AnimatePresence mode="wait">
-                <motion.h2 
-                  key={currentQuestion.id}
-                  className="text-xl md:text-2xl font-semibold text-gray-800 mb-3"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5 }}
+    <div className="w-full h-full flex flex-col items-center justify-between bg-gray-50 overflow-hidden" style={{minHeight: '100vh'}}>
+      {/* Header responsive */}
+      <div className="w-full flex flex-col items-center px-2 pt-3 pb-2 bg-gray-50 z-10 sm:flex-row sm:justify-between sm:items-end sm:px-4">
+        {/* Ligne du haut : retour + titre */}
+        <div className="w-full flex items-center justify-between sm:justify-start">
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <button
+                className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-3 rounded-full transition-all duration-200 shadow-sm hover:shadow cursor-pointer text-sm"
+              >
+                <ChevronRight className="w-4 h-4 rotate-180" />
+                <span>Retour</span>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="bg-white rounded-xl shadow-lg border-none p-6">
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-xl font-bold text-gray-800">Quitter le quiz ?</DialogTitle>
+                <DialogDescription className="text-gray-600 mt-2">
+                  Êtes-vous sûr de vouloir quitter ? Votre progression sera perdue.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setDialogOpen(false)}
+                  className="bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
                 >
-                  {currentQuestion.text}
-                </motion.h2>
-              </AnimatePresence>
-            </div>
-            
-            <div className="space-y-3 mb-8">
+                  Annuler
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleQuit}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  Quitter le quiz
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <h1
+            className="flex-1 text-base font-semibold text-gray-800 text-center mx-2 truncate max-w-[70vw] sm:max-w-xs overflow-hidden whitespace-nowrap"
+            title={quizData.title}
+          >
+            {quizData.title}
+          </h1>
+          <div className="w-8 sm:w-12" /> {/* Espace pour équilibrer */}
+        </div>
+        {/* Ligne du bas : progression */}
+        <div className="w-full flex flex-col items-center mt-2 sm:mt-0 sm:flex-row sm:justify-center">
+          <div className="h-2 w-full max-w-[220px] bg-gray-200 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-blue-600"
+              initial={{ width: `${progress}%`, backgroundColor: '#3B82F6' }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
+          <div className="text-xs text-gray-600 mt-1 sm:mt-0 sm:ml-3 whitespace-nowrap">
+            Question {currentQuestionIndex + 1}/{quizData.questions.length}
+          </div>
+        </div>
+      </div>
+
+      {/* Bloc central : question + options */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full px-2 max-w-xl mx-auto">
+        {!quizComplete ? (
+          <div className="w-full flex flex-col items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.h2 
+                key={currentQuestion.id}
+                className="text-lg md:text-xl font-semibold text-gray-800 mb-4 text-center"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+              >
+                {currentQuestion.text}
+              </motion.h2>
+            </AnimatePresence>
+            <div className="w-full flex flex-col gap-3 mb-2">
               <AnimatePresence mode="wait">
                 <motion.div 
                   key={currentQuestion.id}
@@ -302,19 +301,17 @@ export default function QuizPage({ params }: PageProps) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="space-y-3"
+                  className="w-full flex flex-col gap-3"
                 >
                   {currentQuestion.options.map((option, idx) => {
                     const optionId = idx.toString();
                     return (
-                    <motion.div
-                      key={optionId}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: idx * 0.1 }}
-                    >
-                      <div
-                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      <motion.button
+                        key={optionId}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: idx * 0.1 }}
+                        className={`w-full p-4 rounded-lg border-2 text-left transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-600 cursor-pointer ${
                           selectedOption === optionId 
                             ? 'border-blue-600 bg-blue-50' 
                             : 'border-gray-200 hover:border-blue-400'
@@ -326,109 +323,128 @@ export default function QuizPage({ params }: PageProps) {
                             : ''
                         }`}
                         onClick={() => handleOptionSelect(optionId)}
+                        aria-pressed={selectedOption === optionId}
+                        tabIndex={0}
+                        disabled={showFeedback}
                       >
-                        <div className="flex items-start">
-                          <div className="mr-3 mt-0.5">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                              selectedOption === optionId
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700'
-                            } ${
-                              showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
-                                ? 'bg-green-600 text-white'
-                                : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer
-                                ? 'bg-red-600 text-white'
-                                : ''
-                            }`}>
-                              {showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer ? (
-                                <CheckCircle className="w-4 h-4" />
-                              ) : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer ? (
-                                <XCircle className="w-4 h-4" />
-                              ) : (
-                                <span className="text-sm font-medium">{idx + 1}</span>
-                              )}
-                            </div>
+                        <div className="flex items-center">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 ${
+                            selectedOption === optionId
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-700'
+                          } ${
+                            showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
+                              ? 'bg-green-600 text-white'
+                              : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer
+                              ? 'bg-red-600 text-white'
+                              : ''
+                          }`}>
+                            {showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer ? (
+                              <CheckCircle className="w-4 h-4" />
+                            ) : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer ? (
+                              <XCircle className="w-4 h-4" />
+                            ) : (
+                              <span className="text-sm font-medium">{idx + 1}</span>
+                            )}
                           </div>
                           <span className="text-gray-800">{option.text}</span>
                         </div>
-                      </div>
-                    </motion.div>
-                  )})}
+                      </motion.button>
+                    );
+                  })}
                 </motion.div>
               </AnimatePresence>
             </div>
-            
+            {/* Feedback en overlay centré, sans décaler le bouton */}
             <AnimatePresence>
               {showFeedback && difficulty !== 'hard' && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className={`p-4 rounded-lg ${selectedOption === currentQuestion.correctAnswer ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'} mb-6`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-[90vw] max-w-md p-6 rounded-xl shadow-lg border text-center ${selectedOption === currentQuestion.correctAnswer ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+                  style={{ pointerEvents: 'none' }}
                 >
-                  <div className="flex items-start">
+                  <div className="flex flex-col items-center">
                     {selectedOption === currentQuestion.correctAnswer ? (
-                      <CheckCircle className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
+                      <CheckCircle className="w-8 h-8 text-green-600 mb-2" />
                     ) : (
-                      <XCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
+                      <XCircle className="w-8 h-8 text-red-600 mb-2" />
                     )}
-                    <div>
-                      <p className={`font-medium ${selectedOption === currentQuestion.correctAnswer ? 'text-green-800' : 'text-red-800'} mb-1`}>
-                        {selectedOption === currentQuestion.correctAnswer ? 'Bonne réponse !' : 'Réponse incorrecte'}
-                      </p>
-                      <p className="text-gray-700">{currentQuestion.explanation}</p>
-                    </div>
+                    <p className={`font-medium ${selectedOption === currentQuestion.correctAnswer ? 'text-green-800' : 'text-red-800'} mb-1`}>
+                      {selectedOption === currentQuestion.correctAnswer ? 'Bonne réponse !' : 'Réponse incorrecte'}
+                    </p>
+                    <p className="text-gray-700 text-sm">{currentQuestion.explanation}</p>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-            
-            <div className="flex justify-end">
-              {!showFeedback ? (
-                <motion.button
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-full shadow-md flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-                  whileHover={{ scale: selectedOption ? 1.05 : 1 }}
-                  whileTap={{ scale: selectedOption ? 0.95 : 1 }}
-                  onClick={() => selectedOption && handleAnswerSubmit(selectedOption)}
-                  disabled={!selectedOption}
-                >
-                  Valider ma réponse
-                </motion.button>
-              ) : (
-                <motion.button
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-full shadow-md flex items-center"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={goToNextQuestion}
-                >
-                  {currentQuestionIndex === quizData.questions.length - 1 ? (
-                    'Voir mes résultats'
-                  ) : (
-                    <>
-                      Question suivante
-                      <ChevronRight className="ml-1 w-5 h-5" />
-                    </>
-                  )}
-                </motion.button>
-              )}
-            </div>
           </div>
         ) : (
-          <QuizResults
-            score={score}
-            totalQuestions={quizData.questions.length}
-            passingScore={quizData.passingScore}
-            performance={performance}
-            onRestart={restartQuiz}
-            difficulty={difficulty}
-          />
+          <div className="w-full flex flex-col items-center justify-center h-full">
+            <QuizResults
+              score={score}
+              totalQuestions={quizData.questions.length}
+              passingScore={quizData.passingScore}
+              performance={performance}
+              onRestart={restartQuiz}
+              difficulty={difficulty}
+            />
+          </div>
         )}
-        
-        <div className="text-center text-sm text-gray-600 mt-6 flex items-center justify-center">
-          <Activity className="w-4 h-4 text-red-500 mr-2" />
-          <span>Quiz développé pour la formation en secourisme</span>
-        </div>
       </div>
+
+      {/* Footer : bouton de validation toujours visible */}
+      {!quizComplete && (
+        <div className="w-full px-4 pb-4 pt-2 flex flex-col items-center z-10 bg-gray-50">
+          <div className="flex items-center space-x-4 mb-2">
+            {difficulty !== 'hard' && (
+              <div className="flex items-center space-x-2">
+                <Award className="w-5 h-5 text-yellow-500" />
+                <span className="text-gray-700 font-medium">{score}/{currentQuestionIndex}</span>
+              </div>
+            )}
+            {difficulty !== 'easy' && (
+              <div className="flex items-center space-x-2">
+                <QuizTimer 
+                  timeLeft={timeLeft}
+                  totalTime={quizData.timePerQuestion}
+                  isTimeCritical={isTimeCritical}
+                />  
+              </div>
+            )}
+          </div>
+          <div className="w-full max-w-xl">
+            {!showFeedback ? (
+              <motion.button
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                whileHover={{ scale: selectedOption ? 1.05 : 1 }}
+                whileTap={{ scale: selectedOption ? 0.95 : 1 }}
+                onClick={() => selectedOption && handleAnswerSubmit(selectedOption)}
+                disabled={!selectedOption}
+              >
+                Valider ma réponse
+              </motion.button>
+            ) : (
+              <motion.button
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full shadow-md flex items-center justify-center text-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={goToNextQuestion}
+              >
+                {currentQuestionIndex === quizData.questions.length - 1 ? (
+                  'Voir mes résultats'
+                ) : (
+                  <>
+                    Question suivante
+                    <ChevronRight className="ml-1 w-5 h-5" />
+                  </>
+                )}
+              </motion.button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
