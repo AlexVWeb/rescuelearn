@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { SNVScenario } from '../interfaces/SNV';
@@ -33,74 +33,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
   const timeLimit = searchParams.get('time') ? parseInt(searchParams.get('time')!) : 60;
   const { id: scenarioId } = React.use(params);
 
-  useEffect(() => {
-    const fetchScenario = async () => {
-      try {
-        const data = await snvService.getScenarioById(parseInt(scenarioId));
-        
-        if (!data || !data.victimes || data.victimes.length === 0) {
-          throw new Error('Aucune victime trouvée dans le scénario');
-        }
-        
-        setScenario(data);
-        setTimeLeft(getTimeLimit(difficulty, timeLimit));
-        setGameOver(false);
-        setSelectedColor(null);
-        setShowExplanation(false);
-        
-        const order = Array.from({ length: data.victimes.length }, (_, i) => i);
-        if (isRandomMode) {
-          for (let i = order.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [order[i], order[j]] = [order[j], order[i]];
-          }
-        }
-        setVictimOrder(order);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Une erreur est survenue');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchScenario();
-  }, [scenarioId, difficulty, isRandomMode, timeLimit]);
-
-  useEffect(() => {
-    if (timeLeft > 0 && !gameOver && difficulty !== 'easy' && !showExplanation) {
-      const timer = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 10) {
-            setIsTimeCritical(true);
-          }
-          
-          if (prev <= 1) {
-            clearInterval(timer);
-            handleColorSelect(-1); // Sélection automatique si le temps est écoulé
-            return 0;
-          }
-          
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [timeLeft, gameOver, difficulty, showExplanation]);
-
-  const getTimeLimit = (difficulty: string, timeLimit: number) => {
-    switch (difficulty) {
-      case 'easy':
-        return 999999; // Un grand nombre pour simuler un temps illimité
-      case 'medium':
-        return timeLimit; // Utilise le temps sélectionné
-      case 'hard':
-        return 10; // 10 secondes fixes
-      default:
-        return 999999;
-    }
-  };
-
-  const handleColorSelect = (colorIndex: number) => {
+  const handleColorSelect = useCallback((colorIndex: number) => {
     if (gameOver || !scenario?.victimes) return;
 
     const currentVictim = scenario.victimes[victimOrder[currentVictimIndex]];
@@ -149,6 +82,68 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
         setPerformance({ stars, message });
       }
     }, 2000);
+  }, [gameOver, scenario, victimOrder, currentVictimIndex, score, difficulty, timeLimit]);
+
+  useEffect(() => {
+    const fetchScenario = async () => {
+      try {
+        const data = await snvService.getScenarioById(parseInt(scenarioId));
+        
+        if (!data || !data.victimes || data.victimes.length === 0) {
+          throw new Error('Aucune victime trouvée dans le scénario');
+        }
+        
+        setScenario(data);
+        setTimeLeft(getTimeLimit(difficulty, timeLimit));
+        setGameOver(false);
+        setSelectedColor(null);
+        setShowExplanation(false);
+        
+        const order = Array.from({ length: data.victimes.length }, (_, i) => i);
+        if (isRandomMode) {
+          for (let i = order.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [order[i], order[j]] = [order[j], order[i]];
+          }
+        }
+        setVictimOrder(order);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchScenario();
+  }, [scenarioId, difficulty, isRandomMode, timeLimit]);
+
+  useEffect(() => {
+    if (!gameOver && timeLeft > 0 && !showExplanation) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 0) {
+            setGameOver(true);
+            return 0;
+          }
+          
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [timeLeft, gameOver, difficulty, showExplanation, handleColorSelect]);
+
+  const getTimeLimit = (difficulty: string, timeLimit: number) => {
+    switch (difficulty) {
+      case 'easy':
+        return 999999; // Un grand nombre pour simuler un temps illimité
+      case 'medium':
+        return timeLimit; // Utilise le temps sélectionné
+      case 'hard':
+        return 10; // 10 secondes fixes
+      default:
+        return 999999;
+    }
   };
 
   const restartScenario = () => {
