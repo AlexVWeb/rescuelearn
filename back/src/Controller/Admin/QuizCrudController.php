@@ -72,6 +72,9 @@ class QuizCrudController extends AbstractCrudController
         yield IntegerField::new('timePerQuestion', 'Temps par question (sec)');
         yield IntegerField::new('passingScore', 'Score de réussite (%)');
         yield BooleanField::new('modeRandom', 'Mode aléatoire');
+        yield IntegerField::new('questionCount', 'Nombre de questions')
+            ->setTemplatePath('admin/field/question_count.html.twig')
+            ->onlyOnIndex();
         
         yield FormField::addPanel('Questions');
         yield CollectionField::new('questions', 'Questions')
