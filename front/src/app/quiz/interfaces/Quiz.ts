@@ -28,6 +28,7 @@ export interface ApiQuiz {
   questions: ApiQuestion[];
   modeRandom: boolean;
   level: QuizLevel;
+  questionCount: number;
 }
 
 // Interfaces pour le composant
@@ -51,6 +52,7 @@ export interface QuizComponentData {
   passingScore: number;
   modeRandom: boolean;
   level: string;
+  questionCount: number;
 }
 
 export interface Quiz {
@@ -63,6 +65,7 @@ export interface Quiz {
   passingScore: number;
   modeRandom: boolean;
   level: string;
+  questionCount: number;
 }
 
 export interface QuizCollection {

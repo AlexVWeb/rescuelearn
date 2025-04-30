@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, Activity, Loader2 } from 'lucide-react';
+import { Heart, Activity, Loader2, List } from 'lucide-react';
 import { Quiz, QuizCollection } from './interfaces/Quiz';
 import { EcgLine } from './components/EcgLine';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -131,7 +131,7 @@ const QuizCatalogue = () => {
                       <h3 className="font-bold text-gray-800 text-xl leading-tight min-h-[56px] flex items-center">{quiz.title}</h3>
                     </div>
                     
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="flex items-center bg-gray-50 p-3 rounded-lg">
                         <Activity className="w-5 h-5 text-blue-600 mr-3" />
                         <div>
@@ -145,6 +145,16 @@ const QuizCatalogue = () => {
                         <div>
                           <p className="text-sm font-medium text-gray-900">Score minimum requis</p>
                           <p className="text-sm text-gray-600">{quiz.passingScore}%</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="flex items-center bg-gray-50 p-3 rounded-lg">
+                        <List className="w-5 h-5 text-green-600 mr-3" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Nombre de questions</p>
+                          <p className="text-sm text-gray-600">{quiz.questionCount} questions</p>
                         </div>
                       </div>
                     </div>

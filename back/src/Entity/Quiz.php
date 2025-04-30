@@ -197,4 +197,13 @@ class Quiz
         $this->level = $level;
         return $this;
     }
+
+    /**
+     * @return int
+     */
+    #[Groups(['quiz:read'])]
+    public function getQuestionCount(): int
+    {
+        return $this->questions->count();
+    }
 }
