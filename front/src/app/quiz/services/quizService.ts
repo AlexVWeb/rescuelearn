@@ -20,7 +20,8 @@ const transformApiQuizToComponentData = (apiQuiz: ApiQuiz): QuizComponentData =>
     timePerQuestion: apiQuiz.timePerQuestion,
     passingScore: apiQuiz.passingScore,
     modeRandom: apiQuiz.modeRandom,
-    level: apiQuiz.level.name
+    level: apiQuiz.level.name,
+    questionCount: apiQuiz.questionCount
   };
 };
 
