@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useRouter } from 'next/navigation';
 import { snvService } from './services/snvService';
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -283,6 +284,7 @@ const SNVCatalogue = () => {
         </DialogContent>
       </Dialog>
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 };

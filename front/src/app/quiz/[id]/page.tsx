@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button";
 import { shuffleArray } from '../utils/utils';
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 interface PageProps {
   params: Promise<{
@@ -313,8 +314,8 @@ export default function QuizPage({ params }: PageProps) {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.3, delay: idx * 0.1 }}
                         className={`w-full p-4 rounded-lg border-2 text-left transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-600 cursor-pointer ${selectedOption === optionId
-                            ? 'border-blue-600 bg-blue-50'
-                            : 'border-gray-200 hover:border-blue-400'
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-200 hover:border-blue-400'
                           } ${showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
                             ? 'border-green-600 bg-green-50'
                             : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer
@@ -328,8 +329,8 @@ export default function QuizPage({ params }: PageProps) {
                       >
                         <div className="flex items-center">
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 ${selectedOption === optionId
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-700'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700'
                             } ${showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
                               ? 'bg-green-600 text-white'
                               : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer
@@ -443,6 +444,7 @@ export default function QuizPage({ params }: PageProps) {
         </div>
       )}
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 } 

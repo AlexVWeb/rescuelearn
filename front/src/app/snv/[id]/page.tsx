@@ -11,6 +11,7 @@ import { SnvResults } from '../components/SnvResults';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 interface PageParams {
   id: string;
@@ -417,6 +418,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
         </div>
       </div>
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 };

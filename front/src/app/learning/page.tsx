@@ -7,6 +7,7 @@ import { LearningFilters } from './components/LearningFilters';
 import { learningCardService } from './services/learningCardService';
 import { ApiLearningCard, ApiLearningCardFilters } from './interfaces/LearningCard';
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 type SortOption = 'random' | 'alphabetical';
 
@@ -148,8 +149,8 @@ export default function LearningPage() {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`rounded-md px-4 py-2 ${currentPage === page
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
                       }`}
                   >
                     {page}
@@ -164,6 +165,7 @@ export default function LearningPage() {
         </>
       )}
       <Analytics />
+      <SpeedInsights />
     </main>
   );
 } 
