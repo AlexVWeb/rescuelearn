@@ -8,6 +8,7 @@ import { EcgLine } from '../quiz/components/EcgLine';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
 import { snvService } from './services/snvService';
+import { Analytics } from "@vercel/analytics/react";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -80,7 +81,7 @@ const SNVCatalogue = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8 relative">
       <EcgLine />
-      
+
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12 relative z-10">
           <div className="inline-flex items-center space-x-2 mb-4">
@@ -91,7 +92,7 @@ const SNVCatalogue = () => {
             Entraînez-vous à la classification des victimes dans des situations d&apos;urgence à nombreuses victimes.
           </p>
         </div>
-        
+
         {loading && (
           <div className="flex justify-center items-center py-12">
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -105,7 +106,7 @@ const SNVCatalogue = () => {
         )}
 
         {!loading && !error && (
-          <motion.div 
+          <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
             initial="hidden"
             animate="visible"
@@ -122,7 +123,7 @@ const SNVCatalogue = () => {
                     <div className="bg-yellow-50 -mx-6 -mt-6 p-6 border-b border-yellow-100 mb-6">
                       <h3 className="font-bold text-gray-800 text-xl leading-tight min-h-[56px] flex items-center">{scenario.title}</h3>
                     </div>
-                    
+
                     <div className="space-y-4">
                       <div className="flex items-center bg-gray-50 p-3 rounded-lg">
                         <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3" />
@@ -143,7 +144,7 @@ const SNVCatalogue = () => {
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     onClick={() => {
                       setSelectedScenarioId(scenario.id);
                       setIsModalOpen(true);
@@ -209,14 +210,12 @@ const SNVCatalogue = () => {
               </div>
               <button
                 onClick={() => setIsRandomMode(!isRandomMode)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  isRandomMode ? 'bg-yellow-600' : 'bg-gray-200'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isRandomMode ? 'bg-yellow-600' : 'bg-gray-200'
+                  }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    isRandomMode ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isRandomMode ? 'translate-x-6' : 'translate-x-1'
+                    }`}
                 />
               </button>
             </div>
@@ -283,6 +282,7 @@ const SNVCatalogue = () => {
           </div>
         </DialogContent>
       </Dialog>
+      <Analytics />
     </div>
   );
 };

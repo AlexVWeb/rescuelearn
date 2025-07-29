@@ -10,6 +10,7 @@ import { QuizTimer } from '../../quiz/components/QuizTimer';
 import { SnvResults } from '../components/SnvResults';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Analytics } from "@vercel/analytics/react";
 
 interface PageParams {
   id: string;
@@ -30,7 +31,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
   const [performance, setPerformance] = useState({ stars: 0, message: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   const searchParams = useSearchParams();
   const difficulty = searchParams.get('difficulty') as 'easy' | 'medium' | 'hard';
   const isRandomMode = searchParams.get('random') === 'true';
@@ -63,7 +64,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
 
     setSelectedColor(colorIndex);
     const isCorrect = colorIndex === currentVictim.correctAnswer;
-    
+
     let newScore = score;
     if (isCorrect) {
       newScore = score + 1;
@@ -71,10 +72,10 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
     }
 
     setShowExplanation(true);
-    
+
     setTimeout(() => {
       if (!scenario.victimes) return;
-      
+
       if (currentVictimIndex < scenario.victimes.length - 1) {
         setCurrentVictimIndex(prev => prev + 1);
         setSelectedColor(null);
@@ -86,7 +87,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
         const percentage = (newScore / scenario.victimes.length) * 100;
         let stars = 0;
         let message = '';
-        
+
         if (percentage >= 90) {
           stars = 3;
           message = "Excellent ! Vous maîtrisez parfaitement la classification des victimes.";
@@ -100,7 +101,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
           stars = 0;
           message = "Vous devez approfondir vos connaissances en classification des victimes.";
         }
-        
+
         setPerformance({ stars, message });
       }
     }, 2000);
@@ -110,17 +111,17 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
     const fetchScenario = async () => {
       try {
         const data = await snvService.getScenarioById(parseInt(scenarioId));
-        
+
         if (!data || !data.victimes || data.victimes.length === 0) {
           throw new Error('Aucune victime trouvée dans le scénario');
         }
-        
+
         setScenario(data);
         setTimeLeft(getTimeLimit(difficulty, timeLimit));
         setGameOver(false);
         setSelectedColor(null);
         setShowExplanation(false);
-        
+
         const order = Array.from({ length: data.victimes.length }, (_, i) => i);
         if (isRandomMode) {
           for (let i = order.length - 1; i > 0; i--) {
@@ -147,7 +148,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
             setGameOver(true);
             return 0;
           }
-          
+
           return prev - 1;
         });
       }, 1000);
@@ -215,7 +216,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
   ];
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-between bg-gray-50 overflow-hidden" style={{minHeight: '100vh'}}>
+    <div className="w-full h-full flex flex-col items-center justify-between bg-gray-50 overflow-hidden" style={{ minHeight: '100vh' }}>
       <div className="w-full flex-1 flex flex-col items-center px-4 py-6 overflow-y-auto">
         <div className="w-full max-w-4xl">
           <div className="w-full flex flex-col items-center px-2 pt-3 pb-2 bg-gray-50 z-10 sm:flex-row sm:justify-between sm:items-end sm:px-4">
@@ -339,7 +340,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center space-x-3">
                   {difficulty !== 'easy' && (
-                    <QuizTimer 
+                    <QuizTimer
                       timeLeft={timeLeft}
                       totalTime={getTimeLimit(difficulty, timeLimit)}
                       isTimeCritical={isTimeCritical}
@@ -363,7 +364,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
                 {colors.map((color, index) => {
                   const isSelected = selectedColor === index;
                   const isCorrect = index === currentVictim?.correctAnswer;
-                  
+
                   return (
                     <button
                       key={color.name}
@@ -415,6 +416,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
           )}
         </div>
       </div>
+      <Analytics />
     </div>
   );
 };

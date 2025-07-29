@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { shuffleArray } from '../utils/utils';
+import { Analytics } from "@vercel/analytics/react";
 
 interface PageProps {
   params: Promise<{
@@ -104,9 +105,9 @@ export default function QuizPage({ params }: PageProps) {
 
   const handleAnswerSubmit = useCallback((optionId: string | null) => {
     if (!quizData) return;
-    
+
     setShowFeedback(true);
-    
+
     if (optionId === quizData.questions[currentQuestionIndex].correctAnswer) {
       setScore(prevScore => prevScore + 1);
     }
@@ -121,13 +122,13 @@ export default function QuizPage({ params }: PageProps) {
         if (prev <= 10) {
           setIsTimeCritical(true);
         }
-        
+
         if (prev <= 1) {
           clearInterval(timer);
           handleAnswerSubmit(null);
           return 0;
         }
-        
+
         return prev - 1;
       });
     }, 1000);
@@ -173,7 +174,7 @@ export default function QuizPage({ params }: PageProps) {
       const percentage = (score / quizData.questions.length) * 100;
       let stars = 0;
       let message = '';
-      
+
       if (percentage >= 90) {
         stars = 3;
         message = "Excellent ! Vous maîtrisez les gestes qui sauvent.";
@@ -187,7 +188,7 @@ export default function QuizPage({ params }: PageProps) {
         stars = 0;
         message = "Vous devez approfondir vos connaissances en secourisme.";
       }
-      
+
       setPerformance({ stars, message });
     } else {
       setCurrentQuestionIndex(prevIndex => prevIndex + 1);
@@ -214,7 +215,7 @@ export default function QuizPage({ params }: PageProps) {
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-between bg-gray-50 overflow-hidden" style={{minHeight: '100vh'}}>
+    <div className="w-full h-full flex flex-col items-center justify-between bg-gray-50 overflow-hidden" style={{ minHeight: '100vh' }}>
       {/* Header responsive */}
       <div className="w-full flex flex-col items-center px-2 pt-3 pb-2 bg-gray-50 z-10 sm:flex-row sm:justify-between sm:items-end sm:px-4">
         {/* Ligne du haut : retour + titre */}
@@ -282,7 +283,7 @@ export default function QuizPage({ params }: PageProps) {
         {!quizComplete ? (
           <div className="w-full flex flex-col items-center justify-center">
             <AnimatePresence mode="wait">
-              <motion.h2 
+              <motion.h2
                 key={currentQuestion.id}
                 className="text-lg md:text-xl font-semibold text-gray-800 mb-4 text-center"
                 initial={{ opacity: 0, y: 20 }}
@@ -295,7 +296,7 @@ export default function QuizPage({ params }: PageProps) {
             </AnimatePresence>
             <div className="w-full flex flex-col gap-3 mb-2">
               <AnimatePresence mode="wait">
-                <motion.div 
+                <motion.div
                   key={currentQuestion.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -311,34 +312,30 @@ export default function QuizPage({ params }: PageProps) {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.3, delay: idx * 0.1 }}
-                        className={`w-full p-4 rounded-lg border-2 text-left transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-600 cursor-pointer ${
-                          selectedOption === optionId 
-                            ? 'border-blue-600 bg-blue-50' 
+                        className={`w-full p-4 rounded-lg border-2 text-left transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-600 cursor-pointer ${selectedOption === optionId
+                            ? 'border-blue-600 bg-blue-50'
                             : 'border-gray-200 hover:border-blue-400'
-                        } ${
-                          showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
+                          } ${showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
                             ? 'border-green-600 bg-green-50'
                             : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer
-                            ? 'border-red-600 bg-red-50'
-                            : ''
-                        }`}
+                              ? 'border-red-600 bg-red-50'
+                              : ''
+                          }`}
                         onClick={() => handleOptionSelect(optionId)}
                         aria-pressed={selectedOption === optionId}
                         tabIndex={0}
                         disabled={showFeedback}
                       >
                         <div className="flex items-center">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 ${
-                            selectedOption === optionId
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 ${selectedOption === optionId
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-100 text-gray-700'
-                          } ${
-                            showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
+                            } ${showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
                               ? 'bg-green-600 text-white'
                               : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer
-                              ? 'bg-red-600 text-white'
-                              : ''
-                          }`}>
+                                ? 'bg-red-600 text-white'
+                                : ''
+                            }`}>
                             {showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer ? (
                               <CheckCircle className="w-4 h-4" />
                             ) : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer ? (
@@ -406,11 +403,11 @@ export default function QuizPage({ params }: PageProps) {
             )}
             {difficulty !== 'easy' && (
               <div className="flex items-center space-x-2">
-                <QuizTimer 
+                <QuizTimer
                   timeLeft={timeLeft}
                   totalTime={quizData.timePerQuestion}
                   isTimeCritical={isTimeCritical}
-                />  
+                />
               </div>
             )}
           </div>
@@ -445,6 +442,7 @@ export default function QuizPage({ params }: PageProps) {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 } 

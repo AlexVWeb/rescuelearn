@@ -1,3 +1,5 @@
+import { Analytics } from "@vercel/analytics/react";
+
 export default function QuizLayout({
   children,
 }: {
@@ -6,6 +8,7 @@ export default function QuizLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       {children}
+      <Analytics />
     </div>
   );
 } 

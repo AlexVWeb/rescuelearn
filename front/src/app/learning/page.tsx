@@ -6,7 +6,7 @@ import { LearningCard } from './components/LearningCard';
 import { LearningFilters } from './components/LearningFilters';
 import { learningCardService } from './services/learningCardService';
 import { ApiLearningCard, ApiLearningCardFilters } from './interfaces/LearningCard';
-
+import { Analytics } from "@vercel/analytics/react";
 
 type SortOption = 'random' | 'alphabetical';
 
@@ -139,7 +139,7 @@ export default function LearningPage() {
               />
             ))}
           </div>
-          
+
           {totalPages > 1 && (
             <div className="mt-8 flex flex-col items-center gap-4">
               <div className="flex gap-2">
@@ -147,11 +147,10 @@ export default function LearningPage() {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`rounded-md px-4 py-2 ${
-                      currentPage === page
+                    className={`rounded-md px-4 py-2 ${currentPage === page
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -164,6 +163,7 @@ export default function LearningPage() {
           )}
         </>
       )}
+      <Analytics />
     </main>
   );
 } 
