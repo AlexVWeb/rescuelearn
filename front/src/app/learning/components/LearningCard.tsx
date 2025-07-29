@@ -14,16 +14,11 @@ interface LearningCardProps {
 }
 
 export function LearningCard({ theme, niveau, info, reference, pdfUrl, className }: LearningCardProps) {
-  const handleReferenceClick = (e: React.MouseEvent) => {
+  const handleReferenceClick = (e: React.MouseEvent, reference: string) => {
     e.stopPropagation();
-    if (!pdfUrl) return;
-    
-    // Extraire le numéro de page de la référence
     const pageMatch = reference.match(/Page (\d+)/);
     const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
-    
-    // Ouvrir le PDF dans un nouvel onglet avec le numéro de page
-    window.open(`${pdfUrl}#page=${pageNumber}`, '_blank');
+    window.open(`/referenciels/PSE1_PSE2.pdf#page=${pageNumber}`, '_blank');
   };
 
   return (
@@ -50,12 +45,12 @@ export function LearningCard({ theme, niveau, info, reference, pdfUrl, className
         </div>
 
         {reference && (
-          <div 
+          <div
             className={cn(
               'mt-4 flex items-center text-sm transition-colors',
               pdfUrl ? 'cursor-pointer text-blue-600 hover:text-blue-800' : 'text-gray-500'
             )}
-            onClick={handleReferenceClick}
+            onClick={(e) => handleReferenceClick(e, reference)}
           >
             <BookOpen className={cn(
               'mr-2 h-4 w-4',
