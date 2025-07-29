@@ -15,14 +15,14 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://rescuelearn.com'),
+  metadataBase: new URL('https://rescuelearn.fr'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: 'RescueLearn - Plateforme d\'apprentissage du secourisme',
     description: 'Votre plateforme complète pour l\'apprentissage du secourisme. Quiz interactifs et scénarios SNV pour maîtriser les gestes qui sauvent.',
-    url: 'https://rescuelearn.com',
+    url: 'https://rescuelearn.fr',
     siteName: 'RescueLearn',
     locale: 'fr_FR',
     type: 'website',
