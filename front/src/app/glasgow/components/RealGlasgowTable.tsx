@@ -5,7 +5,7 @@ export function RealGlasgowTable() {
     <div className="w-full">
       <div className="mb-4">
         <h3 className="text-xl font-semibold text-gray-900">Tableau de référence (officiel)</h3>
-        <p className="text-sm text-gray-600">Libellés complets tels qu'enseignés classiquement.</p>
+        <p className="text-sm text-gray-600">{"Libellés complets tels qu'enseignés classiquement."}</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse border border-gray-300 bg-white">
