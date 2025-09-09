@@ -20,29 +20,36 @@ export function MobileMenu() {
       {isOpen && (
         <div className="absolute top-16 left-0 right-0 bg-white shadow-lg z-50">
           <nav className="flex flex-col p-4 space-y-4">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className="text-gray-700 hover:text-blue-600 px-4 py-2"
               onClick={() => setIsOpen(false)}
             >
               Accueil
             </Link>
-            <Link 
-              href="/quiz" 
+            <Link
+              href="/quiz"
               className="text-gray-700 hover:text-blue-600 px-4 py-2"
               onClick={() => setIsOpen(false)}
             >
               Quiz
             </Link>
-            <Link 
-              href="/snv" 
+            <Link
+              href="/snv"
               className="text-gray-700 hover:text-blue-600 px-4 py-2"
               onClick={() => setIsOpen(false)}
             >
               SNV
             </Link>
-            <Link 
-              href="/learning" 
+            <Link
+              href="/glasgow"
+              className="text-gray-700 hover:text-blue-600 px-4 py-2"
+              onClick={() => setIsOpen(false)}
+            >
+              Glasgow
+            </Link>
+            <Link
+              href="/learning"
               className="text-gray-700 hover:text-blue-600 px-4 py-2"
               onClick={() => setIsOpen(false)}
             >

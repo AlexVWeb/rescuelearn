@@ -101,6 +101,7 @@ export default function RootLayout({
                 <Link href="/" className="text-gray-700 hover:text-blue-600 transition-colors">Accueil</Link>
                 <Link href="/quiz" className="text-gray-700 hover:text-blue-600 transition-colors">Quiz</Link>
                 <Link href="/snv" className="text-gray-700 hover:text-blue-600 transition-colors">SNV</Link>
+                <Link href="/glasgow" className="text-gray-700 hover:text-blue-600 transition-colors">Glasgow</Link>
                 <Link href="/learning" className="text-gray-700 hover:text-blue-600 transition-colors">Cartes d&apos;apprentissage</Link>
               </div>
 
@@ -134,6 +135,7 @@ export default function RootLayout({
                 <ul className="mt-4 space-y-2">
                   <li><Link href="/quiz" className="text-sm text-gray-500 hover:text-blue-600">Quiz</Link></li>
                   <li><Link href="/snv" className="text-sm text-gray-500 hover:text-blue-600">Scénarios SNV</Link></li>
+                  <li><Link href="/glasgow" className="text-sm text-gray-500 hover:text-blue-600">Score de Glasgow</Link></li>
                   <li><Link href="/learning" className="text-sm text-gray-500 hover:text-blue-600">Cartes d&apos;apprentissage</Link></li>
                 </ul>
               </div>

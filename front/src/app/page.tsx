@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { Heart, AlertTriangle, BookOpen } from 'lucide-react';
+import { Heart, AlertTriangle, BookOpen, Brain } from 'lucide-react';
 import Link from 'next/link';
 import { LearningBar } from './learning/components/LearningBar';
 
@@ -78,6 +78,13 @@ export default function Home() {
                 Commencer un quiz
               </Link>
               <Link
+                href="/glasgow"
+                className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                aria-label="S'entraîner au Score de Glasgow"
+              >
+                Entraînement Glasgow
+              </Link>
+              <Link
                 href="/snv"
                 className="bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition-colors"
                 aria-label="Découvrir les scénarios SNV (Sauvetage à Nombreuses Victimes)"
@@ -95,7 +102,7 @@ export default function Home() {
           <h2 id="features-heading" className="text-3xl font-bold text-center text-gray-900 mb-12">
             Nos fonctionnalités
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
             <article className="bg-white p-8 rounded-xl shadow-sm aspect-square flex flex-col items-center justify-center text-center transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-blue-50">
               <Link
                 href="/quiz"
@@ -124,6 +131,22 @@ export default function Home() {
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Scénarios SNV</h3>
                 <p className="text-gray-600">
                   Entraînez-vous à la classification des victimes dans des situations d&apos;urgence à nombreuses victimes. Développez vos réflexes et votre prise de décision.
+                </p>
+              </Link>
+            </article>
+
+            <article className="bg-white p-8 rounded-xl shadow-sm aspect-square flex flex-col items-center justify-center text-center transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-purple-50">
+              <Link
+                href="/glasgow"
+                className="w-full h-full flex flex-col items-center justify-center"
+                aria-label="S'entraîner au Score de Glasgow"
+              >
+                <div className="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center mb-6" aria-hidden="true">
+                  <Brain className="w-8 h-8 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Score de Glasgow</h3>
+                <p className="text-gray-600">
+                  Entraînez-vous à l&apos;évaluation de l&apos;état de conscience avec notre tableau interactif. Maîtrisez les réponses oculaires, verbales et motrices.
                 </p>
               </Link>
             </article>
