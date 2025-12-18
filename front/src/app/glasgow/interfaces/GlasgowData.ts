@@ -27,3 +27,5 @@ export interface ScoreResult {
 export interface GlasgowTrainingProps {
     className?: string;
 }
+
+
