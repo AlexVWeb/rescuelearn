@@ -1,16 +1,29 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback, use } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Award, CheckCircle, XCircle, AlertTriangle, ChevronRight } from 'lucide-react';
-import { quizService } from '../services/quizService';
-import { QuizTimer } from '../components/QuizTimer';
-import { QuizResults } from '../components/QuizResults';
-import { QuizComponentData } from '../interfaces/Quiz';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import React, { useState, useEffect, useCallback, use } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Award,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  ChevronRight,
+} from "lucide-react";
+import { quizService } from "../services/quizService";
+import { QuizTimer } from "../components/QuizTimer";
+import { QuizResults } from "../components/QuizResults";
+import { QuizComponentData } from "../interfaces/Quiz";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { shuffleArray } from '../utils/utils';
+import { shuffleArray } from "../utils/utils";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -24,8 +37,11 @@ export default function QuizPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const difficulty = (searchParams.get('difficulty') || 'medium') as 'easy' | 'medium' | 'hard';
-  const isRandomMode = searchParams.get('random') === 'true';
+  const difficulty = (searchParams.get("difficulty") || "medium") as
+    | "easy"
+    | "medium"
+    | "hard";
+  const isRandomMode = searchParams.get("random") === "true";
   const [mounted, setMounted] = useState(false);
   const [quizData, setQuizData] = useState<QuizComponentData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +53,7 @@ export default function QuizPage({ params }: PageProps) {
   const [quizComplete, setQuizComplete] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
   const [isTimeCritical, setIsTimeCritical] = useState(false);
-  const [performance, setPerformance] = useState({ stars: 0, message: '' });
+  const [performance, setPerformance] = useState({ stars: 0, message: "" });
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -45,8 +61,8 @@ export default function QuizPage({ params }: PageProps) {
   }, []);
 
   useEffect(() => {
-    const header = document.body.getElementsByTagName('header')[0];
-    const footer = document.body.getElementsByTagName('footer')[0];
+    const header = document.body.getElementsByTagName("header")[0];
+    const footer = document.body.getElementsByTagName("footer")[0];
     if (header && footer) {
       header.classList.add("hidden");
       footer.classList.add("hidden");
@@ -64,14 +80,14 @@ export default function QuizPage({ params }: PageProps) {
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue = '';
-      return '';
+      e.returnValue = "";
+      return "";
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, []);
 
@@ -85,7 +101,7 @@ export default function QuizPage({ params }: PageProps) {
           // Mélanger les questions après avoir reçu les données
           const shuffledData = {
             ...data,
-            questions: shuffleArray(data.questions)
+            questions: shuffleArray(data.questions),
           };
           setQuizData(shuffledData);
         } else {
@@ -94,8 +110,10 @@ export default function QuizPage({ params }: PageProps) {
         setTimeLeft(data.timePerQuestion);
         setError(null);
       } catch (err) {
-        console.error('Erreur lors du chargement du quiz:', err);
-        setError("Erreur lors du chargement du quiz. Veuillez vérifier que l'ID est correct.");
+        console.error("Erreur lors du chargement du quiz:", err);
+        setError(
+          "Erreur lors du chargement du quiz. Veuillez vérifier que l'ID est correct."
+        );
       } finally {
         setLoading(false);
       }
@@ -104,22 +122,25 @@ export default function QuizPage({ params }: PageProps) {
     fetchQuiz();
   }, [resolvedParams.id, mounted, isRandomMode]);
 
-  const handleAnswerSubmit = useCallback((optionId: string | null) => {
-    if (!quizData) return;
+  const handleAnswerSubmit = useCallback(
+    (optionId: string | null) => {
+      if (!quizData) return;
 
-    setShowFeedback(true);
+      setShowFeedback(true);
 
-    if (optionId === quizData.questions[currentQuestionIndex].correctAnswer) {
-      setScore(prevScore => prevScore + 1);
-    }
-  }, [quizData, currentQuestionIndex]);
+      if (optionId === quizData.questions[currentQuestionIndex].correctAnswer) {
+        setScore((prevScore) => prevScore + 1);
+      }
+    },
+    [quizData, currentQuestionIndex]
+  );
 
   useEffect(() => {
     if (!mounted || !quizData || quizComplete || showFeedback) return;
-    if (difficulty === 'easy') return; // Désactive complètement le chronomètre en mode facile
+    if (difficulty === "easy") return; // Désactive complètement le chronomètre en mode facile
 
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
+      setTimeLeft((prev) => {
         if (prev <= 10) {
           setIsTimeCritical(true);
         }
@@ -135,7 +156,15 @@ export default function QuizPage({ params }: PageProps) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [currentQuestionIndex, quizComplete, showFeedback, quizData, mounted, handleAnswerSubmit, difficulty]);
+  }, [
+    currentQuestionIndex,
+    quizComplete,
+    showFeedback,
+    quizData,
+    mounted,
+    handleAnswerSubmit,
+    difficulty,
+  ]);
 
   if (!mounted) {
     return null;
@@ -143,17 +172,17 @@ export default function QuizPage({ params }: PageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-32 w-32 animate-spin rounded-full border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   if (error || !quizData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-500 text-center">
-          <AlertTriangle className="w-16 h-16 mx-auto mb-4" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center text-red-500">
+          <AlertTriangle className="mx-auto mb-4 h-16 w-16" />
           <p className="text-xl">{error || "Une erreur est survenue"}</p>
         </div>
       </div>
@@ -161,7 +190,8 @@ export default function QuizPage({ params }: PageProps) {
   }
 
   const currentQuestion = quizData.questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / quizData.questions.length) * 100;
+  const progress =
+    ((currentQuestionIndex + 1) / quizData.questions.length) * 100;
 
   const handleOptionSelect = (optionId: string) => {
     if (!showFeedback) {
@@ -174,7 +204,7 @@ export default function QuizPage({ params }: PageProps) {
       setQuizComplete(true);
       const percentage = (score / quizData.questions.length) * 100;
       let stars = 0;
-      let message = '';
+      let message = "";
 
       if (percentage >= 90) {
         stars = 3;
@@ -192,7 +222,7 @@ export default function QuizPage({ params }: PageProps) {
 
       setPerformance({ stars, message });
     } else {
-      setCurrentQuestionIndex(prevIndex => prevIndex + 1);
+      setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
       setSelectedOption(null);
       setShowFeedback(false);
       setTimeLeft(quizData.timePerQuestion);
@@ -212,43 +242,47 @@ export default function QuizPage({ params }: PageProps) {
 
   const handleQuit = () => {
     setDialogOpen(false);
-    router.push('/quiz');
+    router.push("/quiz");
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-between bg-gray-50 overflow-hidden" style={{ minHeight: '100vh' }}>
+    <div
+      className="flex h-full w-full flex-col items-center justify-between overflow-hidden bg-gray-50"
+      style={{ minHeight: "100vh" }}
+    >
       {/* Header responsive */}
-      <div className="w-full flex flex-col items-center px-2 pt-3 pb-2 bg-gray-50 z-10 sm:flex-row sm:justify-between sm:items-end sm:px-4">
+      <div className="z-10 flex w-full flex-col items-center bg-gray-50 px-2 pt-3 pb-2 sm:flex-row sm:items-end sm:justify-between sm:px-4">
         {/* Ligne du haut : retour + titre */}
-        <div className="w-full flex items-center justify-between sm:justify-start">
+        <div className="flex w-full items-center justify-between sm:justify-start">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <button
-                className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-3 rounded-full transition-all duration-200 shadow-sm hover:shadow cursor-pointer text-sm"
-              >
-                <ChevronRight className="w-4 h-4 rotate-180" />
+              <button className="flex cursor-pointer items-center space-x-2 rounded-full bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-200 hover:shadow">
+                <ChevronRight className="h-4 w-4 rotate-180" />
                 <span>Retour</span>
               </button>
             </DialogTrigger>
-            <DialogContent className="bg-white rounded-xl shadow-lg border-none p-6">
+            <DialogContent className="rounded-xl border-none bg-white p-6 shadow-lg">
               <DialogHeader className="mb-4">
-                <DialogTitle className="text-xl font-bold text-gray-800">Quitter le quiz ?</DialogTitle>
-                <DialogDescription className="text-gray-600 mt-2">
-                  Êtes-vous sûr de vouloir quitter ? Votre progression sera perdue.
+                <DialogTitle className="text-xl font-bold text-gray-800">
+                  Quitter le quiz ?
+                </DialogTitle>
+                <DialogDescription className="mt-2 text-gray-600">
+                  Êtes-vous sûr de vouloir quitter ? Votre progression sera
+                  perdue.
                 </DialogDescription>
               </DialogHeader>
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="mt-6 flex justify-end gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setDialogOpen(false)}
-                  className="bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
+                  className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                 >
                   Annuler
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={handleQuit}
-                  className="bg-red-500 hover:bg-red-600 text-white"
+                  className="bg-red-500 text-white hover:bg-red-600"
                 >
                   Quitter le quiz
                 </Button>
@@ -256,7 +290,7 @@ export default function QuizPage({ params }: PageProps) {
             </DialogContent>
           </Dialog>
           <h1
-            className="flex-1 text-base font-semibold text-gray-800 text-center mx-2 truncate max-w-[70vw] sm:max-w-xs overflow-hidden whitespace-nowrap"
+            className="mx-2 max-w-[70vw] flex-1 truncate overflow-hidden text-center text-base font-semibold whitespace-nowrap text-gray-800 sm:max-w-xs"
             title={quizData.title}
           >
             {quizData.title}
@@ -264,29 +298,29 @@ export default function QuizPage({ params }: PageProps) {
           <div className="w-8 sm:w-12" /> {/* Espace pour équilibrer */}
         </div>
         {/* Ligne du bas : progression */}
-        <div className="w-full flex flex-col items-center mt-2 sm:mt-0 sm:flex-row sm:justify-center">
-          <div className="h-2 w-full max-w-[220px] bg-gray-200 rounded-full overflow-hidden">
+        <div className="mt-2 flex w-full flex-col items-center sm:mt-0 sm:flex-row sm:justify-center">
+          <div className="h-2 w-full max-w-[220px] overflow-hidden rounded-full bg-gray-200">
             <motion.div
               className="h-full bg-blue-600"
-              initial={{ width: `${progress}%`, backgroundColor: '#3B82F6' }}
+              initial={{ width: `${progress}%`, backgroundColor: "#3B82F6" }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5 }}
             />
           </div>
-          <div className="text-xs text-gray-600 mt-1 sm:mt-0 sm:ml-3 whitespace-nowrap">
+          <div className="mt-1 text-xs whitespace-nowrap text-gray-600 sm:mt-0 sm:ml-3">
             Question {currentQuestionIndex + 1}/{quizData.questions.length}
           </div>
         </div>
       </div>
 
       {/* Bloc central : question + options */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full px-2 max-w-xl mx-auto">
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-2">
         {!quizComplete ? (
-          <div className="w-full flex flex-col items-center justify-center">
+          <div className="flex w-full flex-col items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.h2
                 key={currentQuestion.id}
-                className="text-lg md:text-xl font-semibold text-gray-800 mb-4 text-center"
+                className="mb-4 text-center text-lg font-semibold text-gray-800 md:text-xl"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -295,7 +329,7 @@ export default function QuizPage({ params }: PageProps) {
                 {currentQuestion.text}
               </motion.h2>
             </AnimatePresence>
-            <div className="w-full flex flex-col gap-3 mb-2">
+            <div className="mb-2 flex w-full flex-col gap-3">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentQuestion.id}
@@ -303,7 +337,7 @@ export default function QuizPage({ params }: PageProps) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="w-full flex flex-col gap-3"
+                  className="flex w-full flex-col gap-3"
                 >
                   {currentQuestion.options.map((option, idx) => {
                     const optionId = idx.toString();
@@ -313,36 +347,56 @@ export default function QuizPage({ params }: PageProps) {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.3, delay: idx * 0.1 }}
-                        className={`w-full p-4 rounded-lg border-2 text-left transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-600 cursor-pointer ${selectedOption === optionId
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-400'
-                          } ${showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
-                            ? 'border-green-600 bg-green-50'
-                            : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer
-                              ? 'border-red-600 bg-red-50'
-                              : ''
-                          }`}
+                        className={`w-full cursor-pointer rounded-lg border-2 p-4 text-left transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-400 focus:outline-none ${
+                          selectedOption === optionId
+                            ? "border-blue-600 bg-blue-50"
+                            : "border-gray-200 hover:border-blue-400"
+                        } ${
+                          showFeedback &&
+                          difficulty !== "hard" &&
+                          optionId === currentQuestion.correctAnswer
+                            ? "border-green-600 bg-green-50"
+                            : showFeedback &&
+                                selectedOption === optionId &&
+                                optionId !== currentQuestion.correctAnswer
+                              ? "border-red-600 bg-red-50"
+                              : ""
+                        }`}
                         onClick={() => handleOptionSelect(optionId)}
                         aria-pressed={selectedOption === optionId}
                         tabIndex={0}
                         disabled={showFeedback}
                       >
                         <div className="flex items-center">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 ${selectedOption === optionId
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-700'
-                            } ${showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer
-                              ? 'bg-green-600 text-white'
-                              : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer
-                                ? 'bg-red-600 text-white'
-                                : ''
-                            }`}>
-                            {showFeedback && difficulty !== 'hard' && optionId === currentQuestion.correctAnswer ? (
-                              <CheckCircle className="w-4 h-4" />
-                            ) : showFeedback && selectedOption === optionId && optionId !== currentQuestion.correctAnswer ? (
-                              <XCircle className="w-4 h-4" />
+                          <div
+                            className={`mr-3 flex h-6 w-6 items-center justify-center rounded-full ${
+                              selectedOption === optionId
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-100 text-gray-700"
+                            } ${
+                              showFeedback &&
+                              difficulty !== "hard" &&
+                              optionId === currentQuestion.correctAnswer
+                                ? "bg-green-600 text-white"
+                                : showFeedback &&
+                                    selectedOption === optionId &&
+                                    optionId !== currentQuestion.correctAnswer
+                                  ? "bg-red-600 text-white"
+                                  : ""
+                            }`}
+                          >
+                            {showFeedback &&
+                            difficulty !== "hard" &&
+                            optionId === currentQuestion.correctAnswer ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : showFeedback &&
+                              selectedOption === optionId &&
+                              optionId !== currentQuestion.correctAnswer ? (
+                              <XCircle className="h-4 w-4" />
                             ) : (
-                              <span className="text-sm font-medium">{idx + 1}</span>
+                              <span className="text-sm font-medium">
+                                {idx + 1}
+                              </span>
                             )}
                           </div>
                           <span className="text-gray-800">{option.text}</span>
@@ -355,31 +409,37 @@ export default function QuizPage({ params }: PageProps) {
             </div>
             {/* Feedback en overlay centré, sans décaler le bouton */}
             <AnimatePresence>
-              {showFeedback && difficulty !== 'hard' && (
+              {showFeedback && difficulty !== "hard" && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
-                  className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-[90vw] max-w-md p-6 rounded-xl shadow-lg border text-center ${selectedOption === currentQuestion.correctAnswer ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
-                  style={{ pointerEvents: 'none' }}
+                  className={`absolute top-1/2 left-1/2 z-20 w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border p-6 text-center shadow-lg ${selectedOption === currentQuestion.correctAnswer ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
+                  style={{ pointerEvents: "none" }}
                 >
                   <div className="flex flex-col items-center">
                     {selectedOption === currentQuestion.correctAnswer ? (
-                      <CheckCircle className="w-8 h-8 text-green-600 mb-2" />
+                      <CheckCircle className="mb-2 h-8 w-8 text-green-600" />
                     ) : (
-                      <XCircle className="w-8 h-8 text-red-600 mb-2" />
+                      <XCircle className="mb-2 h-8 w-8 text-red-600" />
                     )}
-                    <p className={`font-medium ${selectedOption === currentQuestion.correctAnswer ? 'text-green-800' : 'text-red-800'} mb-1`}>
-                      {selectedOption === currentQuestion.correctAnswer ? 'Bonne réponse !' : 'Réponse incorrecte'}
+                    <p
+                      className={`font-medium ${selectedOption === currentQuestion.correctAnswer ? "text-green-800" : "text-red-800"} mb-1`}
+                    >
+                      {selectedOption === currentQuestion.correctAnswer
+                        ? "Bonne réponse !"
+                        : "Réponse incorrecte"}
                     </p>
-                    <p className="text-gray-700 text-sm">{currentQuestion.explanation}</p>
+                    <p className="text-sm text-gray-700">
+                      {currentQuestion.explanation}
+                    </p>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         ) : (
-          <div className="w-full flex flex-col items-center justify-center h-full">
+          <div className="flex h-full w-full flex-col items-center justify-center">
             <QuizResults
               score={score}
               totalQuestions={quizData.questions.length}
@@ -394,15 +454,17 @@ export default function QuizPage({ params }: PageProps) {
 
       {/* Footer : bouton de validation toujours visible */}
       {!quizComplete && (
-        <div className="w-full px-4 pb-4 pt-2 flex flex-col items-center z-10 bg-gray-50">
-          <div className="flex items-center space-x-4 mb-2">
-            {difficulty !== 'hard' && (
+        <div className="z-10 flex w-full flex-col items-center bg-gray-50 px-4 pt-2 pb-4">
+          <div className="mb-2 flex items-center space-x-4">
+            {difficulty !== "hard" && (
               <div className="flex items-center space-x-2">
-                <Award className="w-5 h-5 text-yellow-500" />
-                <span className="text-gray-700 font-medium">{score}/{currentQuestionIndex}</span>
+                <Award className="h-5 w-5 text-yellow-500" />
+                <span className="font-medium text-gray-700">
+                  {score}/{currentQuestionIndex}
+                </span>
               </div>
             )}
-            {difficulty !== 'easy' && (
+            {difficulty !== "easy" && (
               <div className="flex items-center space-x-2">
                 <QuizTimer
                   timeLeft={timeLeft}
@@ -415,27 +477,29 @@ export default function QuizPage({ params }: PageProps) {
           <div className="w-full max-w-xl">
             {!showFeedback ? (
               <motion.button
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                className="flex w-full items-center justify-center rounded-full bg-blue-600 px-6 py-3 text-lg font-medium text-white shadow-md hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 whileHover={{ scale: selectedOption ? 1.05 : 1 }}
                 whileTap={{ scale: selectedOption ? 0.95 : 1 }}
-                onClick={() => selectedOption && handleAnswerSubmit(selectedOption)}
+                onClick={() =>
+                  selectedOption && handleAnswerSubmit(selectedOption)
+                }
                 disabled={!selectedOption}
               >
                 Valider ma réponse
               </motion.button>
             ) : (
               <motion.button
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full shadow-md flex items-center justify-center text-lg"
+                className="flex w-full items-center justify-center rounded-full bg-blue-600 px-6 py-3 text-lg font-medium text-white shadow-md hover:bg-blue-700"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={goToNextQuestion}
               >
                 {currentQuestionIndex === quizData.questions.length - 1 ? (
-                  'Voir mes résultats'
+                  "Voir mes résultats"
                 ) : (
                   <>
                     Question suivante
-                    <ChevronRight className="ml-1 w-5 h-5" />
+                    <ChevronRight className="ml-1 h-5 w-5" />
                   </>
                 )}
               </motion.button>
@@ -447,4 +511,4 @@ export default function QuizPage({ params }: PageProps) {
       <SpeedInsights />
     </div>
   );
-} 
+}

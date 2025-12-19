@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { ApiLearningCard } from '@/app/(public)/learning/interfaces/LearningCard';
-import { learningCardService } from '@/app/(public)/learning/services/learningCardService';
-import { shuffleArray } from '@/app/(public)/quiz/utils/utils';
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { BookOpen, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ApiLearningCard } from "@/app/(public)/learning/interfaces/LearningCard";
+import { learningCardService } from "@/app/(public)/learning/services/learningCardService";
+import { shuffleArray } from "@/app/(public)/quiz/utils/utils";
 
 export function LearningBar() {
   const [cards, setCards] = useState<ApiLearningCard[]>([]);
@@ -25,10 +25,10 @@ export function LearningBar() {
         if (Array.isArray(fetchedCards)) {
           setCards(fetchedCards);
         } else {
-          setError('Format de données invalide');
+          setError("Format de données invalide");
         }
       } catch {
-        setError('Impossible de charger les cartes d&apos;apprentissage');
+        setError("Impossible de charger les cartes d&apos;apprentissage");
       } finally {
         setIsLoading(false);
       }
@@ -51,10 +51,16 @@ export function LearningBar() {
     e.stopPropagation();
     const pageMatch = reference.match(/Page (\d+)/);
     const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
-    window.open(`/referenciels/PSE1_PSE2.pdf#page=${pageNumber}`, '_blank');
+    window.open(`/referenciels/PSE1_PSE2.pdf#page=${pageNumber}`, "_blank");
   };
 
-  if (!isVisible || isLoading || error || !Array.isArray(cards) || cards.length === 0) {
+  if (
+    !isVisible ||
+    isLoading ||
+    error ||
+    !Array.isArray(cards) ||
+    cards.length === 0
+  ) {
     return null;
   }
 
@@ -72,25 +78,29 @@ export function LearningBar() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.5 }}
-        className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 z-50"
+        className="fixed right-0 bottom-0 left-0 z-50 border-t border-gray-200 bg-white shadow-lg"
       >
-        <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="mx-auto max-w-7xl px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex-shrink-0">
                 <BookOpen className="h-6 w-6 text-blue-600" />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-gray-900">{currentCard.theme}</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className="text-sm font-medium text-gray-900">
+                    {currentCard.theme}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
                     {currentCard.niveau}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-gray-600">{currentCard.info}</p>
                 <p
-                  className="mt-1 text-xs text-blue-600 cursor-pointer hover:text-blue-800"
-                  onClick={(e) => handleReferenceClick(e, currentCard.reference)}
+                  className="mt-1 cursor-pointer text-xs text-blue-600 hover:text-blue-800"
+                  onClick={(e) =>
+                    handleReferenceClick(e, currentCard.reference)
+                  }
                 >
                   {currentCard.reference}
                 </p>
@@ -98,22 +108,28 @@ export function LearningBar() {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => setCurrentIndex((prev) => (prev - 1 + cards.length) % cards.length)}
-                className="p-1 rounded-full hover:bg-gray-100"
+                onClick={() =>
+                  setCurrentIndex(
+                    (prev) => (prev - 1 + cards.length) % cards.length
+                  )
+                }
+                className="rounded-full p-1 hover:bg-gray-100"
                 aria-label="Carte précédente"
               >
                 <ChevronLeft className="h-5 w-5 text-gray-500" />
               </button>
               <button
-                onClick={() => setCurrentIndex((prev) => (prev + 1) % cards.length)}
-                className="p-1 rounded-full hover:bg-gray-100"
+                onClick={() =>
+                  setCurrentIndex((prev) => (prev + 1) % cards.length)
+                }
+                className="rounded-full p-1 hover:bg-gray-100"
                 aria-label="Carte suivante"
               >
                 <ChevronRight className="h-5 w-5 text-gray-500" />
               </button>
               <button
                 onClick={() => setIsVisible(false)}
-                className="p-1 rounded-full hover:bg-gray-100"
+                className="rounded-full p-1 hover:bg-gray-100"
                 aria-label="Fermer"
               >
                 <X className="h-5 w-5 text-gray-500" />
@@ -124,4 +140,4 @@ export function LearningBar() {
       </motion.div>
     </AnimatePresence>
   );
-} 
+}

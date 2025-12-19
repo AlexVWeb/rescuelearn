@@ -4,7 +4,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 export default function QuizLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -13,4 +13,4 @@ export default function QuizLayout({
       <SpeedInsights />
     </div>
   );
-} 
+}

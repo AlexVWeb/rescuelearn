@@ -10,9 +10,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: {
     default: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
-    template: "%s | RescueLearn"
+    template: "%s | RescueLearn",
   },
-  description: "RescueLearn est votre plateforme complète pour apprendre, tester et améliorer vos connaissances en secourisme. Quiz interactifs, formations en ligne, et ressources pratiques pour maîtriser les gestes qui sauvent.",
+  description:
+    "RescueLearn est votre plateforme complète pour apprendre, tester et améliorer vos connaissances en secourisme. Quiz interactifs, formations en ligne, et ressources pratiques pour maîtriser les gestes qui sauvent.",
   keywords: [
     "secourisme",
     "formation secourisme",
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
     "gestes qui sauvent",
     "PSC1",
     "PSE1",
-    "PSE2"
+    "PSE2",
   ],
   authors: [{ name: "RescueLearn Team" }],
   creator: "RescueLearn",
@@ -43,7 +44,8 @@ export const metadata: Metadata = {
     url: "https://rescuelearn.fr",
     siteName: "RescueLearn",
     title: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
-    description: "Apprenez, testez et améliorez vos connaissances en secourisme avec RescueLearn.",
+    description:
+      "Apprenez, testez et améliorez vos connaissances en secourisme avec RescueLearn.",
     images: [
       {
         url: "/og-image.jpg",
@@ -56,7 +58,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
-    description: "Apprenez, testez et améliorez vos connaissances en secourisme avec RescueLearn.",
+    description:
+      "Apprenez, testez et améliorez vos connaissances en secourisme avec RescueLearn.",
     images: ["/twitter-image.jpg"],
     creator: "@rescuelearn",
   },

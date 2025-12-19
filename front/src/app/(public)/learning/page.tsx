@@ -1,15 +1,18 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { LearningCard } from './components/LearningCard';
-import { LearningFilters } from './components/LearningFilters';
-import { learningCardService } from './services/learningCardService';
-import { ApiLearningCard, ApiLearningCardFilters } from './interfaces/LearningCard';
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { LearningCard } from "./components/LearningCard";
+import { LearningFilters } from "./components/LearningFilters";
+import { learningCardService } from "./services/learningCardService";
+import {
+  ApiLearningCard,
+  ApiLearningCardFilters,
+} from "./interfaces/LearningCard";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-type SortOption = 'random' | 'alphabetical';
+type SortOption = "random" | "alphabetical";
 
 export default function LearningPage() {
   const [allCards, setAllCards] = useState<ApiLearningCard[]>([]);
@@ -18,22 +21,25 @@ export default function LearningPage() {
   const [selectedNiveau, setSelectedNiveau] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(9);
-  const [sortOption, setSortOption] = useState<SortOption>('random');
+  const [sortOption, setSortOption] = useState<SortOption>("random");
   const [isLoading, setIsLoading] = useState(true);
-  const [filters, setFilters] = useState<ApiLearningCardFilters>({ themes: [], niveaux: [] });
+  const [filters, setFilters] = useState<ApiLearningCardFilters>({
+    themes: [],
+    niveaux: [],
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [cards, fetchedFilters] = await Promise.all([
           learningCardService.getAllCards(),
-          learningCardService.getThemesAndNiveaux()
+          learningCardService.getThemesAndNiveaux(),
         ]);
         setAllCards(cards);
         setFilteredCards(cards);
         setFilters(fetchedFilters);
       } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
+        console.error("Erreur lors du chargement des données:", error);
       } finally {
         setIsLoading(false);
       }
@@ -54,7 +60,7 @@ export default function LearningPage() {
     }
 
     // Appliquer le tri
-    if (sortOption === 'alphabetical') {
+    if (sortOption === "alphabetical") {
       filtered.sort((a, b) => a.theme.localeCompare(b.theme));
     } else {
       // Mélanger aléatoirement
@@ -103,14 +109,15 @@ export default function LearningPage() {
           Cartes d&apos;apprentissage
         </h1>
         <p className="text-gray-600">
-          Explorez nos cartes d&apos;apprentissage et améliorez vos connaissances
+          Explorez nos cartes d&apos;apprentissage et améliorez vos
+          connaissances
         </p>
       </motion.div>
 
       <div className="mb-8">
         <LearningFilters
-          themes={filters.themes.map(t => t.theme)}
-          niveaux={filters.niveaux.map(n => n.niveau)}
+          themes={filters.themes.map((t) => t.theme)}
+          niveaux={filters.niveaux.map((n) => n.niveau)}
           selectedTheme={selectedTheme}
           selectedNiveau={selectedNiveau}
           onThemeChange={setSelectedTheme}
@@ -124,7 +131,9 @@ export default function LearningPage() {
 
       {paginatedCards.length === 0 ? (
         <div className="flex min-h-[400px] items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50">
-          <p className="text-gray-500">Aucune carte ne correspond à vos filtres</p>
+          <p className="text-gray-500">
+            Aucune carte ne correspond à vos filtres
+          </p>
         </div>
       ) : (
         <>
@@ -144,21 +153,25 @@ export default function LearningPage() {
           {totalPages > 1 && (
             <div className="mt-8 flex flex-col items-center gap-4">
               <div className="flex gap-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`rounded-md px-4 py-2 ${currentPage === page
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`rounded-md px-4 py-2 ${
+                        currentPage === page
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-200 text-gray-800 hover:bg-gray-300"
                       }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
               </div>
               <p className="text-sm text-gray-600">
-                Affichage de {paginatedCards.length} éléments sur {filteredCards.length}
+                Affichage de {paginatedCards.length} éléments sur{" "}
+                {filteredCards.length}
               </p>
             </div>
           )}
@@ -168,4 +181,4 @@ export default function LearningPage() {
       <SpeedInsights />
     </main>
   );
-} 
+}

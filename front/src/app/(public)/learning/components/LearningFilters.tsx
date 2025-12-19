@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface LearningFiltersProps {
   themes: string[];
@@ -13,8 +13,8 @@ interface LearningFiltersProps {
   onNiveauChange: (niveau: string | null) => void;
   itemsPerPage: number;
   onItemsPerPageChange: (value: number) => void;
-  sortOption: 'random' | 'alphabetical';
-  onSortChange: (value: 'random' | 'alphabetical') => void;
+  sortOption: "random" | "alphabetical";
+  onSortChange: (value: "random" | "alphabetical") => void;
 }
 
 const ITEMS_PER_PAGE_OPTIONS = [9, 18, 27, 36];
@@ -36,16 +36,19 @@ export function LearningFilters({
   const activeFilters = [
     ...(selectedTheme ? [`Thème: ${selectedTheme}`] : []),
     ...(selectedNiveau ? [`Niveau: ${selectedNiveau}`] : []),
-    ...(sortOption === 'alphabetical' ? ['Tri: Alphabétique'] : []),
+    ...(sortOption === "alphabetical" ? ["Tri: Alphabétique"] : []),
     `Éléments: ${itemsPerPage}`,
   ];
 
-  const hasActiveFilters = selectedTheme !== null || selectedNiveau !== null || sortOption === 'alphabetical';
+  const hasActiveFilters =
+    selectedTheme !== null ||
+    selectedNiveau !== null ||
+    sortOption === "alphabetical";
 
   const handleResetFilters = () => {
     onThemeChange(null);
     onNiveauChange(null);
-    onSortChange('random');
+    onSortChange("random");
   };
 
   return (
@@ -58,7 +61,7 @@ export function LearningFilters({
               className="flex w-fit items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
             >
               <span className="text-sm font-medium">
-                {isFiltersOpen ? 'Masquer les filtres' : 'Afficher les filtres'}
+                {isFiltersOpen ? "Masquer les filtres" : "Afficher les filtres"}
               </span>
               <motion.svg
                 animate={{ rotate: isFiltersOpen ? 180 : 0 }}
@@ -121,14 +124,14 @@ export function LearningFilters({
             <label className="text-sm text-gray-600">Trier par :</label>
             <div className="flex items-center gap-2">
               <motion.button
-                onClick={() => onSortChange('random')}
+                onClick={() => onSortChange("random")}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className={cn(
-                  'flex items-center gap-1 rounded-md border px-2 py-1 text-sm transition-colors',
-                  sortOption === 'random'
-                    ? 'border-blue-600 bg-blue-50 text-blue-600'
-                    : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                  "flex items-center gap-1 rounded-md border px-2 py-1 text-sm transition-colors",
+                  sortOption === "random"
+                    ? "border-blue-600 bg-blue-50 text-blue-600"
+                    : "border-gray-300 bg-white text-gray-600 hover:border-gray-400"
                 )}
                 title="Mode aléatoire"
               >
@@ -148,14 +151,14 @@ export function LearningFilters({
                 <span>Aléatoire</span>
               </motion.button>
               <motion.button
-                onClick={() => onSortChange('alphabetical')}
+                onClick={() => onSortChange("alphabetical")}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className={cn(
-                  'flex items-center gap-1 rounded-md border px-2 py-1 text-sm transition-colors',
-                  sortOption === 'alphabetical'
-                    ? 'border-blue-600 bg-blue-50 text-blue-600'
-                    : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                  "flex items-center gap-1 rounded-md border px-2 py-1 text-sm transition-colors",
+                  sortOption === "alphabetical"
+                    ? "border-blue-600 bg-blue-50 text-blue-600"
+                    : "border-gray-300 bg-white text-gray-600 hover:border-gray-400"
                 )}
                 title="Ordre alphabétique"
               >
@@ -198,22 +201,24 @@ export function LearningFilters({
         {isFiltersOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="mt-4 overflow-hidden"
           >
             <div className="grid gap-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm sm:grid-cols-2">
               <div>
-                <h3 className="mb-3 text-sm font-medium text-gray-900">Thèmes</h3>
+                <h3 className="mb-3 text-sm font-medium text-gray-900">
+                  Thèmes
+                </h3>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => onThemeChange(null)}
                     className={cn(
-                      'rounded-full px-4 py-2 text-sm transition-colors',
+                      "rounded-full px-4 py-2 text-sm transition-colors",
                       selectedTheme === null
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     )}
                   >
                     Tous
@@ -225,10 +230,10 @@ export function LearningFilters({
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       className={cn(
-                        'rounded-full px-4 py-2 text-sm transition-colors',
+                        "rounded-full px-4 py-2 text-sm transition-colors",
                         selectedTheme === theme
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       )}
                     >
                       {theme}
@@ -238,15 +243,17 @@ export function LearningFilters({
               </div>
 
               <div>
-                <h3 className="mb-3 text-sm font-medium text-gray-900">Niveaux</h3>
+                <h3 className="mb-3 text-sm font-medium text-gray-900">
+                  Niveaux
+                </h3>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => onNiveauChange(null)}
                     className={cn(
-                      'rounded-full px-4 py-2 text-sm transition-colors',
+                      "rounded-full px-4 py-2 text-sm transition-colors",
                       selectedNiveau === null
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     )}
                   >
                     Tous
@@ -258,10 +265,10 @@ export function LearningFilters({
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       className={cn(
-                        'rounded-full px-4 py-2 text-sm transition-colors',
+                        "rounded-full px-4 py-2 text-sm transition-colors",
                         selectedNiveau === niveau
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       )}
                     >
                       {niveau}
@@ -275,4 +282,4 @@ export function LearningFilters({
       </AnimatePresence>
     </div>
   );
-} 
+}

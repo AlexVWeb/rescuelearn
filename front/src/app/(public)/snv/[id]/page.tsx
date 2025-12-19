@@ -1,14 +1,28 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { CheckCircle2, XCircle, ChevronRight, Award, Info, AlertTriangle } from 'lucide-react';
-import { SNVScenario } from '../interfaces/SNV';
-import { snvService } from '../services/snvService';
-import { motion } from 'framer-motion';
-import { QuizTimer } from '../../quiz/components/QuizTimer';
-import { SnvResults } from '../components/SnvResults';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import {
+  CheckCircle2,
+  XCircle,
+  ChevronRight,
+  Award,
+  Info,
+  AlertTriangle,
+} from "lucide-react";
+import { SNVScenario } from "../interfaces/SNV";
+import { snvService } from "../services/snvService";
+import { motion } from "framer-motion";
+import { QuizTimer } from "../../quiz/components/QuizTimer";
+import { SnvResults } from "../components/SnvResults";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -29,20 +43,25 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
   const [showExplanation, setShowExplanation] = useState(false);
   const [victimOrder, setVictimOrder] = useState<number[]>([]);
   const [isTimeCritical, setIsTimeCritical] = useState(false);
-  const [performance, setPerformance] = useState({ stars: 0, message: '' });
+  const [performance, setPerformance] = useState({ stars: 0, message: "" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const searchParams = useSearchParams();
-  const difficulty = searchParams.get('difficulty') as 'easy' | 'medium' | 'hard';
-  const isRandomMode = searchParams.get('random') === 'true';
-  const timeLimit = searchParams.get('time') ? parseInt(searchParams.get('time')!) : 60;
+  const difficulty = searchParams.get("difficulty") as
+    | "easy"
+    | "medium"
+    | "hard";
+  const isRandomMode = searchParams.get("random") === "true";
+  const timeLimit = searchParams.get("time")
+    ? parseInt(searchParams.get("time")!)
+    : 60;
   const { id: scenarioId } = React.use(params);
   const router = useRouter();
 
   useEffect(() => {
-    const header = document.body.getElementsByTagName('header')[0];
-    const footer = document.body.getElementsByTagName('footer')[0];
+    const header = document.body.getElementsByTagName("header")[0];
+    const footer = document.body.getElementsByTagName("footer")[0];
     if (header && footer) {
       header.classList.add("hidden");
       footer.classList.add("hidden");
@@ -57,56 +76,70 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
     };
   }, []);
 
-  const handleColorSelect = useCallback((colorIndex: number) => {
-    if (gameOver || !scenario?.victimes) return;
+  const handleColorSelect = useCallback(
+    (colorIndex: number) => {
+      if (gameOver || !scenario?.victimes) return;
 
-    const currentVictim = scenario.victimes[victimOrder[currentVictimIndex]];
-    if (!currentVictim) return;
+      const currentVictim = scenario.victimes[victimOrder[currentVictimIndex]];
+      if (!currentVictim) return;
 
-    setSelectedColor(colorIndex);
-    const isCorrect = colorIndex === currentVictim.correctAnswer;
+      setSelectedColor(colorIndex);
+      const isCorrect = colorIndex === currentVictim.correctAnswer;
 
-    let newScore = score;
-    if (isCorrect) {
-      newScore = score + 1;
-      setScore(newScore);
-    }
-
-    setShowExplanation(true);
-
-    setTimeout(() => {
-      if (!scenario.victimes) return;
-
-      if (currentVictimIndex < scenario.victimes.length - 1) {
-        setCurrentVictimIndex(prev => prev + 1);
-        setSelectedColor(null);
-        setShowExplanation(false);
-        setTimeLeft(getTimeLimit(difficulty, timeLimit));
-        setIsTimeCritical(false);
-      } else {
-        setGameOver(true);
-        const percentage = (newScore / scenario.victimes.length) * 100;
-        let stars = 0;
-        let message = '';
-
-        if (percentage >= 90) {
-          stars = 3;
-          message = "Excellent ! Vous maîtrisez parfaitement la classification des victimes.";
-        } else if (percentage >= 70) {
-          stars = 2;
-          message = "Bien ! Vous avez une bonne compréhension de la classification.";
-        } else if (percentage >= 50) {
-          stars = 1;
-          message = "Pas mal, mais vous devriez réviser certains cas.";
-        } else {
-          stars = 0;
-          message = "Vous devez approfondir vos connaissances en classification des victimes.";
-        }
-
-        setPerformance({ stars, message });
+      let newScore = score;
+      if (isCorrect) {
+        newScore = score + 1;
+        setScore(newScore);
       }
-    }, 2000);
-  }, [gameOver, scenario, victimOrder, currentVictimIndex, score, difficulty, timeLimit]);
+
+      setShowExplanation(true);
+
+      setTimeout(() => {
+        if (!scenario.victimes) return;
+
+        if (currentVictimIndex < scenario.victimes.length - 1) {
+          setCurrentVictimIndex((prev) => prev + 1);
+          setSelectedColor(null);
+          setShowExplanation(false);
+          setTimeLeft(getTimeLimit(difficulty, timeLimit));
+          setIsTimeCritical(false);
+        } else {
+          setGameOver(true);
+          const percentage = (newScore / scenario.victimes.length) * 100;
+          let stars = 0;
+          let message = "";
+
+          if (percentage >= 90) {
+            stars = 3;
+            message =
+              "Excellent ! Vous maîtrisez parfaitement la classification des victimes.";
+          } else if (percentage >= 70) {
+            stars = 2;
+            message =
+              "Bien ! Vous avez une bonne compréhension de la classification.";
+          } else if (percentage >= 50) {
+            stars = 1;
+            message = "Pas mal, mais vous devriez réviser certains cas.";
+          } else {
+            stars = 0;
+            message =
+              "Vous devez approfondir vos connaissances en classification des victimes.";
+          }
+
+          setPerformance({ stars, message });
+        }
+      }, 2000);
+    },
+    [
+      gameOver,
+      scenario,
+      victimOrder,
+      currentVictimIndex,
+      score,
+      difficulty,
+      timeLimit,
+    ]
+  );
 
   useEffect(() => {
     const fetchScenario = async () => {
@@ -114,7 +147,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
         const data = await snvService.getScenarioById(parseInt(scenarioId));
 
         if (!data || !data.victimes || data.victimes.length === 0) {
-          throw new Error('Aucune victime trouvée dans le scénario');
+          throw new Error("Aucune victime trouvée dans le scénario");
         }
 
         setScenario(data);
@@ -132,7 +165,9 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
         }
         setVictimOrder(order);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+        setError(
+          err instanceof Error ? err.message : "Une erreur est survenue"
+        );
       } finally {
         setLoading(false);
       }
@@ -159,11 +194,11 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
 
   const getTimeLimit = (difficulty: string, timeLimit: number) => {
     switch (difficulty) {
-      case 'easy':
+      case "easy":
         return 999999; // Un grand nombre pour simuler un temps illimité
-      case 'medium':
+      case "medium":
         return timeLimit; // Utilise le temps sélectionné
-      case 'hard':
+      case "hard":
         return 10; // 10 secondes fixes
       default:
         return 999999;
@@ -182,21 +217,21 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
 
   const handleQuit = () => {
     setDialogOpen(false);
-    router.push('/snv');
+    router.push("/snv");
   };
 
   if (loading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-600"></div>
+      <div className="flex h-full w-full items-center justify-center bg-gray-50">
+        <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-yellow-600"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-50">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+      <div className="flex h-full w-full items-center justify-center bg-gray-50">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
           <p>{error}</p>
         </div>
       </div>
@@ -210,116 +245,132 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
   const currentVictim = scenario.victimes[victimOrder[currentVictimIndex]];
   const progress = ((currentVictimIndex + 1) / scenario.victimes.length) * 100;
   const colors = [
-    { name: 'Vert', bg: 'bg-green-500', hover: 'hover:bg-green-600' },
-    { name: 'Jaune', bg: 'bg-yellow-500', hover: 'hover:bg-yellow-600' },
-    { name: 'Rouge', bg: 'bg-red-500', hover: 'hover:bg-red-600' },
-    { name: 'Noir', bg: 'bg-gray-900', hover: 'hover:bg-gray-800' }
+    { name: "Vert", bg: "bg-green-500", hover: "hover:bg-green-600" },
+    { name: "Jaune", bg: "bg-yellow-500", hover: "hover:bg-yellow-600" },
+    { name: "Rouge", bg: "bg-red-500", hover: "hover:bg-red-600" },
+    { name: "Noir", bg: "bg-gray-900", hover: "hover:bg-gray-800" },
   ];
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-between bg-gray-50 overflow-hidden" style={{ minHeight: '100vh' }}>
-      <div className="w-full flex-1 flex flex-col items-center px-4 py-6 overflow-y-auto">
+    <div
+      className="flex h-full w-full flex-col items-center justify-between overflow-hidden bg-gray-50"
+      style={{ minHeight: "100vh" }}
+    >
+      <div className="flex w-full flex-1 flex-col items-center overflow-y-auto px-4 py-6">
         <div className="w-full max-w-4xl">
-          <div className="w-full flex flex-col items-center px-2 pt-3 pb-2 bg-gray-50 z-10 sm:flex-row sm:justify-between sm:items-end sm:px-4">
-            <div className="w-full flex items-center justify-between sm:justify-start">
+          <div className="z-10 flex w-full flex-col items-center bg-gray-50 px-2 pt-3 pb-2 sm:flex-row sm:items-end sm:justify-between sm:px-4">
+            <div className="flex w-full items-center justify-between sm:justify-start">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <button
-                    className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-3 rounded-full transition-all duration-200 shadow-sm hover:shadow cursor-pointer text-sm"
-                  >
-                    <ChevronRight className="w-4 h-4 rotate-180" />
+                  <button className="flex cursor-pointer items-center space-x-2 rounded-full bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-200 hover:shadow">
+                    <ChevronRight className="h-4 w-4 rotate-180" />
                     <span>Retour</span>
                   </button>
                 </DialogTrigger>
-                <DialogContent className="bg-white rounded-xl shadow-lg border-none p-6">
+                <DialogContent className="rounded-xl border-none bg-white p-6 shadow-lg">
                   <DialogHeader className="mb-4">
-                    <DialogTitle className="text-xl font-bold text-gray-800">Quitter le scénario ?</DialogTitle>
-                    <DialogDescription className="text-gray-600 mt-2">
-                      Êtes-vous sûr de vouloir quitter ? Votre progression sera perdue.
+                    <DialogTitle className="text-xl font-bold text-gray-800">
+                      Quitter le scénario ?
+                    </DialogTitle>
+                    <DialogDescription className="mt-2 text-gray-600">
+                      Êtes-vous sûr de vouloir quitter ? Votre progression sera
+                      perdue.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="flex justify-end gap-3 mt-6">
+                  <div className="mt-6 flex justify-end gap-3">
                     <Button
                       variant="outline"
                       onClick={() => setDialogOpen(false)}
-                      className="bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
+                      className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                     >
                       Annuler
                     </Button>
                     <Button
                       variant="destructive"
                       onClick={handleQuit}
-                      className="bg-red-500 hover:bg-red-600 text-white"
+                      className="bg-red-500 text-white hover:bg-red-600"
                     >
                       Quitter le scénario
                     </Button>
                   </div>
                 </DialogContent>
               </Dialog>
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex flex-1 items-center justify-center">
                 <h1
-                  className="text-base font-semibold text-gray-800 text-center mx-2 sm:text-xl sm:font-bold sm:max-w-none"
+                  className="mx-2 text-center text-base font-semibold text-gray-800 sm:max-w-none sm:text-xl sm:font-bold"
                   title={scenario?.title}
                 >
                   {scenario?.title}
                 </h1>
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="ml-2 p-1.5 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                  className="ml-2 rounded-full bg-gray-100 p-1.5 transition-colors hover:bg-gray-200"
                   title="Voir les détails du scénario"
                 >
-                  <Info className="w-4 h-4 text-gray-600" />
+                  <Info className="h-4 w-4 text-gray-600" />
                 </button>
               </div>
               <div className="w-8 sm:w-12" />
             </div>
-            <div className="w-full flex flex-col items-center mt-2 sm:mt-0 sm:flex-row sm:justify-center">
-              <div className="h-2 w-full max-w-[220px] bg-gray-200 rounded-full overflow-hidden">
+            <div className="mt-2 flex w-full flex-col items-center sm:mt-0 sm:flex-row sm:justify-center">
+              <div className="h-2 w-full max-w-[220px] overflow-hidden rounded-full bg-gray-200">
                 <motion.div
                   className="h-full bg-blue-600"
-                  initial={{ width: `${progress}%`, backgroundColor: '#3B82F6' }}
+                  initial={{
+                    width: `${progress}%`,
+                    backgroundColor: "#3B82F6",
+                  }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.5 }}
                 />
               </div>
-              <div className="text-xs text-gray-600 mt-1 sm:mt-0 sm:ml-3 whitespace-nowrap">
+              <div className="mt-1 text-xs whitespace-nowrap text-gray-600 sm:mt-0 sm:ml-3">
                 Victime {currentVictimIndex + 1}/{scenario?.victimes.length}
               </div>
             </div>
           </div>
 
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent className="bg-white rounded-xl shadow-lg p-4 max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-h-[90vh] overflow-y-auto rounded-xl bg-white p-4 shadow-lg">
               <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-gray-800 mb-3">
+                <DialogTitle className="mb-3 text-xl font-bold text-gray-800">
                   Détails du scénario
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 mb-1">Titre</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <h3 className="mb-1 font-semibold text-gray-800">Titre</h3>
+                  <p className="text-sm leading-relaxed text-gray-600">
                     {scenario?.title}
                   </p>
                 </div>
 
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 mb-1">Description</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <h3 className="mb-1 font-semibold text-gray-800">
+                    Description
+                  </h3>
+                  <p className="text-sm leading-relaxed text-gray-600">
                     {scenario?.description}
                   </p>
                 </div>
 
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 mb-1">Informations</h3>
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <h3 className="mb-1 font-semibold text-gray-800">
+                    Informations
+                  </h3>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
-                      <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                      <span className="text-sm text-gray-600">Niveau : {scenario?.level}</span>
+                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                      <span className="text-sm text-gray-600">
+                        Niveau : {scenario?.level}
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-gray-600">
-                        Nombre de victimes : {scenario?.victimesCount || (scenario?.victimes?.length || 0)}
+                        Nombre de victimes :{" "}
+                        {scenario?.victimesCount ||
+                          scenario?.victimes?.length ||
+                          0}
                       </span>
                     </div>
                   </div>
@@ -337,31 +388,37 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
               difficulty={difficulty}
             />
           ) : (
-            <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
-              <div className="flex justify-between items-center mb-4">
+            <div className="mb-4 rounded-xl bg-white p-4 shadow-lg">
+              <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  {difficulty !== 'easy' && (
+                  {difficulty !== "easy" && (
                     <QuizTimer
                       timeLeft={timeLeft}
                       totalTime={getTimeLimit(difficulty, timeLimit)}
                       isTimeCritical={isTimeCritical}
                     />
                   )}
-                  {difficulty !== 'hard' && (
+                  {difficulty !== "hard" && (
                     <div className="flex items-center space-x-2">
-                      <Award className="w-5 h-5 text-yellow-500" />
-                      <span className="text-sm text-gray-700">{score}/{currentVictimIndex}</span>
+                      <Award className="h-5 w-5 text-yellow-500" />
+                      <span className="text-sm text-gray-700">
+                        {score}/{currentVictimIndex}
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <h2 className="text-base font-semibold text-gray-800 mb-2">Description de la victime</h2>
-                <p className="text-sm text-gray-700">{currentVictim?.description}</p>
+              <div className="mb-4 rounded-lg bg-gray-50 p-4">
+                <h2 className="mb-2 text-base font-semibold text-gray-800">
+                  Description de la victime
+                </h2>
+                <p className="text-sm text-gray-700">
+                  {currentVictim?.description}
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="mb-4 grid grid-cols-2 gap-3">
                 {colors.map((color, index) => {
                   const isSelected = selectedColor === index;
                   const isCorrect = index === currentVictim?.correctAnswer;
@@ -372,21 +429,7 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
                       type="button"
                       onClick={() => handleColorSelect(index)}
                       disabled={gameOver || showExplanation}
-                      className={`
-                        ${color.bg} 
-                        ${color.hover} 
-                        text-white 
-                        py-3 
-                        px-4 
-                        rounded-lg 
-                        transition-colors 
-                        flex 
-                        items-center 
-                        justify-center
-                        text-sm
-                        ${isSelected ? (isCorrect ? 'ring-2 ring-green-500' : 'ring-2 ring-red-500') : ''}
-                        ${gameOver || showExplanation ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                      `}
+                      className={` ${color.bg} ${color.hover} flex items-center justify-center rounded-lg px-4 py-3 text-sm text-white transition-colors ${isSelected ? (isCorrect ? "ring-2 ring-green-500" : "ring-2 ring-red-500") : ""} ${gameOver || showExplanation ? "cursor-not-allowed opacity-50" : "cursor-pointer"} `}
                     >
                       {color.name}
                     </button>
@@ -395,20 +438,22 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
               </div>
 
               {showExplanation && (
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="rounded-lg bg-gray-50 p-4">
                   <div className="flex items-start space-x-2">
                     {selectedColor === currentVictim?.correctAnswer ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 text-green-500" />
                     ) : (
-                      <XCircle className="w-5 h-5 text-red-500 mt-0.5" />
+                      <XCircle className="mt-0.5 h-5 w-5 text-red-500" />
                     )}
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">
+                      <p className="mb-1 text-sm font-medium text-gray-700">
                         {selectedColor === currentVictim?.correctAnswer
-                          ? 'Bonne réponse !'
-                          : 'Mauvaise réponse'}
+                          ? "Bonne réponse !"
+                          : "Mauvaise réponse"}
                       </p>
-                      <p className="text-sm text-gray-600">{currentVictim?.explanation}</p>
+                      <p className="text-sm text-gray-600">
+                        {currentVictim?.explanation}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -423,4 +468,4 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
   );
 };
 
-export default SNVGame; 
+export default SNVGame;

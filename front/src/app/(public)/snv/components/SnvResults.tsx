@@ -1,6 +1,6 @@
-import { motion } from 'framer-motion';
-import { Award, CheckCircle, AlertTriangle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { motion } from "framer-motion";
+import { Award, CheckCircle, AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface SnvResultsProps {
   score: number;
@@ -10,91 +10,118 @@ interface SnvResultsProps {
     message: string;
   };
   onRestart: () => void;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: "easy" | "medium" | "hard";
 }
 
-export const SnvResults = ({ score, totalVictims, performance, onRestart, difficulty }: SnvResultsProps) => {
+export const SnvResults = ({
+  score,
+  totalVictims,
+  performance,
+  onRestart,
+  difficulty,
+}: SnvResultsProps) => {
   const router = useRouter();
 
   const getDifficultyBadge = () => {
     switch (difficulty) {
-      case 'easy':
-        return <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Mode Facile</span>;
-      case 'medium':
-        return <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">Mode Intermédiaire</span>;
-      case 'hard':
-        return <span className="inline-block px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">Mode Difficile</span>;
+      case "easy":
+        return (
+          <span className="inline-block rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+            Mode Facile
+          </span>
+        );
+      case "medium":
+        return (
+          <span className="inline-block rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+            Mode Intermédiaire
+          </span>
+        );
+      case "hard":
+        return (
+          <span className="inline-block rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800">
+            Mode Difficile
+          </span>
+        );
     }
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="bg-white rounded-xl shadow-lg p-6 md:p-8 max-w-3xl mx-auto"
+      className="mx-auto max-w-3xl rounded-xl bg-white p-6 shadow-lg md:p-8"
     >
-      <div className="text-center mb-8">
-        <div className="flex justify-center items-center mb-4 gap-2">
+      <div className="mb-8 text-center">
+        <div className="mb-4 flex items-center justify-center gap-2">
           {getDifficultyBadge()}
-          
-          <motion.div 
+
+          <motion.div
             className="inline-block"
             animate={{ rotate: [0, 10, -10, 10, 0] }}
             transition={{ duration: 1, delay: 0.5 }}
           >
-            {score >= (totalVictims * 0.7) ? (
-              <CheckCircle className="w-10 h-10 mx-auto text-green-500 mb-2" />
+            {score >= totalVictims * 0.7 ? (
+              <CheckCircle className="mx-auto mb-2 h-10 w-10 text-green-500" />
             ) : (
-              <AlertTriangle className="w-10 h-10 mx-auto text-yellow-500 mb-2" />
+              <AlertTriangle className="mx-auto mb-2 h-10 w-10 text-yellow-500" />
             )}
           </motion.div>
         </div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Scénario Terminé !</h2>
-        <div className="h-1 w-20 bg-red-600 mx-auto mb-4"></div>
-        
-        <div className="flex justify-center items-center space-x-1 mb-4">
+        <h2 className="mb-2 text-2xl font-bold text-gray-800">
+          Scénario Terminé !
+        </h2>
+        <div className="mx-auto mb-4 h-1 w-20 bg-red-600"></div>
+
+        <div className="mb-4 flex items-center justify-center space-x-1">
           {[...Array(3)].map((_, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0.3, scale: 0.8 }}
-              animate={{ 
+              animate={{
                 opacity: i < performance.stars ? 1 : 0.3,
-                scale: i < performance.stars ? 1 : 0.8
+                scale: i < performance.stars ? 1 : 0.8,
               }}
-              transition={{ delay: 0.3 + (i * 0.2) }}
+              transition={{ delay: 0.3 + i * 0.2 }}
             >
-              <Award className={`w-8 h-8 ${i < performance.stars ? 'text-yellow-500' : 'text-gray-300'}`} />
+              <Award
+                className={`h-8 w-8 ${i < performance.stars ? "text-yellow-500" : "text-gray-300"}`}
+              />
             </motion.div>
           ))}
         </div>
-        
-        <div className="text-lg text-gray-700 mb-6">
-          <p>Victimes correctement classées : <span className="font-bold">{score}/{totalVictims}</span></p>
-          <p className="text-sm mt-1">
+
+        <div className="mb-6 text-lg text-gray-700">
+          <p>
+            Victimes correctement classées :{" "}
+            <span className="font-bold">
+              {score}/{totalVictims}
+            </span>
+          </p>
+          <p className="mt-1 text-sm">
             ({Math.round((score / totalVictims) * 100)}%)
           </p>
         </div>
-        
-        <p className="text-gray-700 mb-4">{performance.message}</p>
-        
+
+        <p className="mb-4 text-gray-700">{performance.message}</p>
+
         <motion.button
-          className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-6 rounded-full shadow-md flex items-center justify-center mx-auto cursor-pointer mb-4"
+          className="mx-auto mb-4 flex cursor-pointer items-center justify-center rounded-full bg-yellow-600 px-6 py-2 font-medium text-white shadow-md hover:bg-yellow-700"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onRestart}
         >
           Recommencer le scénario
         </motion.button>
-  
+
         <motion.button
-          className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-6 rounded-full shadow-md flex items-center justify-center mx-auto cursor-pointer"
+          className="mx-auto flex cursor-pointer items-center justify-center rounded-full bg-yellow-600 px-6 py-2 font-medium text-white shadow-md hover:bg-yellow-700"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => router.push('/snv')}
+          onClick={() => router.push("/snv")}
         >
           Retour au catalogue
         </motion.button>
       </div>
     </motion.div>
   );
-}; 
+};

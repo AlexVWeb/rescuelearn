@@ -1,10 +1,10 @@
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
 
 export const EcgLine = () => (
   <div className="absolute inset-x-0 top-2 h-3 overflow-hidden bg-gray-100">
-    <svg 
-      viewBox="0 0 800 20" 
-      className="w-full h-full"
+    <svg
+      viewBox="0 0 800 20"
+      className="h-full w-full"
       preserveAspectRatio="none"
     >
       <motion.path
@@ -13,15 +13,15 @@ export const EcgLine = () => (
         stroke="#DC2626"
         strokeWidth="1.5"
         initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ 
-          pathLength: 1, 
+        animate={{
+          pathLength: 1,
           opacity: 1,
-          x: [-800, 0]
+          x: [-800, 0],
         }}
-        transition={{ 
+        transition={{
           duration: 4,
           ease: "linear",
-          repeat: Infinity
+          repeat: Infinity,
         }}
       />
       <motion.path
@@ -30,17 +30,17 @@ export const EcgLine = () => (
         stroke="#DC2626"
         strokeWidth="1.5"
         initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ 
-          pathLength: 1, 
+        animate={{
+          pathLength: 1,
           opacity: 1,
-          x: [0, 800]
+          x: [0, 800],
         }}
-        transition={{ 
+        transition={{
           duration: 4,
           ease: "linear",
-          repeat: Infinity
+          repeat: Infinity,
         }}
       />
     </svg>
   </div>
-); 
+);

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { BookOpen } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { motion } from "framer-motion";
+import { BookOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface LearningCardProps {
   theme: string;
@@ -13,12 +13,19 @@ interface LearningCardProps {
   className?: string;
 }
 
-export function LearningCard({ theme, niveau, info, reference, pdfUrl, className }: LearningCardProps) {
+export function LearningCard({
+  theme,
+  niveau,
+  info,
+  reference,
+  pdfUrl,
+  className,
+}: LearningCardProps) {
   const handleReferenceClick = (e: React.MouseEvent, reference: string) => {
     e.stopPropagation();
     const pageMatch = reference.match(/Page (\d+)/);
     const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
-    window.open(`/referenciels/PSE1_PSE2.pdf#page=${pageNumber}`, '_blank');
+    window.open(`/referenciels/PSE1_PSE2.pdf#page=${pageNumber}`, "_blank");
   };
 
   return (
@@ -26,7 +33,7 @@ export function LearningCard({ theme, niveau, info, reference, pdfUrl, className
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'group relative overflow-hidden rounded-lg border bg-white p-6 shadow-sm transition-all hover:shadow-md',
+        "group relative overflow-hidden rounded-lg border bg-white p-6 shadow-sm transition-all hover:shadow-md",
         className
       )}
     >
@@ -47,21 +54,25 @@ export function LearningCard({ theme, niveau, info, reference, pdfUrl, className
         {reference && (
           <div
             className={cn(
-              'mt-4 flex items-center text-sm transition-colors',
-              pdfUrl ? 'cursor-pointer text-blue-600 hover:text-blue-800' : 'text-gray-500'
+              "mt-4 flex items-center text-sm transition-colors",
+              pdfUrl
+                ? "cursor-pointer text-blue-600 hover:text-blue-800"
+                : "text-gray-500"
             )}
             onClick={(e) => handleReferenceClick(e, reference)}
           >
-            <BookOpen className={cn(
-              'mr-2 h-4 w-4',
-              pdfUrl ? 'text-blue-600' : 'text-gray-500'
-            )} />
+            <BookOpen
+              className={cn(
+                "mr-2 h-4 w-4",
+                pdfUrl ? "text-blue-600" : "text-gray-500"
+              )}
+            />
             <span className="underline decoration-dotted">{reference}</span>
           </div>
         )}
       </div>
 
-      <div className="absolute inset-0 bg-gradient-to-t from-blue-50/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-blue-50/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
     </motion.div>
   );
-} 
+}

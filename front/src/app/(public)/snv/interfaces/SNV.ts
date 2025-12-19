@@ -1,7 +1,7 @@
 export interface Victim {
-  '@context': string;
-  '@id': string;
-  '@type': string;
+  "@context": string;
+  "@id": string;
+  "@type": string;
   id: number;
   description: string;
   correctAnswer: number; // 0: Vert, 1: Jaune, 2: Rouge, 3: Noir
@@ -10,9 +10,9 @@ export interface Victim {
 }
 
 export interface SNVScenario {
-  '@context': string;
-  '@id': string;
-  '@type': string;
+  "@context": string;
+  "@id": string;
+  "@type": string;
   id: number;
   title: string;
   level: string;
@@ -22,13 +22,13 @@ export interface SNVScenario {
 }
 
 export interface SNVCollection {
-  '@context': string;
-  '@id': string;
-  '@type': string;
+  "@context": string;
+  "@id": string;
+  "@type": string;
   totalItems: number;
   member: SNVScenario[];
   view: {
-    '@id': string;
-    '@type': string;
+    "@id": string;
+    "@type": string;
   };
-} 
+}

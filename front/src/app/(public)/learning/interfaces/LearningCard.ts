@@ -8,12 +8,12 @@ export interface ApiLearningCard {
 }
 
 export interface ApiLearningCardResponse {
-  '@context': string;
-  '@id': string;
-  '@type': string;
+  "@context": string;
+  "@id": string;
+  "@type": string;
   totalItems: number;
   member: ApiLearningCard[];
-} 
+}
 
 export interface Theme {
   theme: string;
