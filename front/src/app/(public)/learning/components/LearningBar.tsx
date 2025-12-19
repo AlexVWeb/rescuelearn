@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { ApiLearningCard } from '@/app/learning/interfaces/LearningCard';
-import { learningCardService } from '@/app/learning/services/learningCardService';
-import { shuffleArray } from '@/app/quiz/utils/utils';
+import { ApiLearningCard } from '@/app/(public)/learning/interfaces/LearningCard';
+import { learningCardService } from '@/app/(public)/learning/services/learningCardService';
+import { shuffleArray } from '@/app/(public)/quiz/utils/utils';
 
 export function LearningBar() {
   const [cards, setCards] = useState<ApiLearningCard[]>([]);
@@ -88,7 +88,7 @@ export function LearningBar() {
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-gray-600">{currentCard.info}</p>
-                <p 
+                <p
                   className="mt-1 text-xs text-blue-600 cursor-pointer hover:text-blue-800"
                   onClick={(e) => handleReferenceClick(e, currentCard.reference)}
                 >
