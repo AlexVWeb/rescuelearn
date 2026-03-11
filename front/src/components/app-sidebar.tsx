@@ -30,6 +30,17 @@ const getNavData = (userRoles: string[]) => {
     userRoles.includes("FORMATEUR") ||
     userRoles.includes("ADMIN_ORGANISME") ||
     isSuperAdmin;
+  const isAdminOrganisme =
+    userRoles.includes("ADMIN_ORGANISME") || isSuperAdmin;
+
+  const trainingSubItems = [
+    { title: "Tableau de bord", url: "/admin/training/dashboard" },
+    { title: "Sessions", url: "/admin/training/sessions" },
+    { title: "Stagiaires", url: "/admin/training/stagiaires" },
+    ...(isAdminOrganisme
+      ? [{ title: "Mon organisme", url: "/admin/training/organisme" }]
+      : []),
+  ];
 
   const trainingItems = isFormateur
     ? [
@@ -38,20 +49,7 @@ const getNavData = (userRoles: string[]) => {
           url: "#",
           icon: Calendar,
           isActive: true,
-          items: [
-            {
-              title: "Tableau de bord",
-              url: "/admin/training/dashboard",
-            },
-            {
-              title: "Sessions",
-              url: "/admin/training/sessions",
-            },
-            {
-              title: "Stagiaires",
-              url: "/admin/training/stagiaires",
-            },
-          ],
+          items: trainingSubItems,
         },
       ]
     : [];

@@ -117,6 +117,36 @@ export async function createOrganismeAction(data: OrganismeFormValues) {
   }
 }
 
+export async function getMyOrganismeAction() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { organismeId: true, roles: true },
+  });
+
+  const roles = Array.isArray(user?.roles) ? (user.roles as string[]) : [];
+  if (!roles.includes("ADMIN_ORGANISME")) {
+    return { success: false, error: "Forbidden" };
+  }
+
+  if (!user?.organismeId) {
+    return { success: false, error: "Aucun organisme associé à votre compte" };
+  }
+
+  try {
+    const organisme = await prisma.organisme.findUnique({
+      where: { id: user.organismeId },
+    });
+    if (!organisme) return { success: false, error: "Organisme introuvable" };
+    return { success: true, data: organisme };
+  } catch (error) {
+    console.error("Failed to fetch my organisme:", error);
+    return { success: false, error: "Failed to fetch organisme" };
+  }
+}
+
 export async function updateOrganismeAction(
   id: string,
   data: OrganismeFormValues
@@ -124,6 +154,17 @@ export async function updateOrganismeAction(
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return { success: false, error: "Unauthorized" };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { organismeId: true, roles: true },
+  });
+
+  const roles = Array.isArray(user?.roles) ? (user.roles as string[]) : [];
+  const isSuperAdmin = roles.includes("SUPER_ADMIN");
+  if (!isSuperAdmin && user?.organismeId !== id) {
+    return { success: false, error: "Forbidden" };
   }
 
   try {
