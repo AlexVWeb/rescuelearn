@@ -10,8 +10,17 @@ model User {
   roles         Json      @default("[]")
   password      String?
   
+  firstName     String?
+  lastName      String?
+  phone         String?
+  
+  organismeId   String?
+  organisme     Organisme? @relation(fields: [organismeId], references: [id])
+  
   sessions      Session[]
   accounts      Account[]
+  
+  trainingSessions TrainingSession[]
 }
 
 model Session {

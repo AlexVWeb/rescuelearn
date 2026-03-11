@@ -11,4 +11,13 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  user: {
+    additionalFields: {
+      roles: {
+        type: "string", // prisma Json type is often represented as string or object in JS
+        required: false,
+        defaultValue: "[]",
+      },
+    },
+  },
 });

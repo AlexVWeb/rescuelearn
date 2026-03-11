@@ -53,7 +53,7 @@ export function ReferencielDialog({
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof referencielSchema>>({
-    resolver: zodResolver(referencielSchema),
+    resolver: zodResolver(referencielSchema) as any,
     defaultValues: {
       title: "",
       yearEdition: new Date().getFullYear(),

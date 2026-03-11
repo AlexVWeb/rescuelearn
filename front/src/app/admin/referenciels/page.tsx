@@ -9,7 +9,7 @@ export default async function ReferencielsPage(props: {
   const search = searchParams?.search || "";
 
   const result = await getReferencielsAction(page, 100, search);
-  const referenciels = result.success ? result.data : [];
+  const referenciels: any[] = result.success && result.data ? result.data : [];
 
   return <ClientPage initialReferenciels={referenciels} />;
 }

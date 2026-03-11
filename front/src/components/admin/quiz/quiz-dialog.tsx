@@ -49,7 +49,7 @@ export function QuizDialog({ open, onOpenChange, quiz }: QuizDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof quizSchema>>({
-    resolver: zodResolver(quizSchema),
+    resolver: zodResolver(quizSchema) as any,
     defaultValues: {
       title: "",
       timePerQuestion: 30,

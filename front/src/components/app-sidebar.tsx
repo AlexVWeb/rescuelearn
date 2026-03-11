@@ -2,20 +2,15 @@
 
 import * as React from "react";
 import {
-  AudioWaveform,
   BookOpen,
-  Bot,
-  Command,
-  Frame,
   GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
   SquareTerminal,
   Users,
   Activity,
   GraduationCap,
   FileText,
+  Calendar,
+  Building,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -28,20 +23,55 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-// ... imports
+// Compute sidebar data dynamically based on user roles
+const getNavData = (userRoles: string[]) => {
+  const isSuperAdmin = userRoles.includes("SUPER_ADMIN");
+  const isFormateur = userRoles.includes("FORMATEUR") || userRoles.includes("ADMIN_ORGANISME") || isSuperAdmin;
 
-// This is sample data.
-const data = {
-  navMain: [
+  const trainingItems = isFormateur ? [
     {
-      title: "Dashboard",
+      title: "Gest. Formations",
+      url: "#",
+      icon: Calendar,
+      isActive: true,
+      items: [
+        {
+          title: "Tableau de bord",
+          url: "/admin/training/dashboard",
+        },
+        {
+          title: "Sessions",
+          url: "/admin/training/sessions",
+        },
+        {
+          title: "Stagiaires",
+          url: "/admin/training/stagiaires",
+        },
+      ],
+    }
+  ] : [];
+
+  const superAdminItems = isSuperAdmin ? [
+    {
+      title: "Tableau de bord",
       url: "/admin",
       icon: SquareTerminal,
-      isActive: true,
+      isActive: !isFormateur,
       items: [
         {
           title: "Overview",
           url: "/admin",
+        },
+      ],
+    },
+    {
+      title: "Organismes",
+      url: "/admin/organismes",
+      icon: Building,
+      items: [
+        {
+          title: "Gérer les organismes",
+          url: "/admin/organismes",
         },
       ],
     },
@@ -120,13 +150,20 @@ const data = {
         },
       ],
     },
-  ],
+  ] : [];
+
+  return {
+    navMain: [...superAdminItems, ...trainingItems]
+  };
 };
 
 export function AppSidebar({
   user,
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user: any }) {
+  const userRoles = Array.isArray(user?.roles) ? user.roles : [];
+  const data = getNavData(userRoles);
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>

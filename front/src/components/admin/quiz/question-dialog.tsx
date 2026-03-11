@@ -70,7 +70,7 @@ export function QuestionDialog({
   }, []);
 
   const form = useForm<z.infer<typeof questionSchema>>({
-    resolver: zodResolver(questionSchema),
+    resolver: zodResolver(questionSchema) as any,
     defaultValues: {
       text: "",
       quizId: 0,

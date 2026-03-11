@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
+import { validateInviteCode, linkUserToOrganisme } from "./actions";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -34,6 +35,7 @@ const formSchema = z.object({
   password: z.string().min(8, {
     message: "Le mot de passe doit contenir au moins 8 caractères.",
   }),
+  inviteCode: z.string().optional(),
 });
 
 export default function LoginPage() {
@@ -48,6 +50,7 @@ export default function LoginPage() {
       name: "",
       email: "",
       password: "",
+      inviteCode: "",
     },
   });
 
@@ -56,6 +59,19 @@ export default function LoginPage() {
     setError(null);
 
     if (isSignUp) {
+      if (!values.inviteCode) {
+        setError("Veuillez entrer un code d'invitation.");
+        setLoading(false);
+        return;
+      }
+      
+      const validation = await validateInviteCode(values.inviteCode);
+      if (!validation.success) {
+        setError(validation.error!);
+        setLoading(false);
+        return;
+      }
+
       await authClient.signUp.email(
         {
           email: values.email,
@@ -63,8 +79,14 @@ export default function LoginPage() {
           name: values.name || "",
         },
         {
-          onSuccess: () => {
-            router.push("/admin");
+          onSuccess: async () => {
+             const link = await linkUserToOrganisme(values.inviteCode!);
+             if (link.success) {
+               router.push("/admin");
+             } else {
+               setError(link.error!);
+               setLoading(false);
+             }
           },
           onError: (ctx) => {
             setError(ctx.error.message);
@@ -119,19 +141,34 @@ export default function LoginPage() {
                   )}
 
                   {isSignUp && (
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nom</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nom</FormLabel>
+                            <FormControl>
+                              <Input placeholder="John Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="inviteCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Code d'invitation Organisme</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Un code à 6 chiffres..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
                   )}
 
                   <FormField

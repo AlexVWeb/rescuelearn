@@ -38,9 +38,8 @@ import { useRouter } from "next/navigation";
 
 // Schema
 const userSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  // role: z.string().optional(), // Simplifying for now
+  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+  email: z.email("L'adresse e-mail n'est pas valide"),
   role: z.string().default("USER"),
 });
 
@@ -58,7 +57,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
   const [error, setError] = useState("");
 
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(userSchema) as any,
     defaultValues: {
       name: "",
       email: "",

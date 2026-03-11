@@ -60,7 +60,7 @@ export function SNVScenarioDialog({
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof scenarioSchema>>({
-    resolver: zodResolver(scenarioSchema),
+    resolver: zodResolver(scenarioSchema) as any,
     defaultValues: {
       title: "",
       level: "Débutant",

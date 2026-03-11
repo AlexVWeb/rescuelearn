@@ -71,7 +71,7 @@ export function SNVVictimDialog({
   }, []);
 
   const form = useForm<z.infer<typeof victimSchema>>({
-    resolver: zodResolver(victimSchema),
+    resolver: zodResolver(victimSchema) as any,
     defaultValues: {
       description: "",
       explanation: "",

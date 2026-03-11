@@ -35,7 +35,7 @@ export default async function UsersPage(props: {
 
   // Note: getUsersAction returns { success, data, meta }
   const result = await getUsersAction(page, 100, search); // Fetching 100 for client-side pagination simplicity
-  const users = result.success ? result.data : [];
+  const users = (result.success && result.data) ? result.data : [];
 
   return <ClientPage initialUsers={users} />;
 }
