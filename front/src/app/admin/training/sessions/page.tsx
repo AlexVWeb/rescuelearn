@@ -1,15 +1,9 @@
 import { getAllSessions } from "../actions";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Plus, Pencil } from "lucide-react";
-import { DeleteSessionButton } from "./components/delete-session-button";
-import Link from "next/link";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
+import { columns } from "./components/columns";
+import { SessionDialog } from "./components/session-dialog";
 
 export default async function SessionsPage() {
   const sessions = await getAllSessions();
@@ -25,48 +19,19 @@ export default async function SessionsPage() {
             Gérez toutes les sessions de votre organisme.
           </p>
         </div>
-        <Button className="w-full sm:w-auto" asChild>
-          <Link href="/admin/training/sessions/new">
+        <SessionDialog>
+          <Button className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" /> Nouvelle Session
-          </Link>
-        </Button>
+          </Button>
+        </SessionDialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {sessions.map((session) => (
-          <Card key={session.id}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div>
-                <CardTitle>{session.title}</CardTitle>
-                <CardDescription>
-                  {session.type} - {session.location}
-                </CardDescription>
-              </div>
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/admin/training/sessions/${session.id}`}>
-                    Gérer
-                  </Link>
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                  <Link href={`/admin/training/sessions/${session.id}`}>
-                    <Pencil className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <DeleteSessionButton sessionId={session.id} sessionTitle={session.title} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm">
-                Statut : <span className="font-medium">{session.status}</span>
-              </p>
-              <p className="text-sm">
-                Inscrits : {session._count.inscriptions} / {session.maxTrainees}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <DataTable
+        columns={columns}
+        data={sessions}
+        searchKey="title"
+        searchPlaceholder="Rechercher par titre..."
+      />
 
       {sessions.length === 0 && (
         <div className="bg-muted/20 rounded-lg border p-8 text-center">

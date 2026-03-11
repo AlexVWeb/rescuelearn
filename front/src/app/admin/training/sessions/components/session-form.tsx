@@ -30,7 +30,7 @@ import { DeleteSessionButton } from "./delete-session-button";
 
 const sessionSchema = z.object({
   title: z.string().min(3, "Titre requis"),
-  type: z.enum(["PSC", "PSE1", "PSE2", "SST", "IPS"]),
+  type: z.enum(["PSC1", "PSE1", "PSE2", "SST", "IPS"]),
   location: z.string().min(2, "Lieu requis"),
   maxTrainees: z.number().min(1, "Minimum 1 stagiaire"),
   status: z.enum(["planifiée", "en_cours", "terminée", "annulée"]),
@@ -41,24 +41,36 @@ const sessionSchema = z.object({
 export type SessionFormValues = z.infer<typeof sessionSchema>;
 
 interface SessionFormProps {
-  sessionItem?: SessionFormValues & { id: string; startDate?: Date | null; endDate?: Date | null };
+  sessionItem?: SessionFormValues & {
+    id: string;
+    startDate?: Date | null;
+    endDate?: Date | null;
+  };
   onCancel?: () => void;
   onSuccess?: (id?: string) => void;
 }
 
-export function SessionForm({ sessionItem, onCancel, onSuccess }: SessionFormProps) {
+export function SessionForm({
+  sessionItem,
+  onCancel,
+  onSuccess,
+}: SessionFormProps) {
   const router = useRouter();
 
   const form = useForm<SessionFormValues>({
     resolver: zodResolver(sessionSchema),
     defaultValues: {
       title: sessionItem?.title || "",
-      type: sessionItem?.type || "PSC",
+      type: (sessionItem?.type as any) || "PSC1",
       location: sessionItem?.location || "",
       maxTrainees: sessionItem?.maxTrainees || 10,
       status: sessionItem?.status || "planifiée",
-      startDate: sessionItem?.startDate ? dayjs(sessionItem.startDate).startOf('day').format('YYYY-MM-DD') : "",
-      endDate: sessionItem?.endDate ? dayjs(sessionItem.endDate).startOf('day').format('YYYY-MM-DD') : "",
+      startDate: sessionItem?.startDate
+        ? dayjs(sessionItem.startDate).startOf("day").format("YYYY-MM-DD")
+        : "",
+      endDate: sessionItem?.endDate
+        ? dayjs(sessionItem.endDate).startOf("day").format("YYYY-MM-DD")
+        : "",
     },
   });
 
@@ -66,7 +78,9 @@ export function SessionForm({ sessionItem, onCancel, onSuccess }: SessionFormPro
     try {
       const formattedData = {
         ...data,
-        startDate: data.startDate ? dayjs(data.startDate).hour(12).toDate() : null,
+        startDate: data.startDate
+          ? dayjs(data.startDate).hour(12).toDate()
+          : null,
         endDate: data.endDate ? dayjs(data.endDate).hour(12).toDate() : null,
       };
 
@@ -124,7 +138,7 @@ export function SessionForm({ sessionItem, onCancel, onSuccess }: SessionFormPro
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="PSC">PSC</SelectItem>
+                    <SelectItem value="PSC1">PSC1</SelectItem>
                     <SelectItem value="PSE1">PSE1</SelectItem>
                     <SelectItem value="PSE2">PSE2</SelectItem>
                     <SelectItem value="SST">SST</SelectItem>
@@ -233,22 +247,18 @@ export function SessionForm({ sessionItem, onCancel, onSuccess }: SessionFormPro
           />
         )}
 
-        <div className="flex justify-between items-center pt-4">
+        <div className="flex items-center justify-between pt-4">
           <div className="flex gap-2">
             {sessionItem && (
-              <DeleteSessionButton 
-                sessionId={sessionItem.id} 
-                sessionTitle={sessionItem.title} 
+              <DeleteSessionButton
+                sessionId={sessionItem.id}
+                sessionTitle={sessionItem.title}
               />
             )}
           </div>
           <div className="flex gap-2">
             {onCancel && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-              >
+              <Button type="button" variant="outline" onClick={onCancel}>
                 Annuler
               </Button>
             )}

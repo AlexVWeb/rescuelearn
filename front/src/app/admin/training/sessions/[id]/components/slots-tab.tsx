@@ -11,7 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Trash2, Calendar, Clock, AlertCircle, Sparkles } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Calendar,
+  Clock,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
 import { createSlot, deleteSlot } from "../../../actions";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -23,7 +30,11 @@ import "dayjs/locale/fr";
 dayjs.locale("fr");
 
 import { Slot } from "../../../types";
-import { getNextSlotSuggestion, isDateWithinSession, SlotSuggestion } from "./slot-utils";
+import {
+  getNextSlotSuggestion,
+  isDateWithinSession,
+  SlotSuggestion,
+} from "./slot-utils";
 
 interface SlotsTabProps {
   sessionId: string;
@@ -32,11 +43,16 @@ interface SlotsTabProps {
   sessionEndDate: Date | null;
 }
 
-export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }: SlotsTabProps) {
+export function SlotsTab({
+  sessionId,
+  slots,
+  sessionStartDate,
+  sessionEndDate,
+}: SlotsTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState<SlotSuggestion | null>(null);
-  
+
   const [newSlot, setNewSlot] = useState({
     label: "",
     date: "",
@@ -46,16 +62,22 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
 
   // Mettre à jour la suggestion quand les slots changent
   useEffect(() => {
-    const nextSuggestion = getNextSlotSuggestion(slots, sessionStartDate, sessionEndDate);
+    const nextSuggestion = getNextSlotSuggestion(
+      slots,
+      sessionStartDate,
+      sessionEndDate
+    );
     setSuggestion(nextSuggestion);
-    // On n'écrase pas les champs si l'utilisateur a commencé à saisir, 
+    // On n'écrase pas les champs si l'utilisateur a commencé à saisir,
     // sauf si c'est le premier chargement ou après un ajout réussi
     if (!newSlot.label && nextSuggestion) {
       setNewSlot(nextSuggestion);
     }
   }, [slots, sessionStartDate, sessionEndDate]);
 
-  const isDateValid = !newSlot.date || isDateWithinSession(newSlot.date, sessionStartDate, sessionEndDate);
+  const isDateValid =
+    !newSlot.date ||
+    isDateWithinSession(newSlot.date, sessionStartDate, sessionEndDate);
 
   async function handleAddSlot() {
     if (
@@ -69,8 +91,9 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
     }
 
     if (!isDateValid) {
-      toast.error("La date doit être comprise entre le début et la fin de la session");
-      return;
+      toast.warning(
+        "Attention: Ce créneau est en dehors des dates prévues de la session. Pensez à mettre à jour les dates dans les paramètres si nécessaire."
+      );
     }
 
     setLoading(true);
@@ -81,9 +104,9 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
         startTime: newSlot.startTime,
         endTime: newSlot.endTime,
       });
-      
+
       toast.success("Créneau ajouté");
-      
+
       // Réinitialiser avec la nouvelle suggestion qui sera calculée par le useEffect
       setNewSlot({
         label: "",
@@ -91,7 +114,7 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
         startTime: "",
         endTime: "",
       });
-      
+
       router.refresh();
     } catch (e) {
       console.error(e);
@@ -130,18 +153,21 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-2 border-primary/10">
+      <Card className="border-primary/10 overflow-hidden border-2">
         <CardHeader className="bg-primary/5 pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl">Organisation des créneaux</CardTitle>
+              <CardTitle className="text-xl">
+                Organisation des créneaux
+              </CardTitle>
               <CardDescription>
                 Définissez les demi-journées de formation pour l'émargement.
               </CardDescription>
             </div>
             {sessionStartDate && sessionEndDate && (
               <Badge variant="outline" className="bg-background">
-                {dayjs(sessionStartDate).startOf('day').format("DD/MM/YYYY")} au {dayjs(sessionEndDate).startOf('day').format("DD/MM/YYYY")}
+                {dayjs(sessionStartDate).startOf("day").format("DD/MM/YYYY")} au{" "}
+                {dayjs(sessionEndDate).startOf("day").format("DD/MM/YYYY")}
               </Badge>
             )}
           </div>
@@ -158,9 +184,9 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
               </Alert>
             )}
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 items-end">
+            <div className="grid grid-cols-1 items-end gap-4 lg:grid-cols-12">
               <div className="grid gap-2 lg:col-span-3">
-                <label className="text-sm font-semibold flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm font-semibold">
                   Libellé
                 </label>
                 <Input
@@ -173,7 +199,7 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
                 />
               </div>
               <div className="grid gap-2 lg:col-span-3">
-                <label className="text-sm font-semibold flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm font-semibold">
                   <Calendar className="h-3.5 w-3.5" /> Date
                 </label>
                 <Input
@@ -189,7 +215,7 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
                 />
               </div>
               <div className="grid gap-2 lg:col-span-2">
-                <label className="text-sm font-semibold flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm font-semibold">
                   <Clock className="h-3.5 w-3.5" /> Début
                 </label>
                 <Input
@@ -202,7 +228,7 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
                 />
               </div>
               <div className="grid gap-2 lg:col-span-2">
-                <label className="text-sm font-semibold flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm font-semibold">
                   <Clock className="h-3.5 w-3.5" /> Fin
                 </label>
                 <Input
@@ -217,60 +243,81 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
               <Button
                 onClick={handleAddSlot}
                 disabled={loading || !isDateValid}
-                className="lg:col-span-2 w-full transition-all hover:scale-[1.02]"
+                className="w-full transition-all hover:scale-[1.02] lg:col-span-2"
               >
                 <Plus className="mr-2 h-4 w-4" /> Ajouter
               </Button>
             </div>
 
-            {suggestion && (newSlot.label !== suggestion.label || newSlot.date !== suggestion.date) && (
-              <div 
-                className="flex items-center gap-3 p-3 rounded-lg border border-dashed bg-secondary/20 cursor-pointer hover:bg-secondary/30 transition-colors"
-                onClick={applySuggestion}
-              >
-                <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                <div className="text-sm">
-                  <span className="font-medium">Suggestion :</span> {suggestion.label} le {dayjs(suggestion.date).format("DD/MM/YYYY")} ({suggestion.startTime}-{suggestion.endTime})
+            {suggestion &&
+              (newSlot.label !== suggestion.label ||
+                newSlot.date !== suggestion.date) && (
+                <div
+                  className="bg-secondary/20 hover:bg-secondary/30 flex cursor-pointer items-center gap-3 rounded-lg border border-dashed p-3 transition-colors"
+                  onClick={applySuggestion}
+                >
+                  <Sparkles className="text-primary h-4 w-4 animate-pulse" />
+                  <div className="text-sm">
+                    <span className="font-medium">Suggestion :</span>{" "}
+                    {suggestion.label} le{" "}
+                    {dayjs(suggestion.date).format("DD/MM/YYYY")} (
+                    {suggestion.startTime}-{suggestion.endTime})
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto h-7 text-xs"
+                  >
+                    Appliquer
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs">
-                  Appliquer
-                </Button>
-              </div>
-            )}
+              )}
           </div>
 
           <div className="mt-8 space-y-3">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              Créneaux planifiés <Badge variant="secondary" className="rounded-full px-2">{slots.length}</Badge>
+            <h3 className="text-muted-foreground flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
+              Créneaux planifiés{" "}
+              <Badge variant="secondary" className="rounded-full px-2">
+                {slots.length}
+              </Badge>
             </h3>
             <div className="grid gap-3">
               {slots.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-xl bg-muted/10">
-                  <Calendar className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                <div className="bg-muted/10 flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-12">
+                  <Calendar className="text-muted-foreground/30 mb-3 h-10 w-10" />
                   <p className="text-muted-foreground text-sm">
                     Aucun créneau configuré pour le moment.
                   </p>
                 </div>
               ) : (
                 [...slots]
-                  .sort((a, b) => dayjs(a.date).startOf('day').valueOf() - dayjs(b.date).startOf('day').valueOf() || a.startTime.localeCompare(b.startTime))
+                  .sort(
+                    (a, b) =>
+                      dayjs(a.date).startOf("day").valueOf() -
+                        dayjs(b.date).startOf("day").valueOf() ||
+                      a.startTime.localeCompare(b.startTime)
+                  )
                   .map((slot) => (
                     <div
                       key={slot.id}
-                      className="group flex items-center justify-between rounded-xl border p-4 bg-card hover:shadow-md transition-all hover:border-primary/20"
+                      className="group bg-card hover:border-primary/20 flex items-center justify-between rounded-xl border p-4 transition-all hover:shadow-md"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full font-bold">
                           {slot.label.match(/\d+/)?.[0] || "?"}
                         </div>
                         <div>
-                          <p className="font-bold text-sm lg:text-base">{slot.label}</p>
-                          <div className="flex items-center gap-4 mt-1">
-                            <span className="flex items-center gap-1.5 text-xs lg:text-sm text-muted-foreground capitalize">
+                          <p className="text-sm font-bold lg:text-base">
+                            {slot.label}
+                          </p>
+                          <div className="mt-1 flex items-center gap-4">
+                            <span className="text-muted-foreground flex items-center gap-1.5 text-xs capitalize lg:text-sm">
                               <Calendar className="h-3.5 w-3.5" />
-                              {dayjs(slot.date).startOf('day').format("dddd DD/MM/YYYY")}
+                              {dayjs(slot.date)
+                                .startOf("day")
+                                .format("dddd DD/MM/YYYY")}
                             </span>
-                            <span className="flex items-center gap-1.5 text-xs lg:text-sm text-muted-foreground">
+                            <span className="text-muted-foreground flex items-center gap-1.5 text-xs lg:text-sm">
                               <Clock className="h-3.5 w-3.5" />
                               {slot.startTime} - {slot.endTime}
                             </span>
@@ -280,7 +327,7 @@ export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }:
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
                         onClick={() => handleDelete(slot.id)}
                         disabled={loading}
                       >

@@ -63,6 +63,7 @@ model Trainee {
   email       String?
   phone       String?
   dateOfBirth DateTime? @db.Date
+  address     String?
   
   organismeId String
   organisme   Organisme @relation(fields: [organismeId], references: [id], onDelete: Cascade)

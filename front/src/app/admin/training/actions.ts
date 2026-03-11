@@ -127,6 +127,7 @@ export async function createTrainee(data: {
   email?: string;
   phone?: string;
   dateOfBirth?: Date;
+  address?: string;
 }) {
   const user = await getUserContext();
   if (!user.organismeId) throw new Error("Aucun organisme associé");
@@ -147,6 +148,7 @@ export async function updateTrainee(
     email?: string;
     phone?: string;
     dateOfBirth?: Date;
+    address?: string;
   }
 ) {
   const user = await getUserContext();
@@ -348,6 +350,48 @@ export async function generateSlotPin(slotId: string) {
   return pin;
 }
 
+export async function generateSessionPin(sessionId: string) {
+  const user = await getUserContext();
+  if (!user.organismeId) throw new Error("Aucun organisme associé");
+
+  const session = await prisma.trainingSession.findUnique({
+    where: { id: sessionId },
+    include: { slots: true },
+  });
+
+  if (!session || session.organismeId !== user.organismeId) {
+    throw new Error("Session introuvable ou non autorisée");
+  }
+
+  // Generate 6 digit PIN
+  const pin = Math.floor(100000 + Math.random() * 900000).toString();
+
+  const inscriptions = await prisma.inscription.findMany({
+    where: { trainingSessionId: sessionId },
+  });
+
+  // Flat map to create upsert for each (inscription, slot) pair
+  const upserts = inscriptions.flatMap((ins) =>
+    session.slots.map((slot) =>
+      prisma.emargement.upsert({
+        where: {
+          inscriptionId_slotId: { inscriptionId: ins.id, slotId: slot.id },
+        },
+        update: { validationCode: pin, codeSentAt: dayjs().toDate() },
+        create: {
+          inscriptionId: ins.id,
+          slotId: slot.id,
+          validationCode: pin,
+          codeSentAt: dayjs().toDate(),
+        },
+      })
+    )
+  );
+
+  await prisma.$transaction(upserts);
+  return pin;
+}
+
 export async function updateEmargementStatus(
   inscriptionId: string,
   slotId: string,
@@ -379,6 +423,43 @@ export async function updateEmargementStatus(
       status,
     },
   });
+}
+
+export async function bulkUpdateEmargementStatus(
+  slotId: string,
+  status: string
+) {
+  const user = await getUserContext();
+  if (!user.organismeId) throw new Error("Aucun organisme associé");
+
+  const slot = await prisma.slot.findUnique({
+    where: { id: slotId },
+    include: { trainingSession: true },
+  });
+
+  if (!slot || slot.trainingSession.organismeId !== user.organismeId) {
+    throw new Error("Créneau introuvable ou non autorisé");
+  }
+
+  const inscriptions = await prisma.inscription.findMany({
+    where: { trainingSessionId: slot.trainingSessionId },
+  });
+
+  return prisma.$transaction(
+    inscriptions.map((ins) =>
+      prisma.emargement.upsert({
+        where: {
+          inscriptionId_slotId: { inscriptionId: ins.id, slotId },
+        },
+        update: { status },
+        create: {
+          inscriptionId: ins.id,
+          slotId,
+          status,
+        },
+      })
+    )
+  );
 }
 
 // ========================

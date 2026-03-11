@@ -67,7 +67,7 @@ export const columns = (
     accessorKey: "_count.victimes",
     header: "Victimes",
     cell: ({ row }) => {
-      // @ts-ignore - access _count
+      // @ts-expect-error - access _count
       const count = row.original._count?.victimes || 0;
       return <div>{count}</div>;
     },

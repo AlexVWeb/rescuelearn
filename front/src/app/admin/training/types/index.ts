@@ -40,6 +40,7 @@ export interface Trainee {
   email: string | null;
   phone: string | null;
   dateOfBirth: Date | null;
+  address: string | null;
   organismeId: string;
   createdAt: Date;
   updatedAt: Date;

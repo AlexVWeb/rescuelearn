@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus, UserRoundPlus } from "lucide-react";
 import {
   addTraineeToSession,
   removeTraineeFromSession,
@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 
 import { Inscription, Trainee } from "../../../types";
+import { TraineeDialog } from "../../../stagiaires/components/trainee-dialog";
 
 interface InscriptionsTabProps {
   sessionId: string;
@@ -43,6 +44,7 @@ export function InscriptionsTab({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [selectedTrainee, setSelectedTrainee] = useState("");
+  const [showTraineeDialog, setShowTraineeDialog] = useState(false);
 
   const inscribedIds = inscriptions.map((i) => i.traineeId);
   const availableTrainees = allTrainees.filter(
@@ -55,6 +57,18 @@ export function InscriptionsTab({
     try {
       await addTraineeToSession(sessionId, selectedTrainee);
       setSelectedTrainee("");
+      router.refresh();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleTraineeCreated(traineeId: string) {
+    setLoading(true);
+    try {
+      await addTraineeToSession(sessionId, traineeId);
       router.refresh();
     } catch (e) {
       console.error(e);
@@ -149,6 +163,14 @@ export function InscriptionsTab({
             >
               <UserPlus className="mr-2 h-4 w-4" /> Inscrire
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowTraineeDialog(true)}
+              disabled={inscriptions.length >= maxTrainees || loading}
+              className="w-full sm:w-auto"
+            >
+              <UserRoundPlus className="mr-2 h-4 w-4" /> Nouveau
+            </Button>
             {inscriptions.length >= maxTrainees && (
               <span className="text-destructive ml-2 text-sm">
                 Session complète
@@ -212,6 +234,12 @@ export function InscriptionsTab({
           </div>
         </CardContent>
       </Card>
+
+      <TraineeDialog
+        open={showTraineeDialog}
+        onOpenChange={setShowTraineeDialog}
+        onSuccess={handleTraineeCreated}
+      />
     </div>
   );
 }

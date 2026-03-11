@@ -1,9 +1,9 @@
 import { getAllTrainees } from "../actions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Pencil } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { TraineeDialog } from "./components/trainee-dialog";
-import { DeleteTraineeButton } from "./components/delete-trainee-button";
+import { DataTable } from "@/components/ui/data-table";
+import { columns } from "./components/columns";
 
 export default async function StagiairesPage() {
   const trainees = await getAllTrainees();
@@ -26,36 +26,12 @@ export default async function StagiairesPage() {
         </TraineeDialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {trainees.map((trainee) => (
-          <Card key={trainee.id}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle>
-                {trainee.firstName} {trainee.lastName}
-              </CardTitle>
-              <div className="flex gap-1">
-                <TraineeDialog trainee={trainee}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </TraineeDialog>
-                <DeleteTraineeButton traineeId={trainee.id} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm">
-                Email : {trainee.email || "Non renseigné"}
-              </p>
-              <p className="text-sm">
-                Téléphone : {trainee.phone || "Non renseigné"}
-              </p>
-              <p className="text-muted-foreground mt-2 text-sm">
-                {trainee._count.inscriptions} Formation(s) suivie(s)
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <DataTable
+        columns={columns}
+        data={trainees}
+        searchKey="lastName"
+        searchPlaceholder="Rechercher par nom..."
+      />
 
       {trainees.length === 0 && (
         <div className="bg-muted/20 rounded-lg border p-8 text-center">
