@@ -13,5 +13,7 @@ export default defineConfig({
   engine: "classic",
   datasource: {
     url: env("DATABASE_URL"),
+    shadowDatabaseUrl:
+      "postgresql://postgres:postgres@127.0.0.1:54322/prisma_shadow",
   },
 });

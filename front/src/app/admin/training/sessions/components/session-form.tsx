@@ -30,7 +30,7 @@ import { DeleteSessionButton } from "./delete-session-button";
 
 const sessionSchema = z.object({
   title: z.string().min(3, "Titre requis"),
-  type: z.enum(["PSC1", "PSE1", "PSE2", "SST", "IPS"]),
+  type: z.enum(["PSC", "PSE1", "PSE2", "SST", "IPS"]),
   location: z.string().min(2, "Lieu requis"),
   maxTrainees: z.number().min(1, "Minimum 1 stagiaire"),
   status: z.enum(["planifiée", "en_cours", "terminée", "annulée"]),
@@ -61,7 +61,7 @@ export function SessionForm({
     resolver: zodResolver(sessionSchema),
     defaultValues: {
       title: sessionItem?.title || "",
-      type: (sessionItem?.type as any) || "PSC1",
+      type: (sessionItem?.type as any) || "PSC",
       location: sessionItem?.location || "",
       maxTrainees: sessionItem?.maxTrainees || 10,
       status: sessionItem?.status || "planifiée",
@@ -138,7 +138,7 @@ export function SessionForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="PSC1">PSC1</SelectItem>
+                    <SelectItem value="PSC">PSC</SelectItem>
                     <SelectItem value="PSE1">PSE1</SelectItem>
                     <SelectItem value="PSE2">PSE2</SelectItem>
                     <SelectItem value="SST">SST</SelectItem>

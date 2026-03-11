@@ -1,7 +1,7 @@
 export type SessionStatus = "planifiée" | "en_cours" | "terminée" | "annulée";
 export type SessionType = "PSC1" | "PSE1" | "PSE2" | "SST" | "IPS";
 export type InscriptionStatus = "inscrit" | "présent" | "absent" | "éliminé";
-export type EmargementStatus = "en_attente" | "validé" | "absent" | string;
+export type EmargementStatus = "en_attente" | "validé" | "absent";
 
 export interface Slot {
   id: string;

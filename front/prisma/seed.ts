@@ -1,11 +1,69 @@
 import { PrismaClient } from "@prisma/client";
+import * as readline from "readline";
+import { hashPassword } from "better-auth/crypto";
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log("Début du seed...");
+function prompt(question: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
 
-  // 1. Création de l'organisme principal
+function promptHidden(question: string): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    // Remplace l'output pour masquer la saisie
+    (rl as any).stdoutMuted = true;
+    (rl as any)._writeToOutput = (str: string) => {
+      if ((rl as any).stdoutMuted && str.trim()) {
+        process.stdout.write("*");
+      } else {
+        process.stdout.write(str);
+      }
+    };
+
+    rl.question(question, (answer) => {
+      process.stdout.write("\n");
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+async function main() {
+  console.log("🚀 Seed RescueLearn - Création du SUPER_ADMIN\n");
+
+  const email = await prompt("📧 Email du SUPER_ADMIN : ");
+  const name = await prompt("👤 Nom complet : ");
+  const password = await promptHidden("🔒 Mot de passe : ");
+  const confirmPassword = await promptHidden("🔒 Confirmer le mot de passe : ");
+
+  if (password !== confirmPassword) {
+    console.error("\n❌ Les mots de passe ne correspondent pas.");
+    process.exit(1);
+  }
+
+  if (password.length < 8) {
+    console.error("\n❌ Le mot de passe doit faire au moins 8 caractères.");
+    process.exit(1);
+  }
+
+  console.log("\n⏳ Création en cours...\n");
+
+  const hashedPassword = await hashPassword(password);
+
   const organisme = await prisma.organisme.create({
     data: {
       name: "Administration RescueLearn",
@@ -13,24 +71,34 @@ async function main() {
     },
   });
 
-  console.log("✅ Organisme principal créé !");
-  console.log("=============================================");
-  console.log(`🏢 Nom : ${organisme.name}`);
-  console.log(`🔑 **CODE D'INVITATION : ${organisme.inviteCode}**`);
-  console.log("=============================================");
+  const user = await prisma.user.create({
+    data: {
+      email,
+      name,
+      emailVerified: true,
+      roles: ["FORMATEUR", "SUPER_ADMIN"],
+      organismeId: organisme.id,
+    },
+  });
 
-  console.log("\nPour devenir SUPER_ADMIN, suivez ces étapes :");
-  console.log(`1. Allez sur http://localhost:3000/login`);
-  console.log(
-    `2. Créez un compte en utilisant le code d'invitation : ${organisme.inviteCode}`
-  );
-  console.log(
-    `3. Une fois le compte créé (vous serez FORMATEUR par défaut), ouvrez Prisma Studio.`
-  );
-  console.log(
-    `4. Modifiez votre champ 'roles' pour y mettre : ["FORMATEUR", "SUPER_ADMIN"]`
-  );
-  console.log(`5. Vous avez désormais tous les droits locaux !`);
+  await prisma.account.create({
+    data: {
+      accountId: user.id,
+      providerId: "credential",
+      userId: user.id,
+      password: hashedPassword,
+    },
+  });
+
+  console.log("=============================================");
+  console.log("✅ SUPER_ADMIN créé avec succès !\n");
+  console.log(`🏢 Organisme  : ${organisme.name}`);
+  console.log(`🔑 Invite code: ${organisme.inviteCode}`);
+  console.log(`👤 Utilisateur: ${user.name}`);
+  console.log(`📧 Email      : ${user.email}`);
+  console.log(`🎭 Rôles      : ${(user.roles as string[]).join(", ")}`);
+  console.log("=============================================");
+  console.log("\n➡️  Connectez-vous sur http://localhost:3000/login");
 }
 
 main()
@@ -38,7 +106,7 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error("Erreur lors du seed :", e);
+    console.error("❌ Erreur lors du seed :", e.message);
     await prisma.$disconnect();
     process.exit(1);
   });

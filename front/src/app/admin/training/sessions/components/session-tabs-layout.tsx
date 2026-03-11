@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { SlotsTab } from "../[id]/components/slots-tab";
 import { InscriptionsTab } from "../[id]/components/inscriptions-tab";
-import { EmargementTab } from "../[id]/components/emargement-tab";
+import { EmargementTab } from "../[id]/components/emargement";
 import { SessionForm } from "./session-form";
 import {
   Inscription,
