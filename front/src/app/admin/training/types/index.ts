@@ -21,6 +21,8 @@ export interface TrainingSession {
   location: string;
   status: SessionStatus;
   maxTrainees: number;
+  startDate: Date | null;
+  endDate: Date | null;
   formateurId: string;
   organismeId: string;
   createdAt: Date;
@@ -62,7 +64,13 @@ export interface Inscription {
   id: string;
   traineeId: string;
   trainingSessionId: string;
-  status: "inscrit" | "actée" | "annulé" | "présent_partiel" | "présent" | string;
+  status:
+    | "inscrit"
+    | "actée"
+    | "annulé"
+    | "présent_partiel"
+    | "présent"
+    | string;
   createdAt?: Date;
   updatedAt?: Date;
   trainee?: Trainee;
@@ -74,7 +82,16 @@ export interface TrainingSessionWithRelations extends TrainingSession {
   inscriptions: Inscription[];
 }
 
-export type CreateTrainingSessionInput = Omit<TrainingSession, "id" | "createdAt" | "updatedAt" | "formateurId" | "organismeId" | "slots" | "_count"> & {
+export type CreateTrainingSessionInput = Omit<
+  TrainingSession,
+  | "id"
+  | "createdAt"
+  | "updatedAt"
+  | "formateurId"
+  | "organismeId"
+  | "slots"
+  | "_count"
+> & {
   status: string;
   type: string;
 };

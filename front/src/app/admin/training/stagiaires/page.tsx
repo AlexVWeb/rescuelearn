@@ -10,10 +10,12 @@ export default async function StagiairesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Base Stagiaires</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Base Stagiaires
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Gérez tous les stagiaires enregistrés par votre organisme.
           </p>
         </div>
@@ -28,7 +30,9 @@ export default async function StagiairesPage() {
         {trainees.map((trainee) => (
           <Card key={trainee.id}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle>{trainee.firstName} {trainee.lastName}</CardTitle>
+              <CardTitle>
+                {trainee.firstName} {trainee.lastName}
+              </CardTitle>
               <div className="flex gap-1">
                 <TraineeDialog trainee={trainee}>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -39,18 +43,26 @@ export default async function StagiairesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm">Email : {trainee.email || "Non renseigné"}</p>
-              <p className="text-sm">Téléphone : {trainee.phone || "Non renseigné"}</p>
-              <p className="text-sm mt-2 text-muted-foreground">{trainee._count.inscriptions} Formation(s) suivie(s)</p>
+              <p className="text-sm">
+                Email : {trainee.email || "Non renseigné"}
+              </p>
+              <p className="text-sm">
+                Téléphone : {trainee.phone || "Non renseigné"}
+              </p>
+              <p className="text-muted-foreground mt-2 text-sm">
+                {trainee._count.inscriptions} Formation(s) suivie(s)
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
-      
+
       {trainees.length === 0 && (
-         <div className="text-center p-8 border rounded-lg bg-muted/20">
-            <p className="text-muted-foreground">Aucun stagiaire trouvé. Ajoutez-en un pour commencer.</p>
-         </div>
+        <div className="bg-muted/20 rounded-lg border p-8 text-center">
+          <p className="text-muted-foreground">
+            Aucun stagiaire trouvé. Ajoutez-en un pour commencer.
+          </p>
+        </div>
       )}
     </div>
   );

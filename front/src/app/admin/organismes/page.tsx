@@ -9,7 +9,7 @@ export default async function OrganismesPage(props: {
   const search = searchParams?.search || "";
 
   const result = await getOrganismesAction(page, 100, search);
-  const organismes = (result.success && result.data) ? result.data : [];
+  const organismes = result.success && result.data ? result.data : [];
 
   return <ClientPage initialOrganismes={organismes} />;
 }

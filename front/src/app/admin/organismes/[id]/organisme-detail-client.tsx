@@ -18,7 +18,10 @@ interface OrganismeDetailClientProps {
   members: OrganismeMember[];
 }
 
-export function OrganismeDetailClient({ organisme, members }: OrganismeDetailClientProps) {
+export function OrganismeDetailClient({
+  organisme,
+  members,
+}: OrganismeDetailClientProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 

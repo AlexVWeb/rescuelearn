@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     "santé",
     "sécurité",
     "gestes qui sauvent",
-    "PSC1",
+    "PSC",
     "PSE1",
     "PSE2",
   ],

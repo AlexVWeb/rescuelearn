@@ -139,7 +139,7 @@ export function ReferencielDialog({
                 <FormItem>
                   <FormLabel>Titre</FormLabel>
                   <FormControl>
-                    <Input placeholder="PSC1, PSE1..." {...field} />
+                    <Input placeholder="PSC, PSE1..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

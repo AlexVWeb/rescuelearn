@@ -10,20 +10,24 @@ export async function validateInviteCode(inviteCode: string) {
   }
 
   const organisme = await prisma.organisme.findUnique({
-    where: { inviteCode }
+    where: { inviteCode },
   });
 
   if (!organisme) {
     return { success: false, error: "Code d'invitation invalide ou expiré." };
   }
 
-  return { success: true, organismeId: organisme.id, organismeName: organisme.name };
+  return {
+    success: true,
+    organismeId: organisme.id,
+    organismeName: organisme.name,
+  };
 }
 
 export async function linkUserToOrganisme(inviteCode: string) {
   // Verifie l'authentification
   const session = await auth.api.getSession({
-    headers: await headers()
+    headers: await headers(),
   });
 
   if (!session?.user) {
@@ -32,7 +36,7 @@ export async function linkUserToOrganisme(inviteCode: string) {
 
   // Verifie le code d'invitation
   const organisme = await prisma.organisme.findUnique({
-    where: { inviteCode }
+    where: { inviteCode },
   });
 
   if (!organisme) {
@@ -41,8 +45,10 @@ export async function linkUserToOrganisme(inviteCode: string) {
 
   // Met à jour l'utilisateur et lui donne le role FORMATEUR
   try {
-    const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-    
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
     // Si l'utilisateur n'a pas de roles, on initialise un tableau
     const currentRoles = Array.isArray(user?.roles) ? user.roles : [];
     const newRoles = [...new Set([...(currentRoles as string[]), "FORMATEUR"])];
@@ -51,13 +57,19 @@ export async function linkUserToOrganisme(inviteCode: string) {
       where: { id: session.user.id },
       data: {
         organismeId: organisme.id,
-        roles: newRoles
-      }
+        roles: newRoles,
+      },
     });
 
     return { success: true };
   } catch (error) {
-    console.error("Erreur lors de la liaison de l'utilisateur à l'organisme:", error);
-    return { success: false, error: "Une erreur est survenue lors de l'association à l'organisme." };
+    console.error(
+      "Erreur lors de la liaison de l'utilisateur à l'organisme:",
+      error
+    );
+    return {
+      success: false,
+      error: "Une erreur est survenue lors de l'association à l'organisme.",
+    };
   }
 }

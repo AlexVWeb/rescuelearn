@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -39,10 +38,14 @@ export function NavMain({
           const hasMultipleSubItems = (item.items?.length ?? 0) > 1;
 
           if (!hasMultipleSubItems) {
-            const url = (item.items?.length === 1) ? item.items[0].url : item.url;
+            const url = item.items?.length === 1 ? item.items[0].url : item.url;
             return (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={item.title}
+                  isActive={item.isActive}
+                >
                   <a href={url}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>

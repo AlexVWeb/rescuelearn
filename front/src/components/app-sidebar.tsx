@@ -26,134 +26,141 @@ import {
 // Compute sidebar data dynamically based on user roles
 const getNavData = (userRoles: string[]) => {
   const isSuperAdmin = userRoles.includes("SUPER_ADMIN");
-  const isFormateur = userRoles.includes("FORMATEUR") || userRoles.includes("ADMIN_ORGANISME") || isSuperAdmin;
+  const isFormateur =
+    userRoles.includes("FORMATEUR") ||
+    userRoles.includes("ADMIN_ORGANISME") ||
+    isSuperAdmin;
 
-  const trainingItems = isFormateur ? [
-    {
-      title: "Gest. Formations",
-      url: "#",
-      icon: Calendar,
-      isActive: true,
-      items: [
+  const trainingItems = isFormateur
+    ? [
+        {
+          title: "Gest. Formations",
+          url: "#",
+          icon: Calendar,
+          isActive: true,
+          items: [
+            {
+              title: "Tableau de bord",
+              url: "/admin/training/dashboard",
+            },
+            {
+              title: "Sessions",
+              url: "/admin/training/sessions",
+            },
+            {
+              title: "Stagiaires",
+              url: "/admin/training/stagiaires",
+            },
+          ],
+        },
+      ]
+    : [];
+
+  const superAdminItems = isSuperAdmin
+    ? [
         {
           title: "Tableau de bord",
-          url: "/admin/training/dashboard",
-        },
-        {
-          title: "Sessions",
-          url: "/admin/training/sessions",
-        },
-        {
-          title: "Stagiaires",
-          url: "/admin/training/stagiaires",
-        },
-      ],
-    }
-  ] : [];
-
-  const superAdminItems = isSuperAdmin ? [
-    {
-      title: "Tableau de bord",
-      url: "/admin",
-      icon: SquareTerminal,
-      isActive: !isFormateur,
-      items: [
-        {
-          title: "Overview",
           url: "/admin",
+          icon: SquareTerminal,
+          isActive: !isFormateur,
+          items: [
+            {
+              title: "Overview",
+              url: "/admin",
+            },
+          ],
         },
-      ],
-    },
-    {
-      title: "Organismes",
-      url: "/admin/organismes",
-      icon: Building,
-      items: [
         {
-          title: "Gérer les organismes",
+          title: "Organismes",
           url: "/admin/organismes",
+          icon: Building,
+          items: [
+            {
+              title: "Gérer les organismes",
+              url: "/admin/organismes",
+            },
+          ],
         },
-      ],
-    },
-    {
-      title: "Utilisateurs",
-      url: "/admin/users",
-      icon: Users,
-      items: [
         {
-          title: "Gérer les utilisateurs",
+          title: "Utilisateurs",
           url: "/admin/users",
+          icon: Users,
+          items: [
+            {
+              title: "Gérer les utilisateurs",
+              url: "/admin/users",
+            },
+          ],
         },
-      ],
-    },
-    {
-      title: "Quiz",
-      url: "#",
-      icon: BookOpen,
-      items: [
         {
           title: "Quiz",
-          url: "/admin/quiz/quizzes",
+          url: "#",
+          icon: BookOpen,
+          items: [
+            {
+              title: "Quiz",
+              url: "/admin/quiz/quizzes",
+            },
+            {
+              title: "Questions",
+              url: "/admin/quiz/questions",
+            },
+            {
+              title: "Options",
+              url: "/admin/quiz/options",
+            },
+            {
+              title: "Catégories",
+              url: "/admin/quiz/categories",
+            },
+            {
+              title: "Niveaux",
+              url: "/admin/quiz/levels",
+            },
+          ],
         },
         {
-          title: "Questions",
-          url: "/admin/quiz/questions",
+          title: "SNV",
+          url: "#",
+          icon: Activity,
+          items: [
+            {
+              title: "Scénarios",
+              url: "/admin/snv/scenarios",
+            },
+            {
+              title: "Victimes",
+              url: "/admin/snv/victims",
+            },
+          ],
         },
         {
-          title: "Options",
-          url: "/admin/quiz/options",
+          title: "Cartes d'apprentissage",
+          url: "#",
+          icon: GraduationCap,
+          items: [
+            {
+              title: "Cartes",
+              url: "/admin/cards",
+            },
+          ],
         },
-        {
-          title: "Catégories",
-          url: "/admin/quiz/categories",
-        },
-        {
-          title: "Niveaux",
-          url: "/admin/quiz/levels",
-        },
-      ],
-    },
-    {
-      title: "SNV",
-      url: "#",
-      icon: Activity,
-      items: [
-        {
-          title: "Scénarios",
-          url: "/admin/snv/scenarios",
-        },
-        {
-          title: "Victimes",
-          url: "/admin/snv/victims",
-        },
-      ],
-    },
-    {
-      title: "Cartes d'apprentissage",
-      url: "#",
-      icon: GraduationCap,
-      items: [
-        {
-          title: "Cartes",
-          url: "/admin/cards",
-        },
-      ],
-    },
-    {
-      title: "Référentiels",
-      url: "#",
-      icon: FileText,
-      items: [
         {
           title: "Référentiels",
-          url: "/admin/referenciels",
+          url: "#",
+          icon: FileText,
+          items: [
+            {
+              title: "Référentiels",
+              url: "/admin/referenciels",
+            },
+          ],
         },
-      ],
-    },
-  ] : [];
+      ]
+    : [];
 
   return {
-    navMain: [...superAdminItems, ...trainingItems]
+    navMain: [...superAdminItems, ...trainingItems],
   };
 };
 

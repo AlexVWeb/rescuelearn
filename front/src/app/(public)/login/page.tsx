@@ -64,7 +64,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      
+
       const validation = await validateInviteCode(values.inviteCode);
       if (!validation.success) {
         setError(validation.error!);
@@ -80,13 +80,13 @@ export default function LoginPage() {
         },
         {
           onSuccess: async () => {
-             const link = await linkUserToOrganisme(values.inviteCode!);
-             if (link.success) {
-               router.push("/admin");
-             } else {
-               setError(link.error!);
-               setLoading(false);
-             }
+            const link = await linkUserToOrganisme(values.inviteCode!);
+            if (link.success) {
+              router.push("/admin");
+            } else {
+              setError(link.error!);
+              setLoading(false);
+            }
           },
           onError: (ctx) => {
             setError(ctx.error.message);
@@ -162,7 +162,10 @@ export default function LoginPage() {
                           <FormItem>
                             <FormLabel>Code d'invitation Organisme</FormLabel>
                             <FormControl>
-                              <Input placeholder="Un code à 6 chiffres..." {...field} />
+                              <Input
+                                placeholder="Un code à 6 chiffres..."
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

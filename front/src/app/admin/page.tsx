@@ -11,7 +11,9 @@ import Link from "next/link";
 
 export default async function AdminPage() {
   const result = await getAdminStatsAction();
-  const stats = result.success ? result.data : { users: 0, organismes: 0, sessions: 0, trainees: 0 };
+  const stats = result.success
+    ? result.data
+    : { users: 0, organismes: 0, sessions: 0, trainees: 0 };
 
   const statCards = [
     {
@@ -47,7 +49,11 @@ export default async function AdminPage() {
   return (
     <div className="grid auto-rows-min gap-4 md:grid-cols-2 lg:grid-cols-4">
       {statCards.map((stat) => (
-        <Link key={stat.title} href={stat.href} className="block transition-transform hover:scale-[1.01]">
+        <Link
+          key={stat.title}
+          href={stat.href}
+          className="block transition-transform hover:scale-[1.01]"
+        >
           <Card className="h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="space-y-1">
@@ -58,15 +64,17 @@ export default async function AdminPage() {
                   {stat.description}
                 </CardDescription>
               </div>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
+              <stat.icon className="text-muted-foreground h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                {stat.value.toLocaleString()}
+              </div>
             </CardContent>
           </Card>
         </Link>
       ))}
-      <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:col-span-2 lg:col-span-4 md:min-h-min" />
+      <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:col-span-2 md:min-h-min lg:col-span-4" />
     </div>
   );
 }

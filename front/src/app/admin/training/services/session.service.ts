@@ -1,37 +1,48 @@
 import { prisma } from "@/lib/prisma";
-import { CreateTrainingSessionInput, UpdateTrainingSessionInput } from "../types";
+import {
+  CreateTrainingSessionInput,
+  UpdateTrainingSessionInput,
+} from "../types";
 
 export class TrainingSessionService {
-  static async createSession(data: CreateTrainingSessionInput, organismeId: string, formateurId: string) {
+  static async createSession(
+    data: CreateTrainingSessionInput,
+    organismeId: string,
+    formateurId: string
+  ) {
     return prisma.trainingSession.create({
       data: {
         ...data,
         organismeId,
         formateurId,
-      }
+      },
     });
   }
 
-  static async updateSession(id: string, data: UpdateTrainingSessionInput, organismeId: string) {
+  static async updateSession(
+    id: string,
+    data: UpdateTrainingSessionInput,
+    organismeId: string
+  ) {
     const session = await prisma.trainingSession.findFirst({
-      where: { id, organismeId }
+      where: { id, organismeId },
     });
     if (!session) throw new Error("Session introuvable");
 
     return prisma.trainingSession.update({
       where: { id },
-      data
+      data,
     });
   }
 
   static async deleteSession(id: string, organismeId: string) {
     const session = await prisma.trainingSession.findFirst({
-      where: { id, organismeId }
+      where: { id, organismeId },
     });
     if (!session) throw new Error("Session introuvable");
 
     return prisma.trainingSession.delete({
-      where: { id }
+      where: { id },
     });
   }
 
@@ -40,17 +51,17 @@ export class TrainingSessionService {
       where: { id, organismeId },
       include: {
         slots: {
-          orderBy: { date: 'asc' }
+          orderBy: { date: "asc" },
         },
         inscriptions: {
           include: {
             trainee: true,
-            emargements: true
-          }
-        }
-      }
+            emargements: true,
+          },
+        },
+      },
     });
-    
+
     if (!session) throw new Error("Session introuvable");
     return session;
   }

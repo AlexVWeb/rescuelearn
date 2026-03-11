@@ -21,12 +21,14 @@ model Organisme {
 }
 
 model TrainingSession {
-  id              String   @id @default(cuid())
+  id              String   @id @default(uuid())
   type            String   // PSC1 | PSE1 | PSE2 | SST | IPS
   title           String
   location        String
   status          String   @default("planifiée") // planifiée | en_cours | terminée | annulée
   maxTrainees     Int
+  startDate       DateTime? @db.Date
+  endDate         DateTime? @db.Date
   
   formateurId     String
   formateur       User      @relation(fields: [formateurId], references: [id])

@@ -29,11 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  User,
-  createUserAction,
-  updateUserAction,
-} from "@/app/actions/user-actions";
+import { User, updateUserAction } from "@/app/actions/user-actions";
 import { useRouter } from "next/navigation";
 
 // Schema

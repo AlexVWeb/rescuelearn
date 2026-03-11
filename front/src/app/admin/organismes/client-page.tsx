@@ -6,7 +6,10 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { OrganismesTable } from "@/components/admin/organismes-table";
-import { Organisme, deleteOrganismeAction } from "@/app/actions/organisme-actions";
+import {
+  Organisme,
+  deleteOrganismeAction,
+} from "@/app/actions/organisme-actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,8 +28,11 @@ interface ClientPageProps {
 
 export default function ClientPage({ initialOrganismes }: ClientPageProps) {
   const router = useRouter();
-  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
-  const [organismeToDelete, setOrganismeToDelete] = useState<string | null>(null);
+  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] =
+    useState(false);
+  const [organismeToDelete, setOrganismeToDelete] = useState<string | null>(
+    null
+  );
 
   const handleDeleteClick = (id: string) => {
     setOrganismeToDelete(id);
@@ -56,7 +62,9 @@ export default function ClientPage({ initialOrganismes }: ClientPageProps) {
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Organismes</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Organismes
+          </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
             Gérez les organismes de formation de la plateforme.
           </p>
@@ -79,8 +87,9 @@ export default function ClientPage({ initialOrganismes }: ClientPageProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Cela supprimera définitivement l&apos;organisme
-              et toutes les données associées (sessions, stagiaires, etc.).
+              Cette action est irréversible. Cela supprimera définitivement
+              l&apos;organisme et toutes les données associées (sessions,
+              stagiaires, etc.).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

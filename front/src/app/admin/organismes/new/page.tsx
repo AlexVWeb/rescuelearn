@@ -40,14 +40,20 @@ export default function NewOrganismePage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Nouvel organisme</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Nouvel organisme
+          </h1>
           <p className="text-muted-foreground text-sm">
             Remplissez les informations pour créer un nouvel organisme.
           </p>
         </div>
       </div>
 
-      <OrganismeForm onSubmit={handleSubmit} loading={loading} submitLabel="Créer l'organisme" />
+      <OrganismeForm
+        onSubmit={handleSubmit}
+        loading={loading}
+        submitLabel="Créer l'organisme"
+      />
     </div>
   );
 }

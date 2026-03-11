@@ -2,7 +2,10 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { organismeSchema, OrganismeFormValues } from "@/lib/schemas/organisme.schema";
+import {
+  organismeSchema,
+  OrganismeFormValues,
+} from "@/lib/schemas/organisme.schema";
 import {
   Form,
   FormControl,
@@ -73,7 +76,11 @@ export function OrganismeForm({
                 <FormItem>
                   <FormLabel>SIRET</FormLabel>
                   <FormControl>
-                    <Input placeholder="14 chiffres" {...field} maxLength={14} />
+                    <Input
+                      placeholder="14 chiffres"
+                      {...field}
+                      maxLength={14}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -108,7 +115,11 @@ export function OrganismeForm({
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="contact@organisme.fr" {...field} />
+                    <Input
+                      type="email"
+                      placeholder="contact@organisme.fr"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

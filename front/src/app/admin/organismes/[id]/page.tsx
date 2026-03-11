@@ -25,7 +25,8 @@ export default async function OrganismeDetailPage({
   }
 
   const organisme = organismeResult.data;
-  const members = membersResult.success && membersResult.data ? membersResult.data : [];
+  const members =
+    membersResult.success && membersResult.data ? membersResult.data : [];
 
   return (
     <div className="space-y-6">
@@ -36,10 +37,14 @@ export default async function OrganismeDetailPage({
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{organisme.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {organisme.name}
+          </h1>
           <p className="text-muted-foreground text-sm">
             Code d&apos;invitation :{" "}
-            <code className="bg-muted rounded px-1">{organisme.inviteCode}</code>
+            <code className="bg-muted rounded px-1">
+              {organisme.inviteCode}
+            </code>
           </p>
         </div>
       </div>

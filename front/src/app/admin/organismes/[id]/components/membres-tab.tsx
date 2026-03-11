@@ -55,7 +55,10 @@ type SearchUser = {
 
 const ROLES = ["admin", "formateur"];
 
-export function MembresTab({ organismeId, members: initialMembers }: MembresTabProps) {
+export function MembresTab({
+  organismeId,
+  members: initialMembers,
+}: MembresTabProps) {
   const router = useRouter();
   const [members, setMembers] = useState(initialMembers);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
@@ -64,7 +67,8 @@ export function MembresTab({ organismeId, members: initialMembers }: MembresTabP
   const [searching, setSearching] = useState(false);
 
   const getMemberName = (m: OrganismeMember) => {
-    if (m.firstName || m.lastName) return `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim();
+    if (m.firstName || m.lastName)
+      return `${m.firstName ?? ""} ${m.lastName ?? ""}`.trim();
     return m.name ?? m.email;
   };
 
@@ -100,7 +104,9 @@ export function MembresTab({ organismeId, members: initialMembers }: MembresTabP
     setSearching(true);
     const result = await searchUsersAction(searchQuery);
     if (result.success && result.data) {
-      setSearchResults(result.data.filter((u) => !members.find((m) => m.id === u.id)));
+      setSearchResults(
+        result.data.filter((u) => !members.find((m) => m.id === u.id))
+      );
     }
     setSearching(false);
   };
@@ -147,11 +153,17 @@ export function MembresTab({ organismeId, members: initialMembers }: MembresTabP
               {searchResults.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>
-                    <div className="font-medium">{u.firstName ?? u.name ?? "—"}</div>
-                    <div className="text-muted-foreground text-xs">{u.email}</div>
+                    <div className="font-medium">
+                      {u.firstName ?? u.name ?? "—"}
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      {u.email}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {u.organismeId ? "Rattaché à un autre organisme" : "Sans organisme"}
+                    {u.organismeId
+                      ? "Rattaché à un autre organisme"
+                      : "Sans organisme"}
                   </TableCell>
                   <TableCell>
                     <Button size="sm" onClick={() => handleAdd(u.id)}>
@@ -179,19 +191,28 @@ export function MembresTab({ organismeId, members: initialMembers }: MembresTabP
           <TableBody>
             {members.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground h-24 text-center">
+                <TableCell
+                  colSpan={5}
+                  className="text-muted-foreground h-24 text-center"
+                >
                   Aucun membre dans cet organisme.
                 </TableCell>
               </TableRow>
             ) : (
               members.map((member) => (
                 <TableRow key={member.id}>
-                  <TableCell className="font-medium">{getMemberName(member)}</TableCell>
-                  <TableCell className="text-muted-foreground">{member.email}</TableCell>
+                  <TableCell className="font-medium">
+                    {getMemberName(member)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {member.email}
+                  </TableCell>
                   <TableCell>
                     <Select
                       defaultValue={getMemberRoles(member)[0] ?? "formateur"}
-                      onValueChange={(role) => handleRoleChange(member.id, role)}
+                      onValueChange={(role) =>
+                        handleRoleChange(member.id, role)
+                      }
                     >
                       <SelectTrigger className="h-8 w-[130px]">
                         <SelectValue />
@@ -225,12 +246,16 @@ export function MembresTab({ organismeId, members: initialMembers }: MembresTabP
         </Table>
       </div>
 
-      <AlertDialog open={!!memberToRemove} onOpenChange={(o) => !o && setMemberToRemove(null)}>
+      <AlertDialog
+        open={!!memberToRemove}
+        onOpenChange={(o) => !o && setMemberToRemove(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Retirer ce membre ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Le compte utilisateur sera conservé mais il ne sera plus rattaché à cet organisme.
+              Le compte utilisateur sera conservé mais il ne sera plus rattaché
+              à cet organisme.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

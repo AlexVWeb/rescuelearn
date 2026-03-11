@@ -44,7 +44,9 @@ export async function getOrganismesAction(
     ? {
         OR: [
           { name: { contains: search, mode: "insensitive" as const } },
-          { agreementNumber: { contains: search, mode: "insensitive" as const } },
+          {
+            agreementNumber: { contains: search, mode: "insensitive" as const },
+          },
         ],
       }
     : {};
@@ -115,7 +117,10 @@ export async function createOrganismeAction(data: OrganismeFormValues) {
   }
 }
 
-export async function updateOrganismeAction(id: string, data: OrganismeFormValues) {
+export async function updateOrganismeAction(
+  id: string,
+  data: OrganismeFormValues
+) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return { success: false, error: "Unauthorized" };
@@ -217,7 +222,10 @@ export async function removeMemberFromOrganismeAction(userId: string) {
   }
 }
 
-export async function addMemberToOrganismeAction(userId: string, organismeId: string) {
+export async function addMemberToOrganismeAction(
+  userId: string,
+  organismeId: string
+) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return { success: false, error: "Unauthorized" };
 
