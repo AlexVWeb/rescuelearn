@@ -363,8 +363,13 @@ export async function generateSessionPin(sessionId: string) {
     throw new Error("Session introuvable ou non autorisée");
   }
 
-  // Generate 6 digit PIN
-  const pin = Math.floor(100000 + Math.random() * 900000).toString();
+  // Generate a unique 6-digit PIN per slot
+  const pinBySlot = Object.fromEntries(
+    session.slots.map((slot) => [
+      slot.id,
+      Math.floor(100000 + Math.random() * 900000).toString(),
+    ])
+  );
 
   const inscriptions = await prisma.inscription.findMany({
     where: { trainingSessionId: sessionId },
@@ -377,11 +382,14 @@ export async function generateSessionPin(sessionId: string) {
         where: {
           inscriptionId_slotId: { inscriptionId: ins.id, slotId: slot.id },
         },
-        update: { validationCode: pin, codeSentAt: dayjs().toDate() },
+        update: {
+          validationCode: pinBySlot[slot.id],
+          codeSentAt: dayjs().toDate(),
+        },
         create: {
           inscriptionId: ins.id,
           slotId: slot.id,
-          validationCode: pin,
+          validationCode: pinBySlot[slot.id],
           codeSentAt: dayjs().toDate(),
         },
       })
@@ -389,7 +397,7 @@ export async function generateSessionPin(sessionId: string) {
   );
 
   await prisma.$transaction(upserts);
-  return pin;
+  return pinBySlot;
 }
 
 export async function updateEmargementStatus(
