@@ -9,6 +9,12 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url }) => {
+      // TODO: remplacer par un vrai provider email en production (Resend, Nodemailer, etc.)
+      console.log(
+        `[RescueLearn] Lien de réinitialisation pour ${user.email}: ${url}`
+      );
+    },
   },
   user: {
     additionalFields: {

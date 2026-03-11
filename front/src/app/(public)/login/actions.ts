@@ -4,6 +4,23 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
+export async function requestPasswordReset(email: string) {
+  try {
+    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/auth/forget-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
+      }),
+    });
+  } catch (error) {
+    console.error("Erreur lors de la demande de réinitialisation:", error);
+  }
+  // On renvoie toujours success pour ne pas révéler si l'email existe
+  return { success: true };
+}
+
 export async function validateInviteCode(inviteCode: string) {
   if (!inviteCode) {
     return { success: false, error: "Code d'invitation requis." };
