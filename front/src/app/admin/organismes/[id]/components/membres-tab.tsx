@@ -1,5 +1,6 @@
 "use client";
 
+import dayjs from "dayjs";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -227,7 +228,7 @@ export function MembresTab({
                     </Select>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {new Date(member.createdAt).toLocaleDateString("fr-FR")}
+                    {dayjs(member.createdAt).format("DD/MM/YYYY")}
                   </TableCell>
                   <TableCell>
                     <Button

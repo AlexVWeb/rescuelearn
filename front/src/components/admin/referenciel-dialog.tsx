@@ -1,5 +1,6 @@
 "use client";
 
+import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -56,7 +57,7 @@ export function ReferencielDialog({
     resolver: zodResolver(referencielSchema) as any,
     defaultValues: {
       title: "",
-      yearEdition: new Date().getFullYear(),
+      yearEdition: dayjs().year(),
     },
   });
 
@@ -70,7 +71,7 @@ export function ReferencielDialog({
     } else {
       form.reset({
         title: "",
-        yearEdition: new Date().getFullYear(),
+        yearEdition: dayjs().year(),
       });
       setFile(null);
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import dayjs from "dayjs";
 import * as React from "react";
 import {
   ColumnDef,
@@ -145,8 +146,7 @@ export function OrganismesTable({ data, onDelete }: OrganismesTableProps) {
       accessorKey: "createdAt",
       header: "Créé le",
       cell: ({ row }) => {
-        const date = new Date(row.getValue("createdAt"));
-        return <div>{date.toLocaleDateString("fr-FR")}</div>;
+        return <div>{dayjs(row.getValue("createdAt")).format("DD/MM/YYYY")}</div>;
       },
     },
     {

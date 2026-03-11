@@ -1,5 +1,6 @@
 "use client";
 
+import dayjs from "dayjs";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -117,7 +118,7 @@ export function EmargementTab({
           <SelectContent>
             {slots.map((slot) => (
               <SelectItem key={slot.id} value={slot.id}>
-                {slot.label} ({new Date(slot.date).toLocaleDateString()}{" "}
+                {slot.label} ({dayjs(slot.date).startOf('day').format("DD/MM/YYYY")}{" "}
                 {slot.startTime}-{slot.endTime})
               </SelectItem>
             ))}

@@ -76,7 +76,12 @@ export function SessionTabsLayout({ session, allTrainees = [], isNew = false }: 
 
         <TabsContent value="slots" className="mt-4 space-y-4">
           {session && (
-            <SlotsTab sessionId={session.id} slots={slots} />
+            <SlotsTab 
+              sessionId={session.id} 
+              slots={slots} 
+              sessionStartDate={session.startDate} 
+              sessionEndDate={session.endDate} 
+            />
           )}
         </TabsContent>
 

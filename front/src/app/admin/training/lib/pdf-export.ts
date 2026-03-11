@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Slot, Inscription } from "../types";
@@ -26,7 +27,7 @@ export function generateEmargementPDF(
       "Stagiaire",
       ...slots.map(
         (s) =>
-          `${s.label}\n${new Date(s.date).toLocaleDateString("fr-FR")}\n${s.startTime} - ${s.endTime}`
+          `${s.label}\n${dayjs(s.date).startOf('day').format("DD/MM/YYYY")}\n${s.startTime} - ${s.endTime}`
       ),
     ],
   ];

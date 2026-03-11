@@ -1,5 +1,6 @@
 "use client";
 
+import dayjs from "dayjs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -56,8 +57,8 @@ export function SessionForm({ sessionItem, onCancel, onSuccess }: SessionFormPro
       location: sessionItem?.location || "",
       maxTrainees: sessionItem?.maxTrainees || 10,
       status: sessionItem?.status || "planifiée",
-      startDate: sessionItem?.startDate ? new Date(sessionItem.startDate).toISOString().split('T')[0] : "",
-      endDate: sessionItem?.endDate ? new Date(sessionItem.endDate).toISOString().split('T')[0] : "",
+      startDate: sessionItem?.startDate ? dayjs(sessionItem.startDate).startOf('day').format('YYYY-MM-DD') : "",
+      endDate: sessionItem?.endDate ? dayjs(sessionItem.endDate).startOf('day').format('YYYY-MM-DD') : "",
     },
   });
 
@@ -65,8 +66,8 @@ export function SessionForm({ sessionItem, onCancel, onSuccess }: SessionFormPro
     try {
       const formattedData = {
         ...data,
-        startDate: data.startDate ? new Date(data.startDate) : null,
-        endDate: data.endDate ? new Date(data.endDate) : null,
+        startDate: data.startDate ? dayjs(data.startDate).hour(12).toDate() : null,
+        endDate: data.endDate ? dayjs(data.endDate).hour(12).toDate() : null,
       };
 
       if (sessionItem) {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import dayjs from "dayjs";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,26 +11,51 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Trash2, Calendar } from "lucide-react";
+import { Plus, Trash2, Calendar, Clock, AlertCircle, Sparkles } from "lucide-react";
 import { createSlot, deleteSlot } from "../../../actions";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import "dayjs/locale/fr";
+
+dayjs.locale("fr");
 
 import { Slot } from "../../../types";
+import { getNextSlotSuggestion, isDateWithinSession, SlotSuggestion } from "./slot-utils";
 
 interface SlotsTabProps {
   sessionId: string;
   slots: Slot[];
+  sessionStartDate: Date | null;
+  sessionEndDate: Date | null;
 }
 
-export function SlotsTab({ sessionId, slots }: SlotsTabProps) {
+export function SlotsTab({ sessionId, slots, sessionStartDate, sessionEndDate }: SlotsTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [suggestion, setSuggestion] = useState<SlotSuggestion | null>(null);
+  
   const [newSlot, setNewSlot] = useState({
-    label: "Jour 1",
-    date: new Date().toISOString().split("T")[0],
-    startTime: "09:00",
-    endTime: "12:30",
+    label: "",
+    date: "",
+    startTime: "",
+    endTime: "",
   });
+
+  // Mettre à jour la suggestion quand les slots changent
+  useEffect(() => {
+    const nextSuggestion = getNextSlotSuggestion(slots, sessionStartDate, sessionEndDate);
+    setSuggestion(nextSuggestion);
+    // On n'écrase pas les champs si l'utilisateur a commencé à saisir, 
+    // sauf si c'est le premier chargement ou après un ajout réussi
+    if (!newSlot.label && nextSuggestion) {
+      setNewSlot(nextSuggestion);
+    }
+  }, [slots, sessionStartDate, sessionEndDate]);
+
+  const isDateValid = !newSlot.date || isDateWithinSession(newSlot.date, sessionStartDate, sessionEndDate);
 
   async function handleAddSlot() {
     if (
@@ -37,28 +63,53 @@ export function SlotsTab({ sessionId, slots }: SlotsTabProps) {
       !newSlot.date ||
       !newSlot.startTime ||
       !newSlot.endTime
-    )
+    ) {
+      toast.error("Veuillez remplir tous les champs");
       return;
+    }
+
+    if (!isDateValid) {
+      toast.error("La date doit être comprise entre le début et la fin de la session");
+      return;
+    }
 
     setLoading(true);
     try {
       await createSlot(sessionId, {
         label: newSlot.label,
-        date: new Date(newSlot.date),
+        date: dayjs(newSlot.date).hour(12).toDate(),
         startTime: newSlot.startTime,
         endTime: newSlot.endTime,
       });
+      
+      toast.success("Créneau ajouté");
+      
+      // Réinitialiser avec la nouvelle suggestion qui sera calculée par le useEffect
       setNewSlot({
-        label: "Jour 1 - Après-midi",
-        date: newSlot.date,
-        startTime: "13:30",
-        endTime: "17:00",
+        label: "",
+        date: "",
+        startTime: "",
+        endTime: "",
       });
+      
       router.refresh();
     } catch (e) {
       console.error(e);
+      toast.error("Erreur lors de l'ajout du créneau");
     } finally {
       setLoading(false);
+    }
+  }
+
+  function applySuggestion() {
+    if (suggestion) {
+      setNewSlot({
+        label: suggestion.label,
+        date: suggestion.date,
+        startTime: suggestion.startTime,
+        endTime: suggestion.endTime,
+      });
+      toast.info("Suggestion appliquée");
     }
   }
 
@@ -67,9 +118,11 @@ export function SlotsTab({ sessionId, slots }: SlotsTabProps) {
     setLoading(true);
     try {
       await deleteSlot(id);
+      toast.success("Créneau supprimé");
       router.refresh();
     } catch (e) {
       console.error(e);
+      toast.error("Erreur lors de la suppression");
     } finally {
       setLoading(false);
     }
@@ -77,98 +130,166 @@ export function SlotsTab({ sessionId, slots }: SlotsTabProps) {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Organisation des demi-journées</CardTitle>
-          <CardDescription>
-            Définissez les créneaux horaires (slots) de cette session pour
-            l'émargement.
-          </CardDescription>
+      <Card className="overflow-hidden border-2 border-primary/10">
+        <CardHeader className="bg-primary/5 pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">Organisation des créneaux</CardTitle>
+              <CardDescription>
+                Définissez les demi-journées de formation pour l'émargement.
+              </CardDescription>
+            </div>
+            {sessionStartDate && sessionEndDate && (
+              <Badge variant="outline" className="bg-background">
+                {dayjs(sessionStartDate).startOf('day').format("DD/MM/YYYY")} au {dayjs(sessionEndDate).startOf('day').format("DD/MM/YYYY")}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="mb-6 flex flex-col items-end gap-2 sm:flex-row">
-            <div className="grid w-full gap-2 sm:w-1/4">
-              <span className="text-sm font-medium">Libellé</span>
-              <Input
-                value={newSlot.label}
-                onChange={(e) =>
-                  setNewSlot({ ...newSlot, label: e.target.value })
-                }
-                placeholder="Ex: Jour 1 - Matin"
-              />
+        <CardContent className="pt-6">
+          <div className="grid gap-6">
+            {!isDateValid && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Attention</AlertTitle>
+                <AlertDescription>
+                  La date sélectionnée est en dehors des dates de la session.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 items-end">
+              <div className="grid gap-2 lg:col-span-3">
+                <label className="text-sm font-semibold flex items-center gap-2">
+                  Libellé
+                </label>
+                <Input
+                  value={newSlot.label}
+                  onChange={(e) =>
+                    setNewSlot({ ...newSlot, label: e.target.value })
+                  }
+                  placeholder="Ex: Jour 1 - Matin"
+                  className="bg-muted/30 focus-visible:ring-primary"
+                />
+              </div>
+              <div className="grid gap-2 lg:col-span-3">
+                <label className="text-sm font-semibold flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5" /> Date
+                </label>
+                <Input
+                  type="date"
+                  value={newSlot.date}
+                  onChange={(e) =>
+                    setNewSlot({ ...newSlot, date: e.target.value })
+                  }
+                  className={cn(
+                    "bg-muted/30 focus-visible:ring-primary",
+                    !isDateValid && "border-destructive text-destructive"
+                  )}
+                />
+              </div>
+              <div className="grid gap-2 lg:col-span-2">
+                <label className="text-sm font-semibold flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5" /> Début
+                </label>
+                <Input
+                  type="time"
+                  value={newSlot.startTime}
+                  onChange={(e) =>
+                    setNewSlot({ ...newSlot, startTime: e.target.value })
+                  }
+                  className="bg-muted/30 focus-visible:ring-primary"
+                />
+              </div>
+              <div className="grid gap-2 lg:col-span-2">
+                <label className="text-sm font-semibold flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5" /> Fin
+                </label>
+                <Input
+                  type="time"
+                  value={newSlot.endTime}
+                  onChange={(e) =>
+                    setNewSlot({ ...newSlot, endTime: e.target.value })
+                  }
+                  className="bg-muted/30 focus-visible:ring-primary"
+                />
+              </div>
+              <Button
+                onClick={handleAddSlot}
+                disabled={loading || !isDateValid}
+                className="lg:col-span-2 w-full transition-all hover:scale-[1.02]"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Ajouter
+              </Button>
             </div>
-            <div className="grid w-full gap-2 sm:w-1/4">
-              <span className="text-sm font-medium">Date</span>
-              <Input
-                type="date"
-                value={newSlot.date}
-                onChange={(e) =>
-                  setNewSlot({ ...newSlot, date: e.target.value })
-                }
-              />
-            </div>
-            <div className="grid w-full gap-2 sm:w-1/4">
-              <span className="text-sm font-medium">Début</span>
-              <Input
-                type="time"
-                value={newSlot.startTime}
-                onChange={(e) =>
-                  setNewSlot({ ...newSlot, startTime: e.target.value })
-                }
-              />
-            </div>
-            <div className="grid w-full gap-2 sm:w-1/4">
-              <span className="text-sm font-medium">Fin</span>
-              <Input
-                type="time"
-                value={newSlot.endTime}
-                onChange={(e) =>
-                  setNewSlot({ ...newSlot, endTime: e.target.value })
-                }
-              />
-            </div>
-            <Button
-              onClick={handleAddSlot}
-              disabled={loading}
-              className="w-full sm:w-auto"
-            >
-              <Plus className="mr-2 h-4 w-4" /> Ajouter
-            </Button>
+
+            {suggestion && (newSlot.label !== suggestion.label || newSlot.date !== suggestion.date) && (
+              <div 
+                className="flex items-center gap-3 p-3 rounded-lg border border-dashed bg-secondary/20 cursor-pointer hover:bg-secondary/30 transition-colors"
+                onClick={applySuggestion}
+              >
+                <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                <div className="text-sm">
+                  <span className="font-medium">Suggestion :</span> {suggestion.label} le {dayjs(suggestion.date).format("DD/MM/YYYY")} ({suggestion.startTime}-{suggestion.endTime})
+                </div>
+                <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs">
+                  Appliquer
+                </Button>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-2">
-            {slots.length === 0 ? (
-              <p className="text-muted-foreground bg-muted/20 rounded-lg border py-4 text-center text-sm">
-                Aucun créneau configuré.
-              </p>
-            ) : (
-              slots.map((slot) => (
-                <div
-                  key={slot.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <Calendar className="text-muted-foreground h-4 w-4" />
-                    <div>
-                      <p className="text-sm font-medium">{slot.label}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {new Date(slot.date).toLocaleDateString("fr-FR")} de{" "}
-                        {slot.startTime} à {slot.endTime}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive"
-                    onClick={() => handleDelete(slot.id)}
-                    disabled={loading}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+          <div className="mt-8 space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              Créneaux planifiés <Badge variant="secondary" className="rounded-full px-2">{slots.length}</Badge>
+            </h3>
+            <div className="grid gap-3">
+              {slots.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-xl bg-muted/10">
+                  <Calendar className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                  <p className="text-muted-foreground text-sm">
+                    Aucun créneau configuré pour le moment.
+                  </p>
                 </div>
-              ))
-            )}
+              ) : (
+                [...slots]
+                  .sort((a, b) => dayjs(a.date).startOf('day').valueOf() - dayjs(b.date).startOf('day').valueOf() || a.startTime.localeCompare(b.startTime))
+                  .map((slot) => (
+                    <div
+                      key={slot.id}
+                      className="group flex items-center justify-between rounded-xl border p-4 bg-card hover:shadow-md transition-all hover:border-primary/20"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                          {slot.label.match(/\d+/)?.[0] || "?"}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm lg:text-base">{slot.label}</p>
+                          <div className="flex items-center gap-4 mt-1">
+                            <span className="flex items-center gap-1.5 text-xs lg:text-sm text-muted-foreground capitalize">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {dayjs(slot.date).startOf('day').format("dddd DD/MM/YYYY")}
+                            </span>
+                            <span className="flex items-center gap-1.5 text-xs lg:text-sm text-muted-foreground">
+                              <Clock className="h-3.5 w-3.5" />
+                              {slot.startTime} - {slot.endTime}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full"
+                        onClick={() => handleDelete(slot.id)}
+                        disabled={loading}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

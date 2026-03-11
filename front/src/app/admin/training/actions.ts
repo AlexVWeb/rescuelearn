@@ -1,5 +1,6 @@
 "use server";
 
+import dayjs from "dayjs";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -334,12 +335,12 @@ export async function generateSlotPin(slotId: string) {
             slotId: slot.id,
           },
         },
-        update: { validationCode: pin, codeSentAt: new Date() },
+        update: { validationCode: pin, codeSentAt: dayjs().toDate() },
         create: {
           inscriptionId: inscription.id,
           slotId: slot.id,
           validationCode: pin,
-          codeSentAt: new Date(),
+          codeSentAt: dayjs().toDate(),
         },
       })
     )
@@ -413,7 +414,7 @@ export async function validatePresencePublic(emargementId: string) {
     where: { id: emargementId },
     data: {
       status: "validé",
-      validatedAt: new Date(),
+      validatedAt: dayjs().toDate(),
     },
   });
 }

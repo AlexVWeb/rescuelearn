@@ -1,5 +1,6 @@
 "use client";
 
+import dayjs from "dayjs";
 import Link from "next/link";
 import { MobileMenu } from "@/components/MobileMenu";
 
@@ -132,7 +133,7 @@ export default function PublicLayout({
           </div>
           <div className="mt-8 border-t pt-8">
             <p className="text-center text-sm text-gray-500">
-              © {new Date().getFullYear()} RescueLearn. Tous droits réservés.{" "}
+              © {dayjs().year()} RescueLearn. Tous droits réservés.{" "}
               <Link
                 href="https://www.linkedin.com/in/alexandre-valet/"
                 className="text-blue-600 hover:text-blue-700"
