@@ -27,6 +27,7 @@ import {
 
 import { createTrainingSession, updateTrainingSession } from "../../actions";
 import { DeleteSessionButton } from "./delete-session-button";
+import { TrainingSession, CreateTrainingSessionInput } from "../../types";
 
 const sessionSchema = z.object({
   title: z.string().min(3, "Titre requis"),
@@ -41,11 +42,7 @@ const sessionSchema = z.object({
 export type SessionFormValues = z.infer<typeof sessionSchema>;
 
 interface SessionFormProps {
-  sessionItem?: SessionFormValues & {
-    id: string;
-    startDate?: Date | null;
-    endDate?: Date | null;
-  };
+  sessionItem?: TrainingSession;
   onCancel?: () => void;
   onSuccess?: (id?: string) => void;
 }
@@ -61,7 +58,7 @@ export function SessionForm({
     resolver: zodResolver(sessionSchema),
     defaultValues: {
       title: sessionItem?.title || "",
-      type: (sessionItem?.type as any) || "PSC",
+      type: sessionItem?.type || "PSC",
       location: sessionItem?.location || "",
       maxTrainees: sessionItem?.maxTrainees || 10,
       status: sessionItem?.status || "planifiée",
@@ -76,8 +73,12 @@ export function SessionForm({
 
   async function onSubmit(data: SessionFormValues) {
     try {
-      const formattedData = {
-        ...data,
+      const formattedData: CreateTrainingSessionInput = {
+        title: data.title,
+        type: data.type,
+        location: data.location,
+        maxTrainees: data.maxTrainees,
+        status: data.status,
         startDate: data.startDate
           ? dayjs(data.startDate).hour(12).toDate()
           : null,
@@ -85,15 +86,15 @@ export function SessionForm({
       };
 
       if (sessionItem) {
-        await updateTrainingSession(sessionItem.id, formattedData as any);
+        await updateTrainingSession(sessionItem.id, formattedData);
         toast.success("Session mise à jour");
         if (onSuccess) onSuccess(sessionItem.id);
         router.refresh();
       } else {
-        const result = await createTrainingSession(formattedData as any);
+        const result = await createTrainingSession(formattedData);
         toast.success("Session créée");
         if (onSuccess) {
-          onSuccess((result as any)?.id);
+          onSuccess(result.id);
         } else {
           router.refresh();
         }

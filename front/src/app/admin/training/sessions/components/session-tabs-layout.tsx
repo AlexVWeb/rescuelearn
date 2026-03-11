@@ -177,7 +177,7 @@ export function SessionTabsLayout({
             </CardHeader>
             <CardContent className="max-w-2xl">
               <SessionForm
-                sessionItem={session as any}
+                sessionItem={session}
                 onCancel={
                   isNew
                     ? () => router.push("/admin/training/sessions")

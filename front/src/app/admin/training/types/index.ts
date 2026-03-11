@@ -1,5 +1,5 @@
 export type SessionStatus = "planifiée" | "en_cours" | "terminée" | "annulée";
-export type SessionType = "PSC1" | "PSE1" | "PSE2" | "SST" | "IPS";
+export type SessionType = "PSC" | "PSE1" | "PSE2" | "SST" | "IPS";
 export type InscriptionStatus = "inscrit" | "présent" | "absent" | "éliminé";
 export type EmargementStatus = "en_attente" | "validé" | "absent";
 
