@@ -64,9 +64,15 @@ export function getNextSlotSuggestion(
     };
   }
 
-  // Si on dépasse la date de fin, on propose quand même une date, mais sans limitation
-  // pour permettre à l'utilisateur de s'étendre
   const nextDate = lastSlotDate.add(1, "day");
+
+  if (
+    sessionEndDate &&
+    nextDate.isAfter(dayjs(sessionEndDate).startOf("day"))
+  ) {
+    return null;
+  }
+
   const nextDateStr = nextDate.format("YYYY-MM-DD");
   const nextDayNumber = Math.floor(sortedSlots.length / 2) + 1;
 
