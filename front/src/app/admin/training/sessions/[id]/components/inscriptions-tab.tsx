@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, UserPlus, UserRoundPlus } from "lucide-react";
+import { Trash2, Upload, UserPlus, UserRoundPlus } from "lucide-react";
 import {
   addTraineeToSession,
   removeTraineeFromSession,
@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { Inscription, Trainee } from "../../../types";
 import { TraineeDialog } from "../../../stagiaires/components/trainee-dialog";
+import { TraineeImportDialog } from "../../../stagiaires/components/trainee-import-dialog";
 
 interface InscriptionsTabProps {
   sessionId: string;
@@ -171,6 +172,15 @@ export function InscriptionsTab({
             >
               <UserRoundPlus className="mr-2 h-4 w-4" /> Nouveau
             </Button>
+            <TraineeImportDialog sessionId={sessionId}>
+              <Button
+                variant="outline"
+                disabled={inscriptions.length >= maxTrainees || loading}
+                className="w-full sm:w-auto"
+              >
+                <Upload className="mr-2 h-4 w-4" /> Importer
+              </Button>
+            </TraineeImportDialog>
             {inscriptions.length >= maxTrainees && (
               <span className="text-destructive ml-2 text-sm">
                 Session complète

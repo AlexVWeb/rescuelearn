@@ -180,6 +180,79 @@ export async function deleteTrainee(id: string) {
   });
 }
 
+export async function importAndEnrollTrainees(
+  sessionId: string,
+  data: Array<{
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+    dateOfBirth?: Date;
+    address?: string;
+  }>
+): Promise<{
+  created: number;
+  enrolled: number;
+  skipped: number;
+  errors: string[];
+}> {
+  const user = await getUserContext();
+  if (!user.organismeId) throw new Error("Aucun organisme associé");
+
+  // Verify session ownership
+  const session = await prisma.trainingSession.findFirst({
+    where: { id: sessionId, organismeId: user.organismeId },
+  });
+  if (!session) throw new Error("Session introuvable");
+
+  let created = 0;
+  let enrolled = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const traineeData of data) {
+    try {
+      // Find or create trainee by email (or by name if no email)
+      let trainee;
+      if (traineeData.email) {
+        trainee = await prisma.trainee.findFirst({
+          where: { email: traineeData.email, organismeId: user.organismeId },
+        });
+      }
+
+      if (!trainee) {
+        trainee = await prisma.trainee.create({
+          data: { ...traineeData, organismeId: user.organismeId },
+        });
+        created++;
+      }
+
+      // Enroll in session (skip if already inscribed)
+      const existingInscription = await prisma.inscription.findUnique({
+        where: {
+          traineeId_trainingSessionId: {
+            traineeId: trainee.id,
+            trainingSessionId: sessionId,
+          },
+        },
+      });
+
+      if (existingInscription) {
+        skipped++;
+      } else {
+        await prisma.inscription.create({
+          data: { traineeId: trainee.id, trainingSessionId: sessionId },
+        });
+        enrolled++;
+      }
+    } catch {
+      errors.push(`${traineeData.firstName} ${traineeData.lastName}`);
+    }
+  }
+
+  return { created, enrolled, skipped, errors };
+}
+
 export async function getSessionDetails(id: string) {
   const user = await getUserContext();
   if (!user.organismeId) throw new Error("Aucun organisme associé");
