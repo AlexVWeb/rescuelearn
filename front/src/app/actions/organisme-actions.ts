@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
+import { UserRole, hasRole } from "@/lib/roles";
 
 export type Organisme = {
   id: string;
@@ -126,8 +127,7 @@ export async function getMyOrganismeAction() {
     select: { organismeId: true, roles: true },
   });
 
-  const roles = Array.isArray(user?.roles) ? (user.roles as string[]) : [];
-  if (!roles.includes("ADMIN_ORGANISME")) {
+  if (!hasRole(user?.roles, UserRole.ADMIN_ORGANISME)) {
     return { success: false, error: "Forbidden" };
   }
 
@@ -161,8 +161,7 @@ export async function updateOrganismeAction(
     select: { organismeId: true, roles: true },
   });
 
-  const roles = Array.isArray(user?.roles) ? (user.roles as string[]) : [];
-  const isSuperAdmin = roles.includes("SUPER_ADMIN");
+  const isSuperAdmin = hasRole(user?.roles, UserRole.SUPER_ADMIN);
   if (!isSuperAdmin && user?.organismeId !== id) {
     return { success: false, error: "Forbidden" };
   }

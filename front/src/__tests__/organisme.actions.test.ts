@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { UserRole } from "@/lib/roles";
 
 // --- Mocks ---
 
@@ -58,7 +59,7 @@ function mockUser(overrides: {
   mockPrisma.user.findUnique.mockResolvedValue({
     id: "user-1",
     organismeId: "org-1",
-    roles: ["ADMIN_ORGANISME"],
+    roles: [UserRole.ADMIN_ORGANISME],
     ...overrides,
   });
 }
@@ -85,7 +86,7 @@ describe("getMyOrganismeAction", () => {
 
   it("returns Forbidden when user does not have ADMIN_ORGANISME role", async () => {
     mockSession();
-    mockUser({ roles: ["FORMATEUR"] });
+    mockUser({ roles: [UserRole.FORMATEUR] });
 
     const result = await getMyOrganismeAction();
 
@@ -94,7 +95,7 @@ describe("getMyOrganismeAction", () => {
 
   it("returns error when user has no organisme linked", async () => {
     mockSession();
-    mockUser({ roles: ["ADMIN_ORGANISME"], organismeId: null });
+    mockUser({ roles: [UserRole.ADMIN_ORGANISME], organismeId: null });
 
     const result = await getMyOrganismeAction();
 
@@ -106,7 +107,7 @@ describe("getMyOrganismeAction", () => {
 
   it("returns the organisme when user is ADMIN_ORGANISME with an organismeId", async () => {
     mockSession();
-    mockUser({ roles: ["ADMIN_ORGANISME"], organismeId: "org-1" });
+    mockUser({ roles: [UserRole.ADMIN_ORGANISME], organismeId: "org-1" });
     const fakeOrganisme = { id: "org-1", name: "Mon Organisme" };
     mockPrisma.organisme.findUnique.mockResolvedValue(fakeOrganisme);
 
@@ -134,7 +135,7 @@ describe("updateOrganismeAction - ownership check", () => {
 
   it("returns Forbidden when non-super-admin tries to update another organisme", async () => {
     mockSession();
-    mockUser({ roles: ["ADMIN_ORGANISME"], organismeId: "org-1" });
+    mockUser({ roles: [UserRole.ADMIN_ORGANISME], organismeId: "org-1" });
 
     const result = await updateOrganismeAction("org-999", validData);
 
@@ -144,7 +145,7 @@ describe("updateOrganismeAction - ownership check", () => {
 
   it("allows non-super-admin to update their own organisme", async () => {
     mockSession();
-    mockUser({ roles: ["ADMIN_ORGANISME"], organismeId: "org-1" });
+    mockUser({ roles: [UserRole.ADMIN_ORGANISME], organismeId: "org-1" });
     mockPrisma.organisme.update.mockResolvedValue({});
 
     const result = await updateOrganismeAction("org-1", validData);
@@ -157,7 +158,7 @@ describe("updateOrganismeAction - ownership check", () => {
 
   it("allows SUPER_ADMIN to update any organisme", async () => {
     mockSession();
-    mockUser({ roles: ["SUPER_ADMIN"], organismeId: "org-1" });
+    mockUser({ roles: [UserRole.SUPER_ADMIN], organismeId: "org-1" });
     mockPrisma.organisme.update.mockResolvedValue({});
 
     const result = await updateOrganismeAction("org-999", validData);

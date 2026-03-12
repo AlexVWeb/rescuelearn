@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { UserRole } from "@/lib/roles";
 import {
   OrganismeMember,
   updateMemberRoleAction,
@@ -54,7 +55,7 @@ type SearchUser = {
   organismeId: string | null;
 };
 
-const ROLES = ["ADMIN_ORGANISME", "FORMATEUR"];
+const ROLES = [UserRole.ADMIN_ORGANISME, UserRole.FORMATEUR];
 
 export function MembresTab({
   organismeId,

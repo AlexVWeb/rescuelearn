@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { UserRole } from "@/lib/roles";
 
 export async function requestPasswordReset(email: string) {
   try {
@@ -68,7 +69,9 @@ export async function linkUserToOrganisme(inviteCode: string) {
 
     // Si l'utilisateur n'a pas de roles, on initialise un tableau
     const currentRoles = Array.isArray(user?.roles) ? user.roles : [];
-    const newRoles = [...new Set([...(currentRoles as string[]), "FORMATEUR"])];
+    const newRoles = [
+      ...new Set([...(currentRoles as string[]), UserRole.FORMATEUR]),
+    ];
 
     await prisma.user.update({
       where: { id: session.user.id },

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { UserRole } from "@/lib/roles";
 
 // Type definitions could be moved to a types file
 export type User = {
@@ -11,7 +12,7 @@ export type User = {
   name: string | null;
   email: string;
   image: string | null;
-  roles: any; // Using any for Json type temporarily, should be refined
+  roles: UserRole[];
   createdAt: Date;
   emailVerified: boolean;
 };
@@ -106,7 +107,7 @@ export async function deleteUserAction(userId: string) {
 
 export async function updateUserAction(
   userId: string,
-  data: { name?: string; roles?: string[] }
+  data: { name?: string; roles?: UserRole[] }
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {

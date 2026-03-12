@@ -30,13 +30,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { User, updateUserAction } from "@/app/actions/user-actions";
+import { UserRole, userRoleSchema } from "@/lib/roles";
 import { useRouter } from "next/navigation";
 
 // Schema
 const userSchema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   email: z.email("L'adresse e-mail n'est pas valide"),
-  role: z.string().default("USER"),
+  role: userRoleSchema.default(UserRole.FORMATEUR),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -57,18 +58,17 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
     defaultValues: {
       name: "",
       email: "",
-      role: "USER",
+      role: UserRole.FORMATEUR,
     },
   });
 
   useEffect(() => {
     if (user) {
       // Create a safely typed role string
-      let roleValue = "USER";
-      // This logic depends on how roles are stored in JSON.
-      if (Array.isArray(user.roles) && user.roles.includes("ADMIN_ORGANISME"))
-        roleValue = "ADMIN_ORGANISME";
-      else if (user.roles === "ADMIN_ORGANISME") roleValue = "ADMIN_ORGANISME";
+      const roleValue =
+        Array.isArray(user.roles) && user.roles.length > 0
+          ? (user.roles[0] as UserRole)
+          : UserRole.FORMATEUR;
 
       form.reset({
         name: user.name || "",
@@ -79,7 +79,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
       form.reset({
         name: "",
         email: "",
-        role: "USER",
+        role: UserRole.FORMATEUR,
       });
     }
   }, [user, form, open]);
@@ -182,8 +182,15 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="USER">User</SelectItem>
-                      <SelectItem value="ADMIN_ORGANISME">Admin</SelectItem>
+                      <SelectItem value={UserRole.FORMATEUR}>
+                        Formateur
+                      </SelectItem>
+                      <SelectItem value={UserRole.ADMIN_ORGANISME}>
+                        Admin Organisme
+                      </SelectItem>
+                      <SelectItem value={UserRole.SUPER_ADMIN}>
+                        Super Admin
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

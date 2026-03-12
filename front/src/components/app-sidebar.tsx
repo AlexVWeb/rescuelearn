@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
+import { UserRole } from "@/lib/roles";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -25,13 +26,13 @@ import {
 
 // Compute sidebar data dynamically based on user roles
 const getNavData = (userRoles: string[]) => {
-  const isSuperAdmin = userRoles.includes("SUPER_ADMIN");
+  const isSuperAdmin = userRoles.includes(UserRole.SUPER_ADMIN);
   const isFormateur =
-    userRoles.includes("FORMATEUR") ||
-    userRoles.includes("ADMIN_ORGANISME") ||
+    userRoles.includes(UserRole.FORMATEUR) ||
+    userRoles.includes(UserRole.ADMIN_ORGANISME) ||
     isSuperAdmin;
   const isAdminOrganisme =
-    userRoles.includes("ADMIN_ORGANISME") || isSuperAdmin;
+    userRoles.includes(UserRole.ADMIN_ORGANISME) || isSuperAdmin;
 
   const trainingSubItems = [
     { title: "Tableau de bord", url: "/admin/training/dashboard" },

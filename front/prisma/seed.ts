@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import * as readline from "readline";
 import { hashPassword } from "better-auth/crypto";
+import { UserRole } from "../src/lib/roles";
 
 const prisma = new PrismaClient();
 
@@ -76,7 +77,7 @@ async function main() {
       email,
       name,
       emailVerified: true,
-      roles: ["FORMATEUR", "SUPER_ADMIN"],
+      roles: [UserRole.FORMATEUR, UserRole.SUPER_ADMIN],
       organismeId: organisme.id,
     },
   });
