@@ -27,7 +27,8 @@ import {
 
 import { createTrainingSession, updateTrainingSession } from "../../actions";
 import { DeleteSessionButton } from "./delete-session-button";
-import { TrainingSession, CreateTrainingSessionInput } from "../../types";
+import { TrainingSession } from "../../types";
+import { formatSessionFormData } from "./session-form.utils";
 
 const sessionSchema = z.object({
   title: z.string().min(3, "Titre requis"),
@@ -73,35 +74,30 @@ export function SessionForm({
 
   async function onSubmit(data: SessionFormValues) {
     try {
-      const formattedData: CreateTrainingSessionInput = {
-        title: data.title,
-        type: data.type,
-        location: data.location,
-        maxTrainees: data.maxTrainees,
-        status: data.status,
-        startDate: data.startDate
-          ? dayjs(data.startDate).hour(12).toDate()
-          : null,
-        endDate: data.endDate ? dayjs(data.endDate).hour(12).toDate() : null,
-      };
+      const formattedData = formatSessionFormData(data);
 
       if (sessionItem) {
         await updateTrainingSession(sessionItem.id, formattedData);
         toast.success("Session mise à jour");
-        if (onSuccess) onSuccess(sessionItem.id);
         router.refresh();
+        if (onSuccess) onSuccess(sessionItem.id);
       } else {
         const result = await createTrainingSession(formattedData);
         toast.success("Session créée");
+        form.reset();
         if (onSuccess) {
           onSuccess(result.id);
         } else {
           router.refresh();
         }
       }
-      form.reset();
     } catch (error) {
       console.error("Failed to save session", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de l'enregistrement"
+      );
     }
   }
 
@@ -263,7 +259,11 @@ export function SessionForm({
                 Annuler
               </Button>
             )}
-            <Button type="submit">Enregistrer</Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting
+                ? "Enregistrement..."
+                : "Enregistrer"}
+            </Button>
           </div>
         </div>
       </form>

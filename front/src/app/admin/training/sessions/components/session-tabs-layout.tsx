@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Users, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,7 +35,17 @@ export function SessionTabsLayout({
   isNew = false,
 }: SessionTabsLayoutProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState(isNew ? "settings" : "slots");
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const defaultTab = isNew ? "settings" : "slots";
+  const activeTab = searchParams.get("tab") || defaultTab;
+
+  function setActiveTab(tab: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`${pathname}?${params.toString()}`);
+  }
 
   const slots = session?.slots || [];
   const inscriptions = session?.inscriptions || [];
