@@ -63,7 +63,7 @@ export function EmargementTable({
         <Table className="min-w-full table-auto border-collapse">
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="bg-muted/50 sticky left-0 z-20 w-[200px] min-w-[200px] border-r px-4 py-3 shadow-[2px_0_0_0_rgba(0,0,0,0.1)]">
+              <TableHead className="bg-muted sticky left-0 z-[2] w-[200px] min-w-[200px] border-r px-4 py-3 shadow-[4px_0_8px_rgba(0,0,0,0.15)]">
                 Stagiaire
               </TableHead>
               {slots.map((slot) => (
@@ -85,7 +85,7 @@ export function EmargementTable({
           <TableBody>
             {inscriptions.map((inscription) => (
               <TableRow key={inscription.id} className="hover:bg-muted/30">
-                <TableCell className="sticky left-0 z-10 w-[200px] border-r bg-white px-4 py-3 font-medium shadow-[2px_0_0_0_rgba(0,0,0,0.1)]">
+                <TableCell className="bg-muted/70 sticky left-0 z-[1] w-[200px] border-r px-4 py-3 font-medium shadow-[4px_0_8px_rgba(0,0,0,0.15)]">
                   <TraineeCell inscription={inscription} />
                 </TableCell>
                 {slots.map((slot) => (
