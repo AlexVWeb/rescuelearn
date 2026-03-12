@@ -54,7 +54,7 @@ type SearchUser = {
   organismeId: string | null;
 };
 
-const ROLES = ["admin", "formateur"];
+const ROLES = ["ADMIN_ORGANISME", "FORMATEUR"];
 
 export function MembresTab({
   organismeId,

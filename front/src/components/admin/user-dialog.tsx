@@ -66,10 +66,9 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
       // Create a safely typed role string
       let roleValue = "USER";
       // This logic depends on how roles are stored in JSON.
-      // Assuming ["ADMIN"] or just "ADMIN"
-      if (Array.isArray(user.roles) && user.roles.includes("ADMIN"))
-        roleValue = "ADMIN";
-      else if (user.roles === "ADMIN") roleValue = "ADMIN";
+      if (Array.isArray(user.roles) && user.roles.includes("ADMIN_ORGANISME"))
+        roleValue = "ADMIN_ORGANISME";
+      else if (user.roles === "ADMIN_ORGANISME") roleValue = "ADMIN_ORGANISME";
 
       form.reset({
         name: user.name || "",
@@ -184,7 +183,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="USER">User</SelectItem>
-                      <SelectItem value="ADMIN">Admin</SelectItem>
+                      <SelectItem value="ADMIN_ORGANISME">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

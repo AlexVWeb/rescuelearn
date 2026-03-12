@@ -304,7 +304,7 @@ export async function searchUsersAction(query: string) {
       take: 10,
     });
     return { success: true, data: users };
-  } catch (error) {
+  } catch (_) {
     return { success: false, error: "Failed to search users" };
   }
 }
