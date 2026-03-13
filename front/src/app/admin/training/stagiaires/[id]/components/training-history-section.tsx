@@ -7,6 +7,7 @@ import { InscriptionWithSession, ExternalTraining } from "../../../types";
 import { ExternalTrainingDialog } from "./external-training-dialog";
 import { DeleteExternalTrainingButton } from "./delete-external-training-button";
 import { getPresignedUrl } from "@/lib/r2";
+import { computeFilieres } from "../../../lib/trainee-validity";
 
 const statusConfig: Record<
   string,
@@ -41,6 +42,9 @@ export async function TrainingHistorySection({
     }))
   );
 
+  // === Validité par filière ===
+  const filieres = computeFilieres(inscriptions, externalTrainings);
+
   return (
     <div className="space-y-8">
       {/* === Formations plateforme === */}
@@ -65,9 +69,10 @@ export async function TrainingHistorySection({
                 <tr>
                   <th className="px-4 py-2 text-left font-medium">Formation</th>
                   <th className="px-4 py-2 text-left font-medium">
-                    Date session
+                    Date d&apos;obtention
                   </th>
                   <th className="px-4 py-2 text-left font-medium">Statut</th>
+                  <th className="px-4 py-2 text-left font-medium">Résultat</th>
                   <th className="px-4 py-2 text-left font-medium">Validité</th>
                   <th className="px-4 py-2 text-right font-medium"></th>
                 </tr>
@@ -82,7 +87,7 @@ export async function TrainingHistorySection({
                   const isValid = ins.status === "présent";
                   const expiryDate =
                     isValid && sessionDate
-                      ? dayjs(sessionDate).add(1, "year")
+                      ? dayjs(sessionDate).add(1, "year").endOf("year")
                       : null;
                   const expired = expiryDate
                     ? expiryDate.isBefore(dayjs())
@@ -94,12 +99,29 @@ export async function TrainingHistorySection({
                         {ins.trainingSession.title}
                       </td>
                       <td className="text-muted-foreground px-4 py-2">
-                        {sessionDate
-                          ? dayjs(sessionDate).format("DD/MM/YYYY")
+                        {ins.attestationResult === "acquis" &&
+                        ins.attestationValidatedAt
+                          ? dayjs(ins.attestationValidatedAt).format(
+                              "DD/MM/YYYY"
+                            )
                           : "—"}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="flex items-center gap-1 px-4 py-2">
                         <Badge variant={cfg.variant}>{cfg.label}</Badge>
+                        {ins.trainingSession.isFC && (
+                          <Badge variant="outline" className="text-xs">
+                            FC
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {ins.attestationResult === "acquis" ? (
+                          <Badge variant="success">Acquis</Badge>
+                        ) : ins.attestationResult === "non_acquis" ? (
+                          <Badge variant="destructive">Non acquis</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-2">
                         {expiryDate ? (
@@ -168,13 +190,20 @@ export async function TrainingHistorySection({
               </thead>
               <tbody>
                 {trainingsWithUrls.map((ext) => {
-                  const expiryDate = dayjs(ext.obtainedAt).add(1, "year");
+                  const expiryDate = dayjs(ext.obtainedAt)
+                    .add(1, "year")
+                    .endOf("year");
                   const expired = expiryDate.isBefore(dayjs());
 
                   return (
                     <tr key={ext.id} className="border-t">
                       <td className="px-4 py-2">
                         <Badge variant="outline">{ext.type}</Badge>
+                        {ext.isFC && (
+                          <Badge variant="outline" className="ml-1 text-xs">
+                            FC
+                          </Badge>
+                        )}
                       </td>
                       <td className="px-4 py-2 font-medium">{ext.name}</td>
                       <td className="text-muted-foreground px-4 py-2">
@@ -217,6 +246,53 @@ export async function TrainingHistorySection({
           </div>
         )}
       </section>
+      {/* === Validité par filière === */}
+      {filieres.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-lg font-semibold">Validité par filière</h2>
+          <div className="rounded-md border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium">Filière</th>
+                  <th className="px-4 py-2 text-left font-medium">
+                    Diplôme initial
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium">
+                    Dernière FC
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium">
+                    Validité effective
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filieres.map((f) => (
+                  <tr key={f.type} className="border-t">
+                    <td className="px-4 py-2 font-medium">{f.type}</td>
+                    <td className="px-4 py-2">
+                      {f.diplomaDate
+                        ? dayjs(f.diplomaDate).format("DD/MM/YYYY")
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-2">
+                      {f.lastFCDate
+                        ? dayjs(f.lastFCDate).format("DD/MM/YYYY")
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-2">
+                      <Badge variant={f.expired ? "destructive" : "default"}>
+                        {f.expired ? "Expiré" : "Valide"} —{" "}
+                        {f.effectiveExpiry.format("DD/MM/YYYY")}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

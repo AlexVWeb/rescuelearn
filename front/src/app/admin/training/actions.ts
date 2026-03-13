@@ -1,9 +1,14 @@
 "use server";
 
 import dayjs from "dayjs";
+import {
+  computeValidCompetences,
+  computeNextExpiry,
+} from "./lib/trainee-validity";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import type { TraineeListItem } from "./types";
 
 async function getUserContext() {
   const session = await auth.api.getSession({
@@ -94,21 +99,42 @@ export async function getTraineeWithHistory(id: string) {
   });
 }
 
-export async function getAllTrainees() {
+export async function getAllTrainees(): Promise<TraineeListItem[]> {
   const user = await getUserContext();
   if (!user.organismeId) return [];
 
-  return prisma.trainee.findMany({
-    where: {
-      organismeId: user.organismeId,
-    },
+  const trainees = await prisma.trainee.findMany({
+    where: { organismeId: user.organismeId },
     include: {
-      _count: {
-        select: { inscriptions: true },
+      _count: { select: { inscriptions: true } },
+      inscriptions: {
+        where: { status: "présent" },
+        include: {
+          trainingSession: {
+            select: { type: true, startDate: true, isFC: true },
+          },
+        },
+      },
+      externalTrainings: {
+        select: { type: true, obtainedAt: true, isFC: true },
       },
     },
     orderBy: { lastName: "asc" },
   });
+
+  return trainees.map(({ inscriptions, externalTrainings, ...trainee }) => {
+    const validCompetences = computeValidCompetences(
+      inscriptions,
+      externalTrainings
+    );
+    const nextExpiryResult = computeNextExpiry(inscriptions, externalTrainings);
+    return {
+      ...trainee,
+      validCompetences,
+      nextExpiry: nextExpiryResult?.expiryDate.toISOString() ?? null,
+      nextExpiryType: nextExpiryResult?.type ?? null,
+    };
+  }) as TraineeListItem[];
 }
 
 import { TrainingSessionService } from "./services/session.service";
@@ -192,6 +218,7 @@ export async function createExternalTraining(data: {
   name: string;
   organisme: string;
   obtainedAt: Date;
+  isFC?: boolean;
   certificateNumber?: string;
   fileUrl?: string;
   fileKey?: string;

@@ -22,10 +22,11 @@ model Organisme {
 
 model TrainingSession {
   id          String    @id @default(uuid())
-  type        String // PSC | PSE1 | PSE2 | SST | IPS
+  type        String // PSC | PSE1 | PSE2 | SST | IPS | FF | FPS
   title       String
   location    String
   status      String    @default("planifiée") // planifiée | en_cours | terminée | annulée
+  isFC        Boolean   @default(false)
   maxTrainees Int
   startDate   DateTime? @db.Date
   endDate     DateTime? @db.Date
@@ -83,6 +84,7 @@ model ExternalTraining {
   name              String
   organisme         String
   obtainedAt        DateTime @db.Date
+  isFC              Boolean  @default(false)
   certificateNumber String?
   fileUrl           String?
   fileKey           String?

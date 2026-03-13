@@ -11,11 +11,13 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -32,12 +34,13 @@ import { formatSessionFormData } from "./session-form.utils";
 
 const sessionSchema = z.object({
   title: z.string().min(3, "Titre requis"),
-  type: z.enum(["PSC", "PSE1", "PSE2", "SST", "IPS"]),
+  type: z.enum(["PSC", "PSE1", "PSE2", "SST", "IPS", "FF", "FPS"]),
   location: z.string().min(2, "Lieu requis"),
   maxTrainees: z.number().min(1, "Minimum 1 stagiaire"),
   status: z.enum(["planifiée", "en_cours", "terminée", "annulée"]),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
+  isFC: z.boolean(),
 });
 
 export type SessionFormValues = z.infer<typeof sessionSchema>;
@@ -69,6 +72,7 @@ export function SessionForm({
       endDate: sessionItem?.endDate
         ? dayjs(sessionItem.endDate).startOf("day").format("YYYY-MM-DD")
         : "",
+      isFC: sessionItem?.isFC ?? false,
     },
   });
 
@@ -140,6 +144,8 @@ export function SessionForm({
                     <SelectItem value="PSE2">PSE2</SelectItem>
                     <SelectItem value="SST">SST</SelectItem>
                     <SelectItem value="IPS">IPS</SelectItem>
+                    <SelectItem value="FF">FF</SelectItem>
+                    <SelectItem value="FPS">FPS</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -170,6 +176,28 @@ export function SessionForm({
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="isFC"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start gap-3 rounded-md border p-4">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>Formation Continue (FC)</FormLabel>
+                <FormDescription>
+                  Cochez si cette session est une formation continue annuelle
+                  obligatoire
+                </FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

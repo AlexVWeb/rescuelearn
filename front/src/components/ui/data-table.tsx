@@ -2,6 +2,7 @@
 
 import {
   ColumnDef,
+  VisibilityState,
   flexRender,
   getCoreRowModel,
   useReactTable,
@@ -22,13 +23,33 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SlidersHorizontal } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchKey?: string;
   searchPlaceholder?: string;
+  visibilityStorageKey?: string;
+}
+
+function loadVisibility(storageKey: string): VisibilityState {
+  if (typeof window === "undefined") return {};
+  try {
+    const saved = localStorage.getItem(storageKey);
+    return saved ? (JSON.parse(saved) as VisibilityState) : {};
+  } catch {
+    return {};
+  }
 }
 
 export function DataTable<TData, TValue>({
@@ -36,9 +57,29 @@ export function DataTable<TData, TValue>({
   data,
   searchKey,
   searchPlaceholder = "Rechercher...",
+  visibilityStorageKey,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  // hasLoaded tracks whether we've restored from localStorage after hydration.
+  // We never initialize from localStorage in useState to avoid SSR/client mismatch.
+  const hasLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (!visibilityStorageKey) return;
+    if (!hasLoadedRef.current) {
+      // First run after mount: restore saved visibility, then mark as loaded.
+      hasLoadedRef.current = true;
+      setColumnVisibility(loadVisibility(visibilityStorageKey));
+      return;
+    }
+    // Subsequent runs: user toggled a column — persist.
+    localStorage.setItem(
+      visibilityStorageKey,
+      JSON.stringify(columnVisibility)
+    );
+  }, [columnVisibility, visibilityStorageKey]);
 
   const table = useReactTable({
     data,
@@ -49,16 +90,18 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
       columnFilters,
+      columnVisibility,
     },
   });
 
   return (
     <div>
-      {searchKey && (
-        <div className="flex items-center py-4">
+      <div className="flex items-center gap-2 py-4">
+        {searchKey && (
           <Input
             placeholder={searchPlaceholder}
             value={
@@ -69,25 +112,49 @@ export function DataTable<TData, TValue>({
             }
             className="max-w-sm"
           />
-        </div>
-      )}
+        )}
+        {visibilityStorageKey && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="ml-auto">
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                Colonnes
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Colonnes affichées</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {table
+                .getAllColumns()
+                .filter((col) => col.getCanHide())
+                .map((col) => (
+                  <DropdownMenuCheckboxItem
+                    key={col.id}
+                    checked={col.getIsVisible()}
+                    onCheckedChange={(value) => col.toggleVisibility(!!value)}
+                  >
+                    {col.columnDef.meta?.label ?? col.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>

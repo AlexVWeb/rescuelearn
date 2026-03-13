@@ -8,6 +8,7 @@ const baseFormValues = {
   location: "Salle des fêtes",
   maxTrainees: 10,
   status: "planifiée" as const,
+  isFC: false,
 };
 
 describe("formatSessionFormData", () => {

@@ -31,15 +31,8 @@ export default async function StagiairesPage() {
         data={trainees}
         searchKey="lastName"
         searchPlaceholder="Rechercher par nom..."
+        visibilityStorageKey="stagiaires-columns"
       />
-
-      {trainees.length === 0 && (
-        <div className="bg-muted/20 rounded-lg border p-8 text-center">
-          <p className="text-muted-foreground">
-            Aucun stagiaire trouvé. Ajoutez-en un pour commencer.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

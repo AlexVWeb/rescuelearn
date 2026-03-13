@@ -20,11 +20,13 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -38,7 +40,16 @@ import {
   uploadExternalTrainingFile,
 } from "../../../actions";
 
-const TRAINING_TYPES = ["PSC", "PSE1", "PSE2", "SST", "IPS", "Autre"];
+const TRAINING_TYPES = [
+  "PSC",
+  "PSE1",
+  "PSE2",
+  "SST",
+  "IPS",
+  "FF",
+  "FPS",
+  "Autre",
+];
 
 const schema = z.object({
   type: z.string().min(1, "Type requis"),
@@ -46,6 +57,7 @@ const schema = z.object({
   organisme: z.string().min(2, "Organisme requis"),
   obtainedAt: z.string().min(1, "Date requise"),
   certificateNumber: z.string().optional(),
+  isFC: z.boolean(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -68,12 +80,13 @@ export function ExternalTrainingDialog({ traineeId }: Props) {
       organisme: "",
       obtainedAt: "",
       certificateNumber: "",
+      isFC: false,
     },
   });
 
   const obtainedAt = form.watch("obtainedAt");
   const validityDate = obtainedAt
-    ? dayjs(obtainedAt).add(1, "year").format("DD/MM/YYYY")
+    ? dayjs(obtainedAt).add(1, "year").endOf("year").format("DD/MM/YYYY")
     : "—";
 
   function onSubmit(data: FormValues) {
@@ -97,6 +110,7 @@ export function ExternalTrainingDialog({ traineeId }: Props) {
           organisme: data.organisme,
           obtainedAt: new Date(data.obtainedAt),
           certificateNumber: data.certificateNumber || undefined,
+          isFC: data.isFC,
           fileUrl,
           fileKey,
         });
@@ -146,6 +160,26 @@ export function ExternalTrainingDialog({ traineeId }: Props) {
                     </SelectContent>
                   </Select>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="isFC"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel>Formation Continue (FC)</FormLabel>
+                    <FormDescription>
+                      Formation continue annuelle obligatoire
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

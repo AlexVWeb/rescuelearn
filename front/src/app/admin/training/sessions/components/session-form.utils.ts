@@ -11,6 +11,7 @@ export function formatSessionFormData(
     location: data.location,
     maxTrainees: data.maxTrainees,
     status: data.status,
+    isFC: data.isFC,
     startDate: data.startDate ? dayjs(data.startDate).hour(12).toDate() : null,
     endDate: data.endDate ? dayjs(data.endDate).hour(12).toDate() : null,
   };

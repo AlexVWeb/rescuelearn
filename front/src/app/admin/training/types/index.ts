@@ -1,5 +1,12 @@
 export type SessionStatus = "planifiée" | "en_cours" | "terminée" | "annulée";
-export type SessionType = "PSC" | "PSE1" | "PSE2" | "SST" | "IPS";
+export type SessionType =
+  | "PSC"
+  | "PSE1"
+  | "PSE2"
+  | "SST"
+  | "IPS"
+  | "FF"
+  | "FPS";
 export type InscriptionStatus = "inscrit" | "présent" | "absent" | "éliminé";
 export type EmargementStatus = "en_attente" | "validé" | "absent";
 
@@ -20,6 +27,7 @@ export interface TrainingSession {
   title: string;
   location: string;
   status: SessionStatus;
+  isFC: boolean;
   maxTrainees: number;
   startDate: Date | null;
   endDate: Date | null;
@@ -109,6 +117,7 @@ export interface ExternalTraining {
   name: string;
   organisme: string;
   obtainedAt: Date;
+  isFC: boolean;
   certificateNumber: string | null;
   fileUrl: string | null;
   fileKey: string | null;
@@ -123,4 +132,11 @@ export interface InscriptionWithSession extends Inscription {
 export interface TraineeWithHistory extends Trainee {
   inscriptions: InscriptionWithSession[];
   externalTrainings: ExternalTraining[];
+}
+
+export interface TraineeListItem extends Trainee {
+  _count: { inscriptions: number };
+  validCompetences: string[];
+  nextExpiry: string | null; // ISO date string, serializable from server to client
+  nextExpiryType: string | null;
 }

@@ -46,7 +46,6 @@ export function FormationTab({
   inscriptions,
   formateur,
 }: FormationTabProps) {
-  console.log("formateur", formateur);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
