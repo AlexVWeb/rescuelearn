@@ -664,3 +664,27 @@ export async function validatePresencePublic(emargementId: string) {
     },
   });
 }
+
+export async function updateAttestationResult(
+  inscriptionId: string,
+  result: "acquis" | "non_acquis"
+) {
+  await getUserContext();
+  await prisma.inscription.update({
+    where: { id: inscriptionId },
+    data: {
+      attestationResult: result,
+      attestationValidatedAt: new Date(),
+    },
+  });
+}
+
+export async function getFormateur() {
+  const user = await getUserContext();
+  // Prefer firstName+lastName if both set, otherwise fall back to name
+  const fullName =
+    user.firstName && user.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : (user.name ?? null);
+  return { name: fullName };
+}

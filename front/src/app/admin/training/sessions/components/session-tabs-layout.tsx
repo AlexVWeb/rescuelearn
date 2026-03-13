@@ -15,6 +15,7 @@ import {
 import { SlotsTab } from "../[id]/components/slots-tab";
 import { InscriptionsTab } from "../[id]/components/inscriptions-tab";
 import { EmargementTab } from "../[id]/components/emargement";
+import { FormationTab } from "../[id]/components/formation/formation-tab";
 import { SessionForm } from "./session-form";
 import {
   Inscription,
@@ -27,12 +28,14 @@ interface SessionTabsLayoutProps {
   session?: TrainingSession & { slots: Slot[]; inscriptions: Inscription[] };
   allTrainees?: Trainee[];
   isNew?: boolean;
+  formateur?: { name: string | null };
 }
 
 export function SessionTabsLayout({
   session,
   allTrainees = [],
   isNew = false,
+  formateur = undefined,
 }: SessionTabsLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -103,7 +106,7 @@ export function SessionTabsLayout({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-[800px] grid-cols-2 sm:grid-cols-4">
+        <TabsList className="grid w-full max-w-[1000px] grid-cols-2 sm:grid-cols-5">
           <TabsTrigger
             value="slots"
             disabled={isNew}
@@ -128,6 +131,13 @@ export function SessionTabsLayout({
             className="text-xs sm:text-sm"
           >
             Émargements
+          </TabsTrigger>
+          <TabsTrigger
+            value="formation"
+            disabled={isNew}
+            className="text-xs sm:text-sm"
+          >
+            Formation
           </TabsTrigger>
           <TabsTrigger value="settings" className="text-xs sm:text-sm">
             <Settings className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
@@ -169,6 +179,22 @@ export function SessionTabsLayout({
               sessionType={session.type}
               slots={slots}
               inscriptions={inscriptions}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="formation" className="mt-4 space-y-4">
+          {session && formateur && (
+            <FormationTab
+              sessionId={session.id}
+              session={{
+                title: session.title,
+                location: session.location,
+                startDate: session.startDate,
+                slots: slots,
+              }}
+              inscriptions={inscriptions}
+              formateur={formateur}
             />
           )}
         </TabsContent>

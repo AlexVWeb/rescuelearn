@@ -96,6 +96,8 @@ model ExternalTraining {
 model Inscription {
   id     String @id @default(cuid())
   status String @default("inscrit") // inscrit | présent | absent | éliminé
+  attestationResult      String?   // "acquis" | "non_acquis"
+  attestationValidatedAt DateTime?
 
   traineeId String
   trainee   Trainee @relation(fields: [traineeId], references: [id], onDelete: Cascade)

@@ -72,6 +72,8 @@ export interface Inscription {
     | "présent_partiel"
     | "présent"
     | string;
+  attestationResult?: string | null;
+  attestationValidatedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
   trainee?: Trainee;
