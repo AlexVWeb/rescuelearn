@@ -74,6 +74,26 @@ export async function getMonOrganisme() {
   });
 }
 
+export async function getTraineeWithHistory(id: string) {
+  const user = await getUserContext();
+  if (!user.organismeId) return null;
+
+  return prisma.trainee.findUnique({
+    where: { id, organismeId: user.organismeId },
+    include: {
+      inscriptions: {
+        include: {
+          trainingSession: true,
+        },
+        orderBy: { trainingSession: { startDate: "desc" } },
+      },
+      externalTrainings: {
+        orderBy: { obtainedAt: "desc" },
+      },
+    },
+  });
+}
+
 export async function getAllTrainees() {
   const user = await getUserContext();
   if (!user.organismeId) return [];
@@ -164,6 +184,70 @@ export async function updateTrainee(
     where: { id },
     data,
   });
+}
+
+export async function createExternalTraining(data: {
+  traineeId: string;
+  type: string;
+  name: string;
+  organisme: string;
+  obtainedAt: Date;
+  certificateNumber?: string;
+  fileUrl?: string;
+  fileKey?: string;
+}) {
+  const user = await getUserContext();
+  if (!user.organismeId) throw new Error("Aucun organisme associé");
+
+  const trainee = await prisma.trainee.findUnique({
+    where: { id: data.traineeId },
+  });
+  if (!trainee || trainee.organismeId !== user.organismeId) {
+    throw new Error("Stagiaire introuvable ou non autorisé");
+  }
+
+  return prisma.externalTraining.create({
+    data: {
+      ...data,
+      organismeId: user.organismeId,
+    },
+  });
+}
+
+export async function deleteExternalTraining(id: string) {
+  const user = await getUserContext();
+  if (!user.organismeId) throw new Error("Aucun organisme associé");
+
+  const record = await prisma.externalTraining.findUnique({
+    where: { id },
+  });
+  if (!record || record.organismeId !== user.organismeId) {
+    throw new Error("Formation introuvable ou non autorisée");
+  }
+
+  if (record.fileKey) {
+    const { deleteFile } = await import("@/lib/r2");
+    await deleteFile(record.fileKey);
+  }
+
+  return prisma.externalTraining.delete({ where: { id } });
+}
+
+export async function uploadExternalTrainingFile(formData: FormData) {
+  const user = await getUserContext();
+  if (!user.organismeId) throw new Error("Aucun organisme associé");
+
+  const file = formData.get("file") as File;
+  if (!file) throw new Error("Aucun fichier fourni");
+
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const key = `rescuelearn/${user.organismeId}/${Date.now()}-${file.name}`;
+
+  const { uploadFile } = await import("@/lib/r2");
+  const url = await uploadFile(key, buffer, file.type);
+
+  return { url, key };
 }
 
 export async function deleteTrainee(id: string) {

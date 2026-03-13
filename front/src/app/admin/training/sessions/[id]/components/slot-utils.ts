@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { Slot } from "../types";
+import { Slot } from "../../../types";
 
 export interface SlotSuggestion {
   label: string;

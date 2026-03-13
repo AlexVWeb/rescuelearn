@@ -98,3 +98,27 @@ export type CreateTrainingSessionInput = Omit<
 };
 
 export type UpdateTrainingSessionInput = Partial<CreateTrainingSessionInput>;
+
+export interface ExternalTraining {
+  id: string;
+  traineeId: string;
+  organismeId: string;
+  type: string;
+  name: string;
+  organisme: string;
+  obtainedAt: Date;
+  certificateNumber: string | null;
+  fileUrl: string | null;
+  fileKey: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InscriptionWithSession extends Inscription {
+  trainingSession: TrainingSession;
+}
+
+export interface TraineeWithHistory extends Trainee {
+  inscriptions: InscriptionWithSession[];
+  externalTrainings: ExternalTraining[];
+}

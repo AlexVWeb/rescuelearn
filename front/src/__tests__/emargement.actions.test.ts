@@ -36,7 +36,9 @@ vi.mock("@/lib/prisma", () => ({
 import { auth } from "@/lib/auth";
 
 function mockAuthenticatedUser(organismeId = "org-1") {
-  (auth.api.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
+  (
+    auth.api.getSession as unknown as ReturnType<typeof vi.fn>
+  ).mockResolvedValue({
     user: { id: "user-1" },
   });
   mockPrisma.user.findUnique.mockResolvedValue({
@@ -46,7 +48,9 @@ function mockAuthenticatedUser(organismeId = "org-1") {
 }
 
 function mockUnauthenticated() {
-  (auth.api.getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+  (
+    auth.api.getSession as unknown as ReturnType<typeof vi.fn>
+  ).mockResolvedValue(null);
 }
 
 beforeEach(() => {
@@ -350,7 +354,7 @@ describe("getTraineesByPin", () => {
         status: "en_attente",
         slot: {
           label: "Matin J1",
-          trainingSession: { title: "PSC1 Mars" },
+          trainingSession: { title: "PSC Mars" },
         },
         inscription: {
           trainee: { id: "t-1", firstName: "Alice", lastName: "Dupont" },
@@ -364,7 +368,7 @@ describe("getTraineesByPin", () => {
     expect(result[0]).toEqual({
       emargementId: "em-1",
       slotLabel: "Matin J1",
-      sessionTitle: "PSC1 Mars",
+      sessionTitle: "PSC Mars",
       traineeId: "t-1",
       firstName: "Alice",
       lastName: "Dupont",

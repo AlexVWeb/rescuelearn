@@ -5,7 +5,7 @@ import { Trainee } from "../../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, ArrowUpDown } from "lucide-react";
-import { TraineeDialog } from "./trainee-dialog";
+import Link from "next/link";
 import { DeleteTraineeButton } from "./delete-trainee-button";
 import dayjs from "dayjs";
 
@@ -87,11 +87,11 @@ export const columns: ColumnDef<Trainee>[] = [
 
       return (
         <div className="flex items-center justify-end gap-2">
-          <TraineeDialog trainee={trainee}>
+          <Link href={`/admin/training/stagiaires/${trainee.id}`}>
             <Button variant="ghost" size="icon" className="h-8 w-8">
               <Pencil className="h-4 w-4" />
             </Button>
-          </TraineeDialog>
+          </Link>
           <DeleteTraineeButton traineeId={trainee.id} />
         </div>
       );

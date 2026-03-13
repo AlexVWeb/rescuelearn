@@ -1,9 +1,9 @@
 model Organisme {
-  id              String   @id @default(uuid())
+  id              String  @id @default(uuid())
   name            String
-  agreementNumber String?  // n° d'agrément
+  agreementNumber String? // n° d'agrément
   logo            String?
-  inviteCode      String   @unique @default(cuid())
+  inviteCode      String  @unique @default(cuid())
   siret           String?
   email           String?
   phone           String?
@@ -12,95 +12,114 @@ model Organisme {
   postalCode      String?
   city            String?
 
-  users             User[]
-  trainingSessions  TrainingSession[]
-  trainees          Trainee[]
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  users            User[]
+  trainingSessions TrainingSession[]
+  trainees         Trainee[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model TrainingSession {
-  id              String   @id @default(uuid())
-  type            String   // PSC1 | PSE1 | PSE2 | SST | IPS
-  title           String
-  location        String
-  status          String   @default("planifiée") // planifiée | en_cours | terminée | annulée
-  maxTrainees     Int
-  startDate       DateTime? @db.Date
-  endDate         DateTime? @db.Date
-  
-  formateurId     String
-  formateur       User      @relation(fields: [formateurId], references: [id])
-  
-  organismeId     String
-  organisme       Organisme @relation(fields: [organismeId], references: [id])
-  
-  slots           Slot[]
-  inscriptions    Inscription[]
+  id          String    @id @default(uuid())
+  type        String // PSC | PSE1 | PSE2 | SST | IPS
+  title       String
+  location    String
+  status      String    @default("planifiée") // planifiée | en_cours | terminée | annulée
+  maxTrainees Int
+  startDate   DateTime? @db.Date
+  endDate     DateTime? @db.Date
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  formateurId String
+  formateur   User   @relation(fields: [formateurId], references: [id])
+
+  organismeId String
+  organisme   Organisme @relation(fields: [organismeId], references: [id])
+
+  slots        Slot[]
+  inscriptions Inscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Slot {
-  id                String   @id @default(cuid())
-  label             String   // ex: "Jour 1 - Matin"
-  date              DateTime @db.Date
-  startTime         String   // ex: "09:00"
-  endTime           String   // ex: "12:30"
-  
+  id        String   @id @default(cuid())
+  label     String // ex: "Jour 1 - Matin"
+  date      DateTime @db.Date
+  startTime String // ex: "09:00"
+  endTime   String // ex: "12:30"
+
   trainingSessionId String
   trainingSession   TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
-  
-  emargements       Emargement[]
+
+  emargements Emargement[]
 }
 
 model Trainee {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   firstName   String
   lastName    String
   email       String?
   phone       String?
   dateOfBirth DateTime? @db.Date
   address     String?
-  
+
   organismeId String
   organisme   Organisme @relation(fields: [organismeId], references: [id], onDelete: Cascade)
-  
-  inscriptions Inscription[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  inscriptions      Inscription[]
+  externalTrainings ExternalTraining[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ExternalTraining {
+  id                String   @id @default(cuid())
+  traineeId         String
+  organismeId       String
+  type              String
+  name              String
+  organisme         String
+  obtainedAt        DateTime @db.Date
+  certificateNumber String?
+  fileUrl           String?
+  fileKey           String?
+
+  trainee Trainee @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Inscription {
-  id                String   @id @default(cuid())
-  status            String   @default("inscrit") // inscrit | présent | absent | éliminé
-  
-  traineeId         String
-  trainee           Trainee  @relation(fields: [traineeId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  status String @default("inscrit") // inscrit | présent | absent | éliminé
+
+  traineeId String
+  trainee   Trainee @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+
   trainingSessionId String
   trainingSession   TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
-  
-  emargements       Emargement[]
+
+  emargements Emargement[]
 
   @@unique([traineeId, trainingSessionId])
 }
 
 model Emargement {
-  id             String   @id @default(cuid())
-  status         String   @default("en_attente") // en_attente | validé | absent
-  validationCode String?  // 6 chiffres
+  id             String    @id @default(cuid())
+  status         String    @default("en_attente") // en_attente | validé | absent
+  validationCode String? // 6 chiffres
   codeSentAt     DateTime?
   validatedAt    DateTime?
-  
-  inscriptionId  String
-  inscription    Inscription @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
-  
-  slotId         String
-  slot           Slot @relation(fields: [slotId], references: [id], onDelete: Cascade)
-  
+
+  inscriptionId String
+  inscription   Inscription @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
+
+  slotId String
+  slot   Slot   @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
   @@unique([inscriptionId, slotId])
 }
