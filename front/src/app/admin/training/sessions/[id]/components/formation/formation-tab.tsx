@@ -23,7 +23,7 @@ import { updateAttestationResult } from "../../../../actions";
 import {
   generateAttestationPDF,
   generateAllAttestationsPDF,
-} from "../../../../lib/pdf-attestation-fin-formation-export";
+} from "../../../../lib/pdf-attestation-fin-formation-psc-export";
 import { Inscription, Slot } from "../../../../types";
 
 interface FormationTabProps {

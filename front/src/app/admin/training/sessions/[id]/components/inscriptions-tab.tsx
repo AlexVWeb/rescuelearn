@@ -48,6 +48,7 @@ interface InscriptionsTabProps {
     startDate: Date | null;
     slots: Slot[];
     isFC?: boolean;
+    type: string;
   };
   inscriptions: Inscription[];
   allTrainees: Trainee[];
@@ -68,6 +69,7 @@ export function InscriptionsTab({
   const [selectedTrainee, setSelectedTrainee] = useState("");
   const [showTraineeDialog, setShowTraineeDialog] = useState(false);
 
+  const isPSC = session.type === "PSC";
   const inscribedIds = inscriptions.map((i) => i.traineeId);
   const availableTrainees = allTrainees.filter(
     (t) => !inscribedIds.includes(t.id)
@@ -160,15 +162,17 @@ export function InscriptionsTab({
               {inscriptions.length} sur {maxTrainees} places)
             </CardDescription>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleDownloadAllFiches}
-            disabled={inscriptions.length === 0 || loading}
-            className="shrink-0"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Fiches évaluation
-          </Button>
+          {isPSC && (
+            <Button
+              variant="outline"
+              onClick={handleDownloadAllFiches}
+              disabled={inscriptions.length === 0 || loading}
+              className="shrink-0"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Fiches évaluation
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row">
@@ -268,16 +272,18 @@ export function InscriptionsTab({
                         <SelectItem value="éliminé">Éliminé</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDownloadFiche(inscription)}
-                      disabled={loading}
-                      title="Télécharger la fiche d'évaluation"
-                    >
-                      <ClipboardList className="h-4 w-4" />
-                    </Button>
+                    {isPSC && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDownloadFiche(inscription)}
+                        disabled={loading}
+                        title="Télécharger la fiche d'évaluation"
+                      >
+                        <ClipboardList className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"

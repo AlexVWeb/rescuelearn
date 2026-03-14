@@ -169,6 +169,7 @@ export function SessionTabsLayout({
                 startDate: session.startDate,
                 slots: slots,
                 isFC: session.isFC,
+                type: session.type,
               }}
               inscriptions={inscriptions}
               allTrainees={allTrainees}
