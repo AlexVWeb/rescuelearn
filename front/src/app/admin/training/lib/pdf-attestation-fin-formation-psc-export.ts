@@ -139,7 +139,7 @@ function buildAttestationPage(
   ];
   const cbYs = [118, 125, 132, 139];
   cbItems.forEach((item, i) => {
-    drawCheckbox(doc, cbX, cbYs[i], false);
+    drawCheckbox(doc, cbX, cbYs[i], i === 2);
     // Truncate if text would overflow (safety net)
     const maxW = rightMargin - cbTextX;
     const lines = doc.splitTextToSize(item, maxW);
