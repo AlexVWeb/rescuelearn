@@ -10,11 +10,9 @@ const L = 15; // left margin
 const R = 195; // right margin
 
 // Table columns
-const COL_OUI = 132; // start of "Oui" column  (criteria = 117mm)
-const COL_NON = 147; // start of "Non" column   (oui = 15mm)
-const COL_OBS = 162; // start of "Observations" (non = 15mm, obs = 33mm)
-
-const ROW_H = 7.5; // standard data row height
+const COL_OUI = 100;
+const COL_NON = 115;
+const COL_OBS = 130;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function drawCheckbox(doc: jsPDF, cx: number, cy: number, checked = false) {
@@ -29,51 +27,50 @@ function drawCheckbox(doc: jsPDF, cx: number, cy: number, checked = false) {
   doc.setLineWidth(0.2);
 }
 
-function drawTableRowLines(doc: jsPDF, y: number, h: number) {
-  doc.setLineWidth(0.2);
-  // outer rect for row
-  doc.rect(L, y, R - L, h);
-  // vertical column dividers
-  doc.line(COL_OUI, y, COL_OUI, y + h);
-  doc.line(COL_NON, y, COL_NON, y + h);
-  doc.line(COL_OBS, y, COL_OBS, y + h);
-}
+// ── Data Structure en Blocs ───────────────────────────────────────────────────
+type TableBlock = {
+  title: string;
+  items?: string[];
+};
 
-// ── Table row data ─────────────────────────────────────────────────────────────
-type TableRow =
-  | { type: "section"; label: string }
-  | { type: "item"; label: string };
-
-const TABLE_ROWS: TableRow[] = [
+const TABLE_BLOCKS: TableBlock[] = [
   {
-    type: "item",
-    label: "Le candidat est présent tout au long de la formation",
-  },
-  { type: "section", label: "Protection adaptée" },
-  { type: "item", label: "- Identifie le danger" },
-  { type: "item", label: "- Action de protection efficace" },
-  { type: "section", label: "Secourir" },
-  { type: "item", label: "- Identifie les signes" },
-  { type: "item", label: "- Gestes conformes aux recommandations PSC 1" },
-  { type: "item", label: "- CAT conforme aux recommandations PSC 1" },
-  { type: "section", label: "Alerter ou faire Alerter" },
-  { type: "item", label: "- Transmet les informations" },
-  {
-    type: "item",
-    label: "- Répond aux questions posées par les services de secours",
-  },
-  { type: "item", label: "- Applique les consignes données" },
-  {
-    type: "section",
-    label: "Surveillance jusqu'à l'arrivée des secours",
+    title: "Le candidat est présent tout au long de la formation",
   },
   {
-    type: "item",
-    label: "- Protéger de la chaleur, du froid ou des intempéries",
+    title: "Protection adaptée",
+    items: ["- Identifie le danger", "- Action de protection efficace"],
   },
-  { type: "section", label: "Prévention" },
-  { type: "item", label: "- Identifie le danger" },
-  { type: "item", label: "- Propose une action de prévention adaptée" },
+  {
+    title: "Secourir",
+    items: [
+      "- Identifie les signes",
+      "- Gestes conformes aux recommandations PSC 1",
+      "- CAT conforme aux recommandations PSC 1",
+    ],
+  },
+  {
+    title: "Alerter ou faire Alerter",
+    items: [
+      "- Transmet les informations",
+      "- Répond aux questions posées par les services de secours",
+      "- Applique les consignes données",
+    ],
+  },
+  {
+    title: "Surveillance",
+    items: [
+      "- Adaptée à l'état de la victime et jusqu'à l'arrivée des secours",
+      "- Protéger de la chaleur, du froid ou des intempéries",
+    ],
+  },
+  {
+    title: "Prévention",
+    items: [
+      "- Identifie le danger",
+      "- Propose une action de prévention adaptée",
+    ],
+  },
 ];
 
 // ── Page builder ───────────────────────────────────────────────────────────────
@@ -102,22 +99,20 @@ function buildFicheEvaluationPage(
   doc.text("7.2", R, 13, { align: "right" });
 
   // ── Title ──────────────────────────────────────────────────────────────────
-  // Outer header box (taller to accommodate logo)
   doc.setLineWidth(0.3);
   doc.rect(L, 10, R - L, 16);
 
-  // Logo left-aligned inside header box
-  // Original image: 1280x444px → scale to 46mm wide (≈ 16mm tall)
-  doc.addImage(
-    "data:image/png;base64," + LOGO_CB_BASE64,
-    "PNG",
-    L + 2,
-    12,
-    32,
-    10
-  );
+  if (LOGO_CB_BASE64) {
+    doc.addImage(
+      "data:image/png;base64," + LOGO_CB_BASE64,
+      "PNG",
+      L + 2,
+      12,
+      32,
+      10
+    );
+  }
 
-  // Title text center of logo, vertically centered
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.text("FORMATION EN PREMIERS SECOURS CITOYEN", 105, 19, {
@@ -135,12 +130,10 @@ function buildFicheEvaluationPage(
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   const cbY = 39;
-  const cbInitX = 48;
-  const cbContX = 115;
-  drawCheckbox(doc, cbInitX, cbY, !isFC);
-  doc.text("Formation initiale", cbInitX + 5, cbY);
-  drawCheckbox(doc, cbContX, cbY, isFC);
-  doc.text("Formation continue", cbContX + 5, cbY);
+  drawCheckbox(doc, 48, cbY, !isFC);
+  doc.text("Formation initiale", 53, cbY);
+  drawCheckbox(doc, 115, cbY, isFC);
+  doc.text("Formation continue", 120, cbY);
 
   // ── Date + Lieu ────────────────────────────────────────────────────────────
   const infoY = 50;
@@ -154,129 +147,163 @@ function buildFicheEvaluationPage(
   doc.setFont("helvetica", "normal");
   doc.text(session.location, 110 + doc.getTextWidth("LIEU : "), infoY);
 
-  // ── Participant ────────────────────────────────────────────────────────────
+  // ── Participant & Formateur ────────────────────────────────────────────────
   const partY = 60;
   doc.setFont("helvetica", "bold");
-  const partPrefix = "Nom-prénom participant(e) : ";
-  doc.text(partPrefix, L, partY);
+  doc.text("Nom-prénom participant(e) : ", L, partY);
   doc.setFont("helvetica", "normal");
-  doc.text(traineeName, L + doc.getTextWidth(partPrefix), partY);
+  doc.text(
+    traineeName,
+    19 + doc.getTextWidth("Nom-prénom participant(e) : "),
+    partY
+  );
   doc.setLineWidth(0.2);
-  doc.line(L + doc.getTextWidth(partPrefix), partY + 1, R, partY + 1);
+  doc.line(
+    L + doc.getTextWidth("Nom-prénom participant(e) : "),
+    partY + 1,
+    R,
+    partY + 1
+  );
 
-  // ── Formateur ──────────────────────────────────────────────────────────────
   const formY = 70;
   doc.setFont("helvetica", "bold");
-  const formPrefix = "Nom-prénom formateur : ";
-  doc.text(formPrefix, L, formY);
+  doc.text("Nom-prénom formateur : ", L, formY);
   doc.setFont("helvetica", "normal");
-  doc.text(formateur.name ?? "", L + doc.getTextWidth(formPrefix), formY);
-  doc.line(L + doc.getTextWidth(formPrefix), formY + 1, R, formY + 1);
+  doc.text(
+    formateur.name ?? "",
+    19 + doc.getTextWidth("Nom-prénom formateur : "),
+    formY
+  );
+  doc.line(
+    L + doc.getTextWidth("Nom-prénom formateur : "),
+    formY + 1,
+    R,
+    formY + 1
+  );
 
-  // ── Thème ──────────────────────────────────────────────────────────────────
   const themeY = 80;
   doc.setFont("helvetica", "bold");
-  const themePrefix = "THEME de la mise en situation : ";
-  doc.text(themePrefix, L, themeY);
+  doc.text("THEME de la mise en situation : ", L, themeY);
   doc.setFont("helvetica", "normal");
-  doc.setLineWidth(0.2);
-  doc.line(L + doc.getTextWidth(themePrefix), themeY + 1, R, themeY + 1);
+  doc.line(
+    L + doc.getTextWidth("THEME de la mise en situation : "),
+    themeY + 1,
+    R,
+    themeY + 1
+  );
 
   // ── Table ──────────────────────────────────────────────────────────────────
   const tStartY = 87;
   const headerH = 8;
   const subHeaderH = 6;
+  const dataStartY = tStartY + headerH + subHeaderH;
 
-  // Header outer border
-  doc.setLineWidth(0.4);
-  doc.rect(L, tStartY, R - L, headerH + subHeaderH);
-  doc.setLineWidth(0.4);
-  doc.line(COL_OUI, tStartY, COL_OUI, tStartY + headerH + subHeaderH);
-  doc.line(COL_NON, 95, COL_NON, tStartY + headerH + subHeaderH);
-  doc.line(COL_OBS, tStartY, COL_OBS, tStartY + headerH + subHeaderH);
+  // Lignes horizontales de l'en-tête
+  doc.setLineWidth(0.2);
+  // Ligne de séparation Critères/Fait (s'arrête avant Observations)
+  doc.line(L, tStartY + headerH, COL_OBS, tStartY + headerH);
+  // Ligne de séparation En-tête/Données (traverse tout le tableau)
+  doc.line(L, dataStartY, R, dataStartY);
 
-  // "Fait" header merges Oui + Non columns — draw top sub-divider only
-  doc.line(L, tStartY + headerH, R, tStartY + headerH);
-  doc.line(COL_OUI, tStartY + headerH, COL_OBS, tStartY + headerH);
-
-  // Header text
-  const ouiMidX = (COL_OUI + COL_NON) / 2;
-  const nonMidX = (COL_NON + COL_OBS) / 2;
-  const faitMidX = (COL_OUI + COL_OBS) / 2;
-
+  // Textes de l'en-tête (Centrage vertical avec baseline "middle")
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("Critères", L + 3, tStartY + 5.5);
-  doc.text("Fait", faitMidX, tStartY + 5.5, { align: "center" });
-  doc.text("Observations", (COL_OBS + R) / 2, tStartY + 5.5, {
+
+  doc.text("Critères", (L + COL_OUI) / 2, tStartY + headerH / 2, {
     align: "center",
+    baseline: "middle",
   });
-  doc.text("Oui", ouiMidX, tStartY + headerH + 4, { align: "center" });
-  doc.text("Non", nonMidX, tStartY + headerH + 4, { align: "center" });
-  doc.setFont("helvetica", "normal");
+  doc.text("Fait", (COL_OUI + COL_OBS) / 2, tStartY + headerH / 2, {
+    align: "center",
+    baseline: "middle",
+  });
+  doc.text(
+    "Observations",
+    (COL_OBS + R) / 2,
+    tStartY + (headerH + subHeaderH) / 2,
+    { align: "center", baseline: "middle" }
+  );
 
-  // Data rows
-  let curY = tStartY + headerH + subHeaderH;
-  const maxCriteriaW = COL_OUI - L - 6;
+  doc.text("Oui", (COL_OUI + COL_NON) / 2, tStartY + headerH + subHeaderH / 2, {
+    align: "center",
+    baseline: "middle",
+  });
+  doc.text("Non", (COL_NON + COL_OBS) / 2, tStartY + headerH + subHeaderH / 2, {
+    align: "center",
+    baseline: "middle",
+  });
 
-  for (const row of TABLE_ROWS) {
-    if (row.type === "section") {
-      // Gray background for section headers
-      doc.setFillColor(215, 215, 215);
-      doc.rect(L, curY, R - L, ROW_H, "F");
-      drawTableRowLines(doc, curY, ROW_H);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text(row.label, L + 3, curY + ROW_H - 2.3);
+  // Rendu des lignes de données (Blocs)
+  let curY = dataStartY;
+  const maxCriteriaW = COL_OUI - L - 4;
+
+  for (const block of TABLE_BLOCKS) {
+    let textY = curY + 5.5; // Padding supérieur interne au bloc
+
+    // Titre du bloc
+    doc.setFont("helvetica", "bold");
+    const titleLines = doc.splitTextToSize(
+      block.title,
+      maxCriteriaW
+    ) as string[];
+    titleLines.forEach((line) => {
+      doc.text(line, L + 2, textY);
+      textY += 4.5;
+    });
+
+    // Sous-éléments (s'il y en a)
+    if (block.items && block.items.length > 0) {
       doc.setFont("helvetica", "normal");
-
-      curY += ROW_H; // Incrémentation explicite pour la section
-    } else {
-      // Split text dynamically
-      const lines = doc.splitTextToSize(row.label, maxCriteriaW) as string[];
-
-      // Calculate dynamic row height based on number of lines
-      const rowH = Math.max(ROW_H, lines.length * 4.5 + 3);
-
-      drawTableRowLines(doc, curY, rowH);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-
-      // Write each line dynamically
-      lines.forEach((line, index) => {
-        doc.text(line, L + 3, curY + 5.5 + index * 4.5);
+      block.items.forEach((item) => {
+        const itemLines = doc.splitTextToSize(
+          item,
+          maxCriteriaW - 4
+        ) as string[];
+        itemLines.forEach((line) => {
+          doc.text(line, L + 6, textY); // Légère indentation
+          textY += 4.5;
+        });
       });
-
-      // On a supprimé le dessin des cases à cocher ici pour laisser les cellules vides
-
-      curY += rowH; // Incrémentation explicite pour l'item
     }
+
+    curY = textY + 1.5; // Ajout d'un padding inférieur avant la ligne de séparation
+
+    // Ligne de séparation horizontale (S'ARRÊTE A LA COLONNE OBSERVATIONS)
+    doc.setLineWidth(0.2);
+    doc.line(L, curY, COL_OBS, curY);
   }
 
-  // ── Signatures ─────────────────────────────────────────────────────────────
-  const sigY = curY + 10; // Espacement après le tableau
-  const sigH = 30; // Hauteur du cadre de signature
+  const tableBottomY = curY;
 
-  // Dessin du cadre extérieur et de la séparation centrale
+  // Traçage des grandes lignes verticales et de la bordure extérieure
+  doc.setLineWidth(0.3); // Bordure extérieure plus épaisse
+  doc.rect(L, tStartY, R - L, tableBottomY - tStartY);
+
+  doc.setLineWidth(0.2); // Lignes intérieures plus fines
+  // Ligne entre Critères et Oui
+  doc.line(COL_OUI, tStartY, COL_OUI, tableBottomY);
+  // Ligne entre Oui et Non (Commence sous "Fait")
+  doc.line(COL_NON, tStartY + headerH, COL_NON, tableBottomY);
+  // Ligne entre Fait et Observations (Sépare la grande colonne vide)
+  doc.line(COL_OBS, tStartY, COL_OBS, tableBottomY);
+
+  // ── Signatures ─────────────────────────────────────────────────────────────
+  const sigY = curY + 10;
+  const sigH = 30;
+
   doc.setLineWidth(0.3);
   doc.rect(L, sigY, R - L, sigH);
   doc.line((L + R) / 2, sigY, (L + R) / 2, sigY + sigH);
 
-  // Ajout des textes centrés dans chaque moitié
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-
-  // Moitié gauche : Formateur
   doc.text("Signature du formateur", L + (R - L) / 4, sigY + 6, {
     align: "center",
   });
-
-  // Moitié droite : Participant
   doc.text("Signature du participant", L + (3 * (R - L)) / 4, sigY + 6, {
     align: "center",
   });
 }
-
 // ── Public exports ─────────────────────────────────────────────────────────────
 export function generateFicheEvaluationPDF(
   session: {
