@@ -16,7 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Upload, UserPlus, UserRoundPlus } from "lucide-react";
+import {
+  ClipboardList,
+  Download,
+  Trash2,
+  Upload,
+  UserPlus,
+  UserRoundPlus,
+} from "lucide-react";
 import {
   addTraineeToSession,
   removeTraineeFromSession,
@@ -25,22 +32,36 @@ import {
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 
-import { Inscription, Trainee } from "../../../types";
+import { Inscription, Slot, Trainee } from "../../../types";
 import { TraineeDialog } from "../../../stagiaires/components/trainee-dialog";
 import { TraineeImportDialog } from "../../../stagiaires/components/trainee-import-dialog";
+import {
+  generateFicheEvaluationPDF,
+  generateAllFichesEvaluationPDF,
+} from "../../../lib/pdf-fiche-evaluation-formative-PSC";
 
 interface InscriptionsTabProps {
   sessionId: string;
+  session: {
+    title: string;
+    location: string;
+    startDate: Date | null;
+    slots: Slot[];
+    isFC?: boolean;
+  };
   inscriptions: Inscription[];
   allTrainees: Trainee[];
   maxTrainees: number;
+  formateur: { name: string | null };
 }
 
 export function InscriptionsTab({
   sessionId,
+  session,
   inscriptions,
   allTrainees,
   maxTrainees,
+  formateur,
 }: InscriptionsTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -103,6 +124,14 @@ export function InscriptionsTab({
     }
   }
 
+  function handleDownloadFiche(inscription: Inscription) {
+    generateFicheEvaluationPDF(session, inscription, formateur);
+  }
+
+  function handleDownloadAllFiches() {
+    generateAllFichesEvaluationPDF(session, inscriptions, formateur);
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "présent":
@@ -123,12 +152,23 @@ export function InscriptionsTab({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Liste des Inscrits</CardTitle>
-          <CardDescription>
-            Gérez les inscriptions des stagiaires à cette session. (
-            {inscriptions.length} sur {maxTrainees} places)
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle>Liste des Inscrits</CardTitle>
+            <CardDescription>
+              Gérez les inscriptions des stagiaires à cette session. (
+              {inscriptions.length} sur {maxTrainees} places)
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleDownloadAllFiches}
+            disabled={inscriptions.length === 0 || loading}
+            className="shrink-0"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Fiches évaluation
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row">
@@ -228,6 +268,16 @@ export function InscriptionsTab({
                         <SelectItem value="éliminé">Éliminé</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDownloadFiche(inscription)}
+                      disabled={loading}
+                      title="Télécharger la fiche d'évaluation"
+                    >
+                      <ClipboardList className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

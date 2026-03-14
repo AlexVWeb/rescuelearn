@@ -163,9 +163,17 @@ export function SessionTabsLayout({
           {session && (
             <InscriptionsTab
               sessionId={session.id}
+              session={{
+                title: session.title,
+                location: session.location,
+                startDate: session.startDate,
+                slots: slots,
+                isFC: session.isFC,
+              }}
               inscriptions={inscriptions}
               allTrainees={allTrainees}
               maxTrainees={session.maxTrainees}
+              formateur={formateur ?? { name: null }}
             />
           )}
         </TabsContent>
