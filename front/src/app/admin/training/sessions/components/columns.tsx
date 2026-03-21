@@ -5,7 +5,6 @@ import { TrainingSession } from "../../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, ArrowUpDown, Eye } from "lucide-react";
-import { SessionDialog } from "./session-dialog";
 import { DeleteSessionButton } from "./delete-session-button";
 import dayjs from "dayjs";
 import Link from "next/link";
@@ -102,11 +101,11 @@ export const columns: ColumnDef<TrainingSession>[] = [
               <Eye className="h-4 w-4" />
             </Link>
           </Button>
-          <SessionDialog session={session as any}>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+            <Link href={`/admin/training/sessions/${session.id}?tab=settings`}>
               <Pencil className="h-4 w-4" />
-            </Button>
-          </SessionDialog>
+            </Link>
+          </Button>
           <DeleteSessionButton
             sessionId={session.id}
             sessionTitle={session.title}

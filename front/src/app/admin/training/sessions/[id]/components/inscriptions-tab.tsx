@@ -53,7 +53,7 @@ interface InscriptionsTabProps {
   inscriptions: Inscription[];
   allTrainees: Trainee[];
   maxTrainees: number;
-  formateur: { name: string | null };
+  formateur: { lastName: string | null; firstName: string | null };
   organismeLogoBase64?: string | null;
 }
 

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Slot, Inscription } from "../../../../types";
-import { generateEmargementPDF } from "../../../../lib/pdf-export";
+import { generateEmargementPDF } from "../../../../lib/pdf-emargement";
 import { useEmargement } from "./hooks/use-emargement";
 import { EmargementTable } from "./components/emargement-table";
 import { StatusLegend } from "./components/status-legend";

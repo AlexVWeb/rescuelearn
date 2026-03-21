@@ -708,10 +708,8 @@ export async function updateAttestationResult(
 
 export async function getFormateur() {
   const user = await getUserContext();
-  // Prefer firstName+lastName if both set, otherwise fall back to name
-  const fullName =
-    user.firstName && user.lastName
-      ? `${user.firstName} ${user.lastName}`
-      : (user.name ?? null);
-  return { name: fullName };
+  return {
+    lastName: user.lastName ?? null,
+    firstName: user.firstName ?? null,
+  };
 }

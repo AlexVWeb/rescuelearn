@@ -36,7 +36,8 @@ interface FormationTabProps {
   };
   inscriptions: Inscription[];
   formateur: {
-    name: string | null;
+    lastName: string | null;
+    firstName: string | null;
   };
 }
 
@@ -95,7 +96,7 @@ export function FormationTab({
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div>
-          <CardTitle>Attestations de fin de formation</CardTitle>
+          <CardTitle>Attestations de formation</CardTitle>
           <CardDescription>
             Validez les résultats et générez les attestations PDF
           </CardDescription>
@@ -107,7 +108,7 @@ export function FormationTab({
           className="shrink-0"
         >
           <Download className="mr-2 h-4 w-4" />
-          Tout télécharger
+          Télécharger les attestations de fin de formation
         </Button>
       </CardHeader>
 

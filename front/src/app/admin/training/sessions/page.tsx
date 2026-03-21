@@ -3,10 +3,11 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./components/columns";
-import { SessionDialog } from "./components/session-dialog";
+import { TrainingSession } from "../types";
+import Link from "next/link";
 
 export default async function SessionsPage() {
-  const sessions = await getAllSessions();
+  const sessions = (await getAllSessions()) as unknown as TrainingSession[];
 
   return (
     <div className="space-y-6">
@@ -19,11 +20,11 @@ export default async function SessionsPage() {
             Gérez toutes les sessions de votre organisme.
           </p>
         </div>
-        <SessionDialog>
-          <Button className="w-full sm:w-auto">
+        <Button asChild className="w-full sm:w-auto">
+          <Link href="/admin/training/sessions/new">
             <Plus className="mr-2 h-4 w-4" /> Nouvelle Session
-          </Button>
-        </SessionDialog>
+          </Link>
+        </Button>
       </div>
 
       <DataTable

@@ -83,11 +83,11 @@ function buildFicheEvaluationPage(
     isFC?: boolean;
   },
   inscription: Inscription,
-  formateur: { name: string | null },
+  formateur: { lastName: string | null; firstName: string | null },
   organismeLogoBase64?: string | null
 ): void {
   const traineeName =
-    `${inscription.trainee?.firstName ?? ""} ${inscription.trainee?.lastName ?? ""}`.trim();
+    `${inscription.trainee?.lastName ?? ""} ${inscription.trainee?.firstName ?? ""}`.trim();
   const formattedDate = session.startDate
     ? dayjs(session.startDate).format("DD/MM/YYYY")
     : "";
@@ -166,7 +166,7 @@ function buildFicheEvaluationPage(
   doc.text("Nom-prénom formateur : ", L, formY);
   doc.setFont("helvetica", "normal");
   doc.text(
-    formateur.name ?? "",
+    `${formateur.lastName ?? ""} ${formateur.firstName ?? ""}`.trim(),
     19 + doc.getTextWidth("Nom-prénom formateur : "),
     formY
   );
@@ -310,7 +310,7 @@ export function generateFicheEvaluationPDF(
     isFC?: boolean;
   },
   inscription: Inscription,
-  formateur: { name: string | null },
+  formateur: { lastName: string | null; firstName: string | null },
   organismeLogoBase64?: string | null
 ): void {
   const doc = new jsPDF("portrait", "mm", "a4");
@@ -335,7 +335,7 @@ export function generateAllFichesEvaluationPDF(
     isFC?: boolean;
   },
   inscriptions: Inscription[],
-  formateur: { name: string | null },
+  formateur: { lastName: string | null; firstName: string | null },
   organismeLogoBase64?: string | null
 ): void {
   const doc = new jsPDF("portrait", "mm", "a4");

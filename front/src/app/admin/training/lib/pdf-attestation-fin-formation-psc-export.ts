@@ -31,7 +31,7 @@ function buildAttestationPage(
     slots: Slot[];
   },
   inscription: Inscription,
-  formateur: { name: string | null }
+  formateur: { lastName: string | null; firstName: string | null }
 ): void {
   const x = 20;
   const rightMargin = 190; // right limit (210 - 20)
@@ -48,7 +48,12 @@ function buildAttestationPage(
   doc.text(formateurPrefix, x, 45);
   const formateurPrefixW = doc.getTextWidth(formateurPrefix);
   doc.setFont("helvetica", "bold");
-  doc.text(formateur.name || "Non renseigné", 22 + formateurPrefixW, 45);
+  doc.text(
+    `${formateur.lastName ?? ""} ${formateur.firstName ?? ""}`.trim() ||
+      "Non renseigné",
+    22 + formateurPrefixW,
+    45
+  );
   doc.setFont("helvetica", "normal");
 
   // ── Stagiaire ──────────────────────────────────────────────────────────────
@@ -215,7 +220,7 @@ export function generateAttestationPDF(
     slots: Slot[];
   },
   inscription: Inscription,
-  formateur: { name: string | null }
+  formateur: { lastName: string | null; firstName: string | null }
 ): void {
   const doc = new jsPDF("portrait", "mm", "a4");
   buildAttestationPage(doc, session, inscription, formateur);
@@ -232,7 +237,7 @@ export function generateAllAttestationsPDF(
     slots: Slot[];
   },
   inscriptions: Inscription[],
-  formateur: { name: string | null }
+  formateur: { lastName: string | null; firstName: string | null }
 ): void {
   const doc = new jsPDF("portrait", "mm", "a4");
   inscriptions.forEach((inscription, index) => {

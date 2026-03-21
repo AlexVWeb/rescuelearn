@@ -28,7 +28,7 @@ interface SessionTabsLayoutProps {
   session?: TrainingSession & { slots: Slot[]; inscriptions: Inscription[] };
   allTrainees?: Trainee[];
   isNew?: boolean;
-  formateur?: { name: string | null };
+  formateur?: { lastName: string | null; firstName: string | null };
   organismeLogoBase64?: string | null;
 }
 
@@ -176,7 +176,7 @@ export function SessionTabsLayout({
               inscriptions={inscriptions}
               allTrainees={allTrainees}
               maxTrainees={session.maxTrainees}
-              formateur={formateur ?? { name: null }}
+              formateur={formateur ?? { lastName: null, firstName: null }}
               organismeLogoBase64={organismeLogoBase64}
             />
           )}
