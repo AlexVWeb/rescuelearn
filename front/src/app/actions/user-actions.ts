@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { UserRole } from "@/lib/roles";
+import { hashPassword } from "better-auth/crypto";
 
 // Type definitions could be moved to a types file
 export type User = {
@@ -64,6 +65,7 @@ export async function createUserAction(data: {
   name: string;
   email: string;
   role: string;
+  password: string;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
@@ -71,12 +73,21 @@ export async function createUserAction(data: {
   }
 
   try {
-    await prisma.user.create({
+    const hashedPwd = await hashPassword(data.password);
+    const user = await prisma.user.create({
       data: {
         name: data.name,
         email: data.email,
         roles: [data.role],
         emailVerified: false,
+      },
+    });
+    await prisma.account.create({
+      data: {
+        accountId: user.id,
+        providerId: "credential",
+        userId: user.id,
+        password: hashedPwd,
       },
     });
     revalidatePath("/admin/users");

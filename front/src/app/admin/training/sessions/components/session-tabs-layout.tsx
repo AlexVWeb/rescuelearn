@@ -29,6 +29,7 @@ interface SessionTabsLayoutProps {
   allTrainees?: Trainee[];
   isNew?: boolean;
   formateur?: { name: string | null };
+  organismeLogoBase64?: string | null;
 }
 
 export function SessionTabsLayout({
@@ -36,6 +37,7 @@ export function SessionTabsLayout({
   allTrainees = [],
   isNew = false,
   formateur = undefined,
+  organismeLogoBase64,
 }: SessionTabsLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -175,6 +177,7 @@ export function SessionTabsLayout({
               allTrainees={allTrainees}
               maxTrainees={session.maxTrainees}
               formateur={formateur ?? { name: null }}
+              organismeLogoBase64={organismeLogoBase64}
             />
           )}
         </TabsContent>

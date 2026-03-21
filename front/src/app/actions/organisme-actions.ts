@@ -6,6 +6,15 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
 import { UserRole, hasRole } from "@/lib/roles";
+import { uploadFile, deleteFile, getPresignedUrl } from "@/lib/r2";
+
+const ALLOWED_MIME_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/svg+xml": "svg",
+  "image/webp": "webp",
+};
+const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
 export type Organisme = {
   id: string;
@@ -305,5 +314,127 @@ export async function searchUsersAction(query: string) {
     return { success: true, data: users };
   } catch (_) {
     return { success: false, error: "Failed to search users" };
+  }
+}
+
+export async function uploadOrganismeLogoAction(
+  id: string,
+  formData: FormData
+) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { organismeId: true, roles: true },
+  });
+  const isSuperAdmin = hasRole(user?.roles, UserRole.SUPER_ADMIN);
+  if (!isSuperAdmin && user?.organismeId !== id) {
+    return { success: false, error: "Forbidden" };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { success: false, error: "Fichier manquant" };
+  }
+
+  const ext = ALLOWED_MIME_TYPES[file.type];
+  if (!ext) {
+    return {
+      success: false,
+      error: "Format non supporté. Utilisez PNG, JPG, SVG ou WebP.",
+    };
+  }
+  if (file.size > MAX_SIZE_BYTES) {
+    return { success: false, error: "Fichier trop volumineux (max 2 Mo)." };
+  }
+
+  try {
+    const organisme = await prisma.organisme.findUnique({
+      where: { id },
+      select: { logo: true },
+    });
+    if (!organisme) {
+      return { success: false, error: "Organisme introuvable" };
+    }
+    if (organisme.logo) {
+      await deleteFile(organisme.logo);
+    }
+
+    const key = `organismes/${id}/logo.${ext}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await uploadFile(key, buffer, file.type);
+
+    await prisma.organisme.update({
+      where: { id },
+      data: { logo: key },
+    });
+
+    revalidatePath(`/admin/organismes/${id}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to upload logo:", error);
+    return { success: false, error: "Erreur lors de l'upload" };
+  }
+}
+
+export async function deleteOrganismeLogoAction(id: string) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { organismeId: true, roles: true },
+  });
+  const isSuperAdmin = hasRole(user?.roles, UserRole.SUPER_ADMIN);
+  if (!isSuperAdmin && user?.organismeId !== id) {
+    return { success: false, error: "Forbidden" };
+  }
+
+  try {
+    const organisme = await prisma.organisme.findUnique({
+      where: { id },
+      select: { logo: true },
+    });
+    if (!organisme) {
+      return { success: false, error: "Organisme introuvable" };
+    }
+
+    if (organisme.logo) {
+      await deleteFile(organisme.logo);
+    }
+
+    await prisma.organisme.update({
+      where: { id },
+      data: { logo: null },
+    });
+
+    revalidatePath(`/admin/organismes/${id}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete logo:", error);
+    return { success: false, error: "Erreur lors de la suppression" };
+  }
+}
+
+export async function getOrganismeLogoUrlAction(
+  id: string
+): Promise<{ success: true; url: string } | { success: false; error: string }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  try {
+    const organisme = await prisma.organisme.findUnique({
+      where: { id },
+      select: { logo: true },
+    });
+    if (!organisme?.logo) {
+      return { success: false, error: "Aucun logo" };
+    }
+    const url = await getPresignedUrl(organisme.logo);
+    return { success: true, url };
+  } catch (error) {
+    console.error("Failed to get logo URL:", error);
+    return { success: false, error: "Erreur lors de la récupération du logo" };
   }
 }

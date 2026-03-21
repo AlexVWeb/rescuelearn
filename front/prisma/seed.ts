@@ -69,6 +69,7 @@ async function main() {
     data: {
       name: "Administration RescueLearn",
       agreementNumber: "ADMIN-001",
+      siret: "12345678910121",
     },
   });
 

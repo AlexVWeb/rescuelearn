@@ -1,4 +1,10 @@
-import { getSessionDetails, getAllTrainees, getFormateur } from "../../actions";
+import {
+  getSessionDetails,
+  getAllTrainees,
+  getFormateur,
+  getMonOrganisme,
+} from "../../actions";
+import { getLogoAsBase64 } from "@/lib/organisme-logo";
 import { notFound } from "next/navigation";
 import { SessionTabsLayout } from "../components/session-tabs-layout";
 import { TrainingSession, Slot, Inscription } from "../../types";
@@ -13,12 +19,17 @@ export default async function SessionDetailsPage({
   let session;
   let allTrainees;
   let formateur;
+  let organismeLogoBase64: string | null = null;
   try {
     [session, allTrainees, formateur] = await Promise.all([
       getSessionDetails(id),
       getAllTrainees(),
       getFormateur(),
     ]);
+    const organisme = await getMonOrganisme();
+    if (organisme?.logo) {
+      organismeLogoBase64 = await getLogoAsBase64(organisme.logo);
+    }
   } catch (e) {
     return notFound();
   }
@@ -33,6 +44,7 @@ export default async function SessionDetailsPage({
       }
       allTrainees={allTrainees}
       formateur={formateur}
+      organismeLogoBase64={organismeLogoBase64}
     />
   );
 }

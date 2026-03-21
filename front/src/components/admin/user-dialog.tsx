@@ -29,16 +29,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, updateUserAction } from "@/app/actions/user-actions";
+import {
+  User,
+  updateUserAction,
+  createUserAction,
+} from "@/app/actions/user-actions";
 import { UserRole, userRoleSchema } from "@/lib/roles";
 import { useRouter } from "next/navigation";
 
 // Schema
-const userSchema = z.object({
-  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
-  email: z.email("L'adresse e-mail n'est pas valide"),
-  role: userRoleSchema.default(UserRole.FORMATEUR),
-});
+const userSchema = z
+  .object({
+    name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+    email: z.email("L'adresse e-mail n'est pas valide"),
+    role: userRoleSchema.default(UserRole.FORMATEUR),
+    password: z.string().optional(),
+    confirmPassword: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.password && !data.confirmPassword) return; // edit mode, skip
+    if (!data.password || data.password.length < 8) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["password"],
+        message: "Le mot de passe doit faire au moins 8 caractères",
+      });
+    }
+    if (data.password !== data.confirmPassword) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["confirmPassword"],
+        message: "Les mots de passe ne correspondent pas",
+      });
+    }
+  });
 
 type UserFormValues = z.infer<typeof userSchema>;
 
@@ -97,16 +121,12 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
         result = await updateUserAction(user.id, { name: data.name, roles });
       } else {
         // Create
-        // Note: Password handling is missing here as agreed in plan (basic setup first)
-        // Ideally we'd have a generated password or email invite flow.
-        // For now simplified to just calling create action (which we need to make sure exists)
-        // Check: I defined get, update, delete in user-actions. Did I define create?
-        // I missed createUserAction in the previous write_to_file call!!
-        // I only wrote get, delete, update.
-        // I need to add createUserAction.
-        // For now, I'll comment this out or assume it exists and fix it in the next step.
-        console.warn("Create not implemented completely yet");
-        result = { success: false, error: "Create not implemented yet" };
+        result = await createUserAction({
+          name: data.name,
+          email: data.email,
+          role: data.role,
+          password: data.password!,
+        });
       }
 
       if (result.success) {
@@ -197,6 +217,45 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
                 </FormItem>
               )}
             />
+
+            {!user && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mot de passe</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="••••••••"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirmer le mot de passe</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="••••••••"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
 
             {error && <p className="text-destructive text-sm">{error}</p>}
 

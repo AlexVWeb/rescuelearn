@@ -54,6 +54,7 @@ interface InscriptionsTabProps {
   allTrainees: Trainee[];
   maxTrainees: number;
   formateur: { name: string | null };
+  organismeLogoBase64?: string | null;
 }
 
 export function InscriptionsTab({
@@ -63,6 +64,7 @@ export function InscriptionsTab({
   allTrainees,
   maxTrainees,
   formateur,
+  organismeLogoBase64,
 }: InscriptionsTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -127,11 +129,21 @@ export function InscriptionsTab({
   }
 
   function handleDownloadFiche(inscription: Inscription) {
-    generateFicheEvaluationPDF(session, inscription, formateur);
+    generateFicheEvaluationPDF(
+      session,
+      inscription,
+      formateur,
+      organismeLogoBase64
+    );
   }
 
   function handleDownloadAllFiches() {
-    generateAllFichesEvaluationPDF(session, inscriptions, formateur);
+    generateAllFichesEvaluationPDF(
+      session,
+      inscriptions,
+      formateur,
+      organismeLogoBase64
+    );
   }
 
   const getStatusBadge = (status: string) => {

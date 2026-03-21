@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrganismeForm } from "@/components/admin/organisme-form";
 import { MembresTab } from "./components/membres-tab";
+import { DocumentsTab } from "./components/documents-tab";
 import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
 import {
   Organisme,
@@ -47,6 +48,7 @@ export function OrganismeDetailClient({
       <TabsList>
         <TabsTrigger value="informations">Informations</TabsTrigger>
         <TabsTrigger value="membres">Membres</TabsTrigger>
+        <TabsTrigger value="documents">Documents</TabsTrigger>
       </TabsList>
 
       <TabsContent value="informations" className="mt-6">
@@ -70,6 +72,10 @@ export function OrganismeDetailClient({
 
       <TabsContent value="membres" className="mt-6">
         <MembresTab organismeId={organisme.id} members={members} />
+      </TabsContent>
+
+      <TabsContent value="documents" className="mt-6">
+        <DocumentsTab organismeId={organisme.id} hasLogo={!!organisme.logo} />
       </TabsContent>
     </Tabs>
   );
