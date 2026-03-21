@@ -7,16 +7,24 @@ import { headers } from "next/headers";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
 
 export async function updateProfileAction(data: {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return { success: false, error: "Non autorisé" };
 
+  const fullName = `${data.firstName} ${data.lastName}`.trim();
+
   try {
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { name: data.name, email: data.email },
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        name: fullName,
+        email: data.email,
+      },
     });
     revalidatePath("/admin/profile");
     return { success: true };

@@ -1,11 +1,19 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import { ProfileForm } from "./profile-form";
 
 export default async function ProfilePage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/");
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { firstName: true, lastName: true, email: true },
+  });
+
+  if (!user) redirect("/");
 
   return (
     <div className="space-y-4">
@@ -15,9 +23,7 @@ export default async function ProfilePage() {
           Gérez vos informations personnelles.
         </p>
       </div>
-      <ProfileForm
-        user={{ name: session.user.name ?? "", email: session.user.email }}
-      />
+      <ProfileForm user={user} />
     </div>
   );
 }

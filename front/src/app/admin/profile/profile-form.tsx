@@ -29,7 +29,8 @@ import { useRouter } from "next/navigation";
 
 // --- Profile schema ---
 const profileSchema = z.object({
-  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+  firstName: z.string().min(1, "Requis"),
+  lastName: z.string().min(1, "Requis"),
   email: z.email("L'adresse e-mail n'est pas valide"),
 });
 
@@ -49,7 +50,7 @@ type ProfileValues = z.infer<typeof profileSchema>;
 type PasswordValues = z.infer<typeof passwordSchema>;
 
 interface ProfileFormProps {
-  user: { name: string; email: string };
+  user: { firstName: string | null; lastName: string | null; email: string };
 }
 
 export function ProfileForm({ user }: ProfileFormProps) {
@@ -61,7 +62,11 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema) as any,
-    defaultValues: { name: user.name, email: user.email },
+    defaultValues: {
+      firstName: user.firstName ?? "",
+      lastName: user.lastName ?? "",
+      email: user.email,
+    },
   });
 
   const onProfileSubmit = async (data: ProfileValues) => {
@@ -120,19 +125,34 @@ export function ProfileForm({ user }: ProfileFormProps) {
               onSubmit={profileForm.handleSubmit(onProfileSubmit)}
               className="space-y-4"
             >
-              <FormField
-                control={profileForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom complet</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Jean Dupont" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={profileForm.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prénom</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Jean" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={profileForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Dupont" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={profileForm.control}
                 name="email"
