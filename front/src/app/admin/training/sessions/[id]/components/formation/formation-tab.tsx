@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,12 +18,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileDown } from "lucide-react";
+import { Download, FileDown, ClipboardList, Files } from "lucide-react";
 import { updateAttestationResult } from "../../../../actions";
 import {
   generateAttestationPDF,
   generateAllAttestationsPDF,
 } from "../../../../lib/pdf-attestation-fin-formation-psc-export";
+import {
+  SingleFisePDFDownload,
+  MultipleFisePDFDownload,
+} from "../../../../lib/pdf-fise";
 import { Inscription, Slot } from "../../../../types";
 
 interface FormationTabProps {
@@ -39,6 +43,7 @@ interface FormationTabProps {
     lastName: string | null;
     firstName: string | null;
   };
+  organismeLogoBase64?: string | null;
 }
 
 export function FormationTab({
@@ -46,6 +51,7 @@ export function FormationTab({
   session,
   inscriptions,
   formateur,
+  organismeLogoBase64,
 }: FormationTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -101,15 +107,37 @@ export function FormationTab({
             Validez les résultats et générez les attestations PDF
           </CardDescription>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleDownloadAll}
-          disabled={!hasAnyResult || loading}
-          className="shrink-0"
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Télécharger les attestations de fin de formation
-        </Button>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <Button
+            variant="outline"
+            onClick={handleDownloadAll}
+            disabled={!hasAnyResult || loading}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Attestations de fin de formation
+          </Button>
+          {inscriptions.length === 0 || loading ? (
+            <Button variant="outline" disabled>
+              <Files className="mr-2 h-4 w-4" />
+              Toutes les FISE
+            </Button>
+          ) : (
+            <MultipleFisePDFDownload
+              session={session}
+              inscriptions={inscriptions}
+              formateur={formateur}
+              organismeLogoBase64={organismeLogoBase64}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              {({ loading: pdfLoading }) => (
+                <>
+                  <Files className="mr-2 h-4 w-4" />
+                  {pdfLoading ? "Génération..." : "Toutes les FISE"}
+                </>
+              )}
+            </MultipleFisePDFDownload>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent>
@@ -159,10 +187,40 @@ export function FormationTab({
                     className="h-8 w-8"
                     onClick={() => handleDownloadOne(inscription)}
                     disabled={!inscription.attestationResult || loading}
-                    title="Télécharger l'attestation"
+                    title="Télécharger l'attestation de fin de formation"
                   >
                     <FileDown className="h-4 w-4" />
                   </Button>
+
+                  {loading ? (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled
+                      title="Télécharger la FISE"
+                    >
+                      <ClipboardList className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <SingleFisePDFDownload
+                      session={session}
+                      inscription={inscription}
+                      formateur={formateur}
+                      organismeLogoBase64={organismeLogoBase64}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "icon",
+                        className: "h-8 w-8",
+                      })}
+                    >
+                      {({ loading: pdfLoading }) => (
+                        <ClipboardList
+                          className={`h-4 w-4 ${pdfLoading ? "animate-pulse" : ""}`}
+                        />
+                      )}
+                    </SingleFisePDFDownload>
+                  )}
                 </div>
               </div>
             ))

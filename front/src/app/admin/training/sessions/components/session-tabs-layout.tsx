@@ -207,6 +207,7 @@ export function SessionTabsLayout({
               }}
               inscriptions={inscriptions}
               formateur={formateur}
+              organismeLogoBase64={organismeLogoBase64}
             />
           )}
         </TabsContent>
