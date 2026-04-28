@@ -8,7 +8,42 @@ import {
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import type { TraineeListItem } from "./types";
+import type {
+  TraineeListItem,
+  TraineeWithHistory,
+  SessionType,
+  SessionStatus,
+} from "./types";
+
+const VALID_SESSION_TYPES: readonly string[] = [
+  "PSC",
+  "PSE1",
+  "PSE2",
+  "SST",
+  "IPS",
+  "FF",
+  "FPS",
+];
+const VALID_SESSION_STATUSES: readonly string[] = [
+  "planifiée",
+  "en_cours",
+  "terminée",
+  "annulée",
+];
+
+function asSessionType(value: string): SessionType {
+  if (!VALID_SESSION_TYPES.includes(value)) {
+    throw new Error(`Unexpected session type: "${value}"`);
+  }
+  return value as SessionType;
+}
+
+function asSessionStatus(value: string): SessionStatus {
+  if (!VALID_SESSION_STATUSES.includes(value)) {
+    throw new Error(`Unexpected session status: "${value}"`);
+  }
+  return value as SessionStatus;
+}
 
 async function getUserContext() {
   const session = await auth.api.getSession({
@@ -79,24 +114,36 @@ export async function getMonOrganisme() {
   });
 }
 
-export async function getTraineeWithHistory(id: string) {
+export async function getTraineeWithHistory(
+  id: string
+): Promise<TraineeWithHistory | null> {
   const user = await getUserContext();
   if (!user.organismeId) return null;
 
-  return prisma.trainee.findUnique({
+  const raw = await prisma.trainee.findUnique({
     where: { id, organismeId: user.organismeId },
     include: {
       inscriptions: {
-        include: {
-          trainingSession: true,
-        },
+        include: { trainingSession: true },
         orderBy: { trainingSession: { startDate: "desc" } },
       },
-      externalTrainings: {
-        orderBy: { obtainedAt: "desc" },
-      },
+      externalTrainings: { orderBy: { obtainedAt: "desc" } },
     },
   });
+
+  if (!raw) return null;
+
+  return {
+    ...raw,
+    inscriptions: raw.inscriptions.map((inscription) => ({
+      ...inscription,
+      trainingSession: {
+        ...inscription.trainingSession,
+        type: asSessionType(inscription.trainingSession.type),
+        status: asSessionStatus(inscription.trainingSession.status),
+      },
+    })),
+  };
 }
 
 export async function getAllTrainees(): Promise<TraineeListItem[]> {

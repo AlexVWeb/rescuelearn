@@ -97,7 +97,6 @@ export const columns = (
     accessorKey: "_count.questions",
     header: "Questions",
     cell: ({ row }) => {
-      // @ts-expect-error - access _count
       const count = row.original._count?.questions || 0;
       return <div className="text-center">{count}</div>;
     },
