@@ -168,11 +168,13 @@ export async function deleteTrainingSession(id: string) {
 }
 
 export async function createTrainee(data: {
+  civility?: string | null;
   firstName: string;
   lastName: string;
   email?: string;
   phone?: string;
   dateOfBirth?: Date;
+  birthPlace?: string | null;
   address?: string;
 }) {
   const user = await getUserContext();
@@ -189,11 +191,13 @@ export async function createTrainee(data: {
 export async function updateTrainee(
   id: string,
   data: {
+    civility?: string | null;
     firstName: string;
     lastName: string;
     email?: string;
     phone?: string;
     dateOfBirth?: Date;
+    birthPlace?: string | null;
     address?: string;
   }
 ) {
@@ -294,11 +298,13 @@ export async function deleteTrainee(id: string) {
 export async function importAndEnrollTrainees(
   sessionId: string,
   data: Array<{
+    civility?: string | null;
     firstName: string;
     lastName: string;
     email?: string;
     phone?: string;
     dateOfBirth?: Date;
+    birthPlace?: string | null;
     address?: string;
   }>
 ): Promise<{

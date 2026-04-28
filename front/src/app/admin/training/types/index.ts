@@ -43,11 +43,13 @@ export interface TrainingSession {
 
 export interface Trainee {
   id: string;
+  civility?: string | null;
   firstName: string;
   lastName: string;
   email: string | null;
   phone: string | null;
   dateOfBirth: Date | null;
+  birthPlace?: string | null;
   address: string | null;
   organismeId: string;
   createdAt: Date;

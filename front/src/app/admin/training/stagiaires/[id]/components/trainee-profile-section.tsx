@@ -22,6 +22,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Form,
   FormControl,
   FormField,
@@ -34,11 +41,13 @@ import { TraineeWithHistory } from "../../../types";
 import Link from "next/link";
 
 const schema = z.object({
+  civility: z.string().optional(),
   firstName: z.string().min(2, "Prénom requis"),
   lastName: z.string().min(2, "Nom requis"),
   email: z.string().email("Email invalide").or(z.literal("")),
   phone: z.string().optional(),
   dateOfBirth: z.string().optional(),
+  birthPlace: z.string().optional(),
   address: z.string().optional(),
 });
 
@@ -59,6 +68,7 @@ export function TraineeProfileSection({ trainee }: Props) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      civility: trainee.civility || "",
       firstName: trainee.firstName,
       lastName: trainee.lastName,
       email: trainee.email || "",
@@ -66,6 +76,7 @@ export function TraineeProfileSection({ trainee }: Props) {
       dateOfBirth: trainee.dateOfBirth
         ? dayjs(trainee.dateOfBirth).format("YYYY-MM-DD")
         : "",
+      birthPlace: trainee.birthPlace || "",
       address: trainee.address || "",
     },
   });
@@ -75,6 +86,8 @@ export function TraineeProfileSection({ trainee }: Props) {
       try {
         await updateTrainee(trainee.id, {
           ...data,
+          civility: data.civility === "" ? null : data.civility,
+          birthPlace: data.birthPlace === "" ? null : data.birthPlace,
           email: data.email === "" ? undefined : data.email,
           dateOfBirth: data.dateOfBirth
             ? new Date(data.dateOfBirth)
@@ -102,6 +115,7 @@ export function TraineeProfileSection({ trainee }: Props) {
           <div className="flex items-center gap-2">
             <User className="text-muted-foreground h-5 w-5" />
             <h1 className="text-xl font-bold">
+              {trainee.civility ? `${trainee.civility} ` : ""}
               {trainee.lastName.toUpperCase()} {trainee.firstName}
             </h1>
             <Badge variant="secondary">
@@ -152,7 +166,7 @@ export function TraineeProfileSection({ trainee }: Props) {
             <Calendar className="h-3.5 w-3.5" />
             <span>
               {trainee.dateOfBirth
-                ? dayjs(trainee.dateOfBirth).format("DD/MM/YYYY")
+                ? `${dayjs(trainee.dateOfBirth).format("DD/MM/YYYY")}${trainee.birthPlace ? ` à ${trainee.birthPlace}` : ""}`
                 : "—"}
             </span>
           </div>
@@ -164,6 +178,30 @@ export function TraineeProfileSection({ trainee }: Props) {
       ) : (
         <Form {...form}>
           <form className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <FormField
+              control={form.control}
+              name="civility"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Civilité</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="-" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="M">M.</SelectItem>
+                      <SelectItem value="Mme">Mme</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="firstName"
@@ -231,9 +269,22 @@ export function TraineeProfileSection({ trainee }: Props) {
             />
             <FormField
               control={form.control}
+              name="birthPlace"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Lieu de naissance</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="address"
               render={({ field }) => (
-                <FormItem className="col-span-2 sm:col-span-3">
+                <FormItem className="col-span-2 sm:col-span-4">
                   <FormLabel>Adresse</FormLabel>
                   <FormControl>
                     <Input {...field} />

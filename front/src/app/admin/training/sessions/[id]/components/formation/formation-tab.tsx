@@ -18,7 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileDown, ClipboardList, Files } from "lucide-react";
+import {
+  Download,
+  FileDown,
+  ClipboardList,
+  Files,
+  FileText,
+} from "lucide-react";
 import { updateAttestationResult } from "../../../../actions";
 import {
   generateAttestationPDF,
@@ -28,6 +34,7 @@ import {
   SingleFisePDFDownload,
   MultipleFisePDFDownload,
 } from "../../../../lib/pdf-fise";
+import { PvPDFDownload } from "../../../../lib/pdf-pv";
 import { Inscription, Slot } from "../../../../types";
 
 interface FormationTabProps {
@@ -136,6 +143,38 @@ export function FormationTab({
                 </>
               )}
             </MultipleFisePDFDownload>
+          )}
+          {inscriptions.length === 0 || loading ? (
+            <Button variant="outline" disabled>
+              <FileText className="mr-2 h-4 w-4" />
+              PV de formation
+            </Button>
+          ) : (
+            <PvPDFDownload
+              session={{
+                ...session,
+                endDate:
+                  session.slots.length > 0
+                    ? new Date(
+                        Math.max(
+                          ...session.slots.map((s) =>
+                            new Date(s.date).getTime()
+                          )
+                        )
+                      )
+                    : null,
+              }}
+              inscriptions={inscriptions}
+              formateur={formateur}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              {({ loading: pdfLoading }) => (
+                <>
+                  <FileText className="mr-2 h-4 w-4" />
+                  {pdfLoading ? "Génération..." : "PV de formation"}
+                </>
+              )}
+            </PvPDFDownload>
           )}
         </div>
       </CardHeader>

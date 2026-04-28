@@ -59,11 +59,13 @@ model Slot {
 
 model Trainee {
   id          String    @id @default(cuid())
+  civility    String?
   firstName   String
   lastName    String
   email       String?
   phone       String?
   dateOfBirth DateTime? @db.Date
+  birthPlace  String?
   address     String?
 
   organismeId String
