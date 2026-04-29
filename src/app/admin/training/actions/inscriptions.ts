@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireOrganisme } from "./_context";
+import { ATTESTATION_RESULT } from "../types";
 
 export async function addTraineeToSession(
   sessionId: string,
@@ -71,7 +72,7 @@ export async function updateInscriptionStatus(
 
 export async function updateAttestationResult(
   inscriptionId: string,
-  result: "acquis" | "non_acquis"
+  result: (typeof ATTESTATION_RESULT)[keyof typeof ATTESTATION_RESULT]
 ) {
   await requireOrganisme();
   return prisma.inscription.update({

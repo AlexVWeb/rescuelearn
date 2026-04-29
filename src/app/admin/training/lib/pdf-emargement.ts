@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Slot, Inscription } from "../types";
+import { Slot, Inscription, EMARGEMENT_STATUS } from "../types";
 
 const L = 14;
 const R = 283;
@@ -64,9 +64,9 @@ export function generateEmargementPDF(
       const emargement = inscription.emargements?.find(
         (e) => e.slotId === slot.id
       );
-      if (emargement?.status === "validé") {
+      if (emargement?.status === EMARGEMENT_STATUS.VALIDE) {
         row.push("Présent");
-      } else if (emargement?.status === "absent") {
+      } else if (emargement?.status === EMARGEMENT_STATUS.ABSENT) {
         row.push("Absent");
       } else {
         row.push("");

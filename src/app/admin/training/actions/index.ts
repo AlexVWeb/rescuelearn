@@ -5,3 +5,4 @@ export * from "./slots";
 export * from "./inscriptions";
 export * from "./emargement";
 export * from "./public";
+export * from "./dashboard";

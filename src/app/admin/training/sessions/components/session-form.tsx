@@ -29,7 +29,7 @@ import {
 
 import { createTrainingSession, updateTrainingSession } from "../../actions";
 import { DeleteSessionButton } from "./delete-session-button";
-import { TrainingSession } from "../../types";
+import { TrainingSession, SESSION_STATUS } from "../../types";
 import { formatSessionFormData } from "./session-form.utils";
 
 const sessionSchema = z.object({
@@ -37,7 +37,12 @@ const sessionSchema = z.object({
   type: z.enum(["PSC", "PSE1", "PSE2", "SST", "IPS", "FF", "FPS"]),
   location: z.string().min(2, "Lieu requis"),
   maxTrainees: z.number().min(1, "Minimum 1 stagiaire"),
-  status: z.enum(["planifiée", "en_cours", "terminée", "annulée"]),
+  status: z.enum([
+    SESSION_STATUS.PLANIFIEE,
+    SESSION_STATUS.EN_COURS,
+    SESSION_STATUS.TERMINEE,
+    SESSION_STATUS.ANNULEE,
+  ]),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
   isFC: z.boolean(),
@@ -65,7 +70,7 @@ export function SessionForm({
       type: sessionItem?.type || "PSC",
       location: sessionItem?.location || "",
       maxTrainees: sessionItem?.maxTrainees || 10,
-      status: sessionItem?.status || "planifiée",
+      status: sessionItem?.status || SESSION_STATUS.PLANIFIEE,
       startDate: sessionItem?.startDate
         ? dayjs(sessionItem.startDate).startOf("day").format("YYYY-MM-DD")
         : "",
@@ -260,10 +265,18 @@ export function SessionForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="planifiée">Planifiée</SelectItem>
-                    <SelectItem value="en_cours">En Cours</SelectItem>
-                    <SelectItem value="terminée">Terminée</SelectItem>
-                    <SelectItem value="annulée">Annulée</SelectItem>
+                    <SelectItem value={SESSION_STATUS.PLANIFIEE}>
+                      Planifiée
+                    </SelectItem>
+                    <SelectItem value={SESSION_STATUS.EN_COURS}>
+                      En Cours
+                    </SelectItem>
+                    <SelectItem value={SESSION_STATUS.TERMINEE}>
+                      Terminée
+                    </SelectItem>
+                    <SelectItem value={SESSION_STATUS.ANNULEE}>
+                      Annulée
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

@@ -1,4 +1,11 @@
 export type SessionStatus = "planifiée" | "en_cours" | "terminée" | "annulée";
+export const SESSION_STATUS = {
+  PLANIFIEE: "planifiée",
+  EN_COURS: "en_cours",
+  TERMINEE: "terminée",
+  ANNULEE: "annulée",
+} as const;
+
 export type SessionType =
   | "PSC"
   | "PSE1"
@@ -7,8 +14,26 @@ export type SessionType =
   | "IPS"
   | "FF"
   | "FPS";
+
 export type InscriptionStatus = "inscrit" | "présent" | "absent" | "éliminé";
+export const INSCRIPTION_STATUS = {
+  INSCRIT: "inscrit",
+  PRESENT: "présent",
+  ABSENT: "absent",
+  ELIMINE: "éliminé",
+} as const;
+
+export const ATTESTATION_RESULT = {
+  ACQUIS: "acquis",
+  NON_ACQUIS: "non_acquis",
+} as const;
+
 export type EmargementStatus = "en_attente" | "validé" | "absent";
+export const EMARGEMENT_STATUS = {
+  EN_ATTENTE: "en_attente",
+  VALIDE: "validé",
+  ABSENT: "absent",
+} as const;
 
 export interface Slot {
   id: string;

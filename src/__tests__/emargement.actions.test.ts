@@ -68,6 +68,7 @@ import {
   bulkUpdateEmargementStatus,
   getTraineesByPin,
 } from "@/app/admin/training/actions";
+import { EMARGEMENT_STATUS } from "@/app/admin/training/types";
 
 describe("generateSlotPin", () => {
   it("throw si l'utilisateur n'est pas authentifié", async () => {
@@ -251,7 +252,7 @@ describe("updateEmargementStatus", () => {
   it("throw si l'utilisateur n'est pas authentifié", async () => {
     mockUnauthenticated();
     await expect(
-      updateEmargementStatus("ins-1", "slot-1", "validé")
+      updateEmargementStatus("ins-1", "slot-1", EMARGEMENT_STATUS.VALIDE)
     ).rejects.toThrow("Non autorisé");
   });
 
@@ -259,7 +260,11 @@ describe("updateEmargementStatus", () => {
     mockAuthenticatedUser("org-1");
     mockPrisma.inscription.findUnique.mockResolvedValue(null);
     await expect(
-      updateEmargementStatus("ins-inexistante", "slot-1", "validé")
+      updateEmargementStatus(
+        "ins-inexistante",
+        "slot-1",
+        EMARGEMENT_STATUS.VALIDE
+      )
     ).rejects.toThrow("Inscription introuvable ou non autorisée");
   });
 
@@ -270,7 +275,7 @@ describe("updateEmargementStatus", () => {
       trainingSession: { organismeId: "org-autre" },
     });
     await expect(
-      updateEmargementStatus("ins-1", "slot-1", "validé")
+      updateEmargementStatus("ins-1", "slot-1", EMARGEMENT_STATUS.VALIDE)
     ).rejects.toThrow("Inscription introuvable ou non autorisée");
   });
 
@@ -281,12 +286,11 @@ describe("updateEmargementStatus", () => {
       trainingSession: { organismeId: "org-1" },
     });
 
-    await updateEmargementStatus("ins-1", "slot-1", "absent");
-
+    await updateEmargementStatus("ins-1", "slot-1", EMARGEMENT_STATUS.ABSENT);
     expect(mockPrisma.emargement.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: { status: "absent" },
-        create: expect.objectContaining({ status: "absent" }),
+        update: { status: EMARGEMENT_STATUS.ABSENT },
+        create: expect.objectContaining({ status: EMARGEMENT_STATUS.ABSENT }),
       })
     );
   });
@@ -296,7 +300,7 @@ describe("bulkUpdateEmargementStatus", () => {
   it("throw si l'utilisateur n'est pas authentifié", async () => {
     mockUnauthenticated();
     await expect(
-      bulkUpdateEmargementStatus("slot-1", "validé")
+      bulkUpdateEmargementStatus("slot-1", EMARGEMENT_STATUS.VALIDE)
     ).rejects.toThrow("Non autorisé");
   });
 
@@ -304,7 +308,7 @@ describe("bulkUpdateEmargementStatus", () => {
     mockAuthenticatedUser("org-1");
     mockPrisma.slot.findUnique.mockResolvedValue(null);
     await expect(
-      bulkUpdateEmargementStatus("slot-inexistant", "validé")
+      bulkUpdateEmargementStatus("slot-inexistant", EMARGEMENT_STATUS.VALIDE)
     ).rejects.toThrow("Créneau introuvable ou non autorisé");
   });
 
@@ -316,7 +320,7 @@ describe("bulkUpdateEmargementStatus", () => {
       trainingSession: { organismeId: "org-autre" },
     });
     await expect(
-      bulkUpdateEmargementStatus("slot-1", "absent")
+      bulkUpdateEmargementStatus("slot-1", EMARGEMENT_STATUS.ABSENT)
     ).rejects.toThrow("Créneau introuvable ou non autorisé");
   });
 
@@ -333,7 +337,7 @@ describe("bulkUpdateEmargementStatus", () => {
       { id: "ins-3" },
     ]);
 
-    await bulkUpdateEmargementStatus("slot-1", "validé");
+    await bulkUpdateEmargementStatus("slot-1", EMARGEMENT_STATUS.VALIDE);
 
     expect(mockPrisma.emargement.upsert).toHaveBeenCalledTimes(3);
   });
@@ -372,7 +376,7 @@ describe("getTraineesByPin", () => {
       traineeId: "t-1",
       firstName: "Alice",
       lastName: "Dupont",
-      status: "en_attente",
+      status: EMARGEMENT_STATUS.EN_ATTENTE,
     });
   });
 

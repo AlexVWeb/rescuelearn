@@ -35,7 +35,12 @@ import {
   MultipleFisePDFDownload,
 } from "../../../../lib/pdf-fise";
 import { PvPDFDownload } from "../../../../lib/pdf-pv";
-import { Inscription, Slot } from "../../../../types";
+import {
+  Inscription,
+  Slot,
+  ATTESTATION_RESULT,
+  INSCRIPTION_STATUS,
+} from "../../../../types";
 
 interface FormationTabProps {
   sessionId: string;
@@ -71,7 +76,10 @@ export function FormationTab({
   async function handleUpdateResult(id: string, value: string) {
     setLoading(true);
     try {
-      await updateAttestationResult(id, value as "acquis" | "non_acquis");
+      await updateAttestationResult(
+        id,
+        value as (typeof ATTESTATION_RESULT)[keyof typeof ATTESTATION_RESULT]
+      );
       router.refresh();
     } catch (e) {
       console.error(e);
@@ -90,15 +98,15 @@ export function FormationTab({
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "présent":
+      case INSCRIPTION_STATUS.PRESENT:
         return (
           <Badge variant="default" className="bg-green-600">
             Présent
           </Badge>
         );
-      case "absent":
+      case INSCRIPTION_STATUS.ABSENT:
         return <Badge variant="destructive">Absent</Badge>;
-      case "éliminé":
+      case INSCRIPTION_STATUS.ELIMINE:
         return <Badge variant="destructive">Éliminé</Badge>;
       default:
         return <Badge variant="secondary">Inscrit</Badge>;
@@ -215,8 +223,12 @@ export function FormationTab({
                       <SelectValue placeholder="Non défini" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="acquis">Acquis</SelectItem>
-                      <SelectItem value="non_acquis">Non Acquis</SelectItem>
+                      <SelectItem value={ATTESTATION_RESULT.ACQUIS}>
+                        Acquis
+                      </SelectItem>
+                      <SelectItem value={ATTESTATION_RESULT.NON_ACQUIS}>
+                        Non Acquis
+                      </SelectItem>
                     </SelectContent>
                   </Select>
 

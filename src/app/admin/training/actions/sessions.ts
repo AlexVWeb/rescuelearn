@@ -7,6 +7,7 @@ import type {
   CreateTrainingSessionInput,
   UpdateTrainingSessionInput,
 } from "../types";
+import { SESSION_STATUS } from "../types";
 
 export async function getUpcomingSessions() {
   const user = await requireOrganisme();
@@ -14,7 +15,7 @@ export async function getUpcomingSessions() {
   return prisma.trainingSession.findMany({
     where: {
       organismeId: user.organismeId,
-      status: { in: ["planifiée", "en_cours"] },
+      status: { in: [SESSION_STATUS.PLANIFIEE, SESSION_STATUS.EN_COURS] },
     },
     include: {
       slots: true,

@@ -2,6 +2,7 @@
 
 import dayjs from "dayjs";
 import { prisma } from "@/lib/prisma";
+import { EMARGEMENT_STATUS } from "../types";
 
 export async function getTraineesByPin(pin: string) {
   const emargements = await prisma.emargement.findMany({
@@ -29,7 +30,7 @@ export async function validatePresencePublic(emargementId: string) {
   return prisma.emargement.update({
     where: { id: emargementId },
     data: {
-      status: "validé",
+      status: EMARGEMENT_STATUS.VALIDE,
       validatedAt: dayjs().toDate(),
     },
   });
