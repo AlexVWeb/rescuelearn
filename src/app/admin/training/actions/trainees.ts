@@ -1,7 +1,7 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { requireOrganisme } from "./_context";
+import { requireOrganisme, getTenantPrisma } from "@/lib/context";
+import { withOrganisme } from "@/lib/prisma";
 import {
   computeValidCompetences,
   computeNextExpiry,
@@ -53,10 +53,9 @@ export type TraineeInput = {
 };
 
 export async function getAllTrainees(): Promise<TraineeListItem[]> {
-  const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
 
-  const trainees = await prisma.trainee.findMany({
-    where: { organismeId: user.organismeId },
+  const trainees = await tenant.trainee.findMany({
     include: {
       _count: { select: { inscriptions: true } },
       inscriptions: {
@@ -92,10 +91,10 @@ export async function getAllTrainees(): Promise<TraineeListItem[]> {
 export async function getTraineeWithHistory(
   id: string
 ): Promise<TraineeWithHistory | null> {
-  const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
 
-  const raw = await prisma.trainee.findUnique({
-    where: { id, organismeId: user.organismeId },
+  const raw = await tenant.trainee.findFirst({
+    where: { id },
     include: {
       inscriptions: {
         include: { trainingSession: true },
@@ -122,31 +121,28 @@ export async function getTraineeWithHistory(
 
 export async function createTrainee(data: TraineeInput) {
   const user = await requireOrganisme();
-  return prisma.trainee.create({
+  const tenant = await getTenantPrisma();
+  return tenant.trainee.create({
     data: { ...data, organismeId: user.organismeId },
   });
 }
 
 export async function updateTrainee(id: string, data: TraineeInput) {
   const user = await requireOrganisme();
-
-  const trainee = await prisma.trainee.findFirst({
+  const tenant = await getTenantPrisma();
+  // findUnique est converti en findFirst + organismeId par l'extension
+  return tenant.trainee.update({
     where: { id, organismeId: user.organismeId },
+    data,
   });
-  if (!trainee) throw new Error("Stagiaire introuvable");
-
-  return prisma.trainee.update({ where: { id }, data });
 }
 
 export async function deleteTrainee(id: string) {
   const user = await requireOrganisme();
-
-  const trainee = await prisma.trainee.findFirst({
+  const tenant = await getTenantPrisma();
+  return tenant.trainee.delete({
     where: { id, organismeId: user.organismeId },
   });
-  if (!trainee) throw new Error("Stagiaire introuvable");
-
-  return prisma.trainee.delete({ where: { id } });
 }
 
 export async function importAndEnrollTrainees(
@@ -159,9 +155,10 @@ export async function importAndEnrollTrainees(
   errors: string[];
 }> {
   const user = await requireOrganisme();
+  const tenant = withOrganisme(user.organismeId);
 
-  const session = await prisma.trainingSession.findFirst({
-    where: { id: sessionId, organismeId: user.organismeId },
+  const session = await tenant.trainingSession.findFirst({
+    where: { id: sessionId },
   });
   if (!session) throw new Error("Session introuvable");
 
@@ -174,19 +171,19 @@ export async function importAndEnrollTrainees(
     try {
       let trainee;
       if (traineeData.email) {
-        trainee = await prisma.trainee.findFirst({
-          where: { email: traineeData.email, organismeId: user.organismeId },
+        trainee = await tenant.trainee.findFirst({
+          where: { email: traineeData.email },
         });
       }
 
       if (!trainee) {
-        trainee = await prisma.trainee.create({
+        trainee = await tenant.trainee.create({
           data: { ...traineeData, organismeId: user.organismeId },
         });
         created++;
       }
 
-      const existingInscription = await prisma.inscription.findUnique({
+      const existingInscription = await tenant.inscription.findUnique({
         where: {
           traineeId_trainingSessionId: {
             traineeId: trainee.id,
@@ -198,7 +195,7 @@ export async function importAndEnrollTrainees(
       if (existingInscription) {
         skipped++;
       } else {
-        await prisma.inscription.create({
+        await tenant.inscription.create({
           data: { traineeId: trainee.id, trainingSessionId: sessionId },
         });
         enrolled++;

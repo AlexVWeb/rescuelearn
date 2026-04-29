@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireOrganisme } from "./_context";
+import { requireOrganisme } from "@/lib/context";
 
 export async function createSlot(
   sessionId: string,

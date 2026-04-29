@@ -39,6 +39,7 @@ const mockPrisma = vi.hoisted(() => ({
 
 vi.mock("@/lib/prisma", () => ({
   prisma: mockPrisma,
+  withOrganisme: vi.fn().mockReturnValue(mockPrisma),
 }));
 
 // --- Helpers ---
@@ -46,29 +47,34 @@ vi.mock("@/lib/prisma", () => ({
 import { auth } from "@/lib/auth";
 
 function mockSession(userId = "user-1") {
-  (
-    auth.api.getSession as unknown as ReturnType<typeof vi.fn>
-  ).mockResolvedValue({
-    user: { id: userId },
-  });
+  const fakeUser = {
+    id: userId,
+    organismeId: "org-1",
+    roles: [UserRole.ADMIN_ORGANISME],
+  };
+  vi.mocked(getUserContext).mockResolvedValue(fakeUser as any);
+  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as any);
+  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as any);
 }
 
 function mockUnauthenticated() {
-  (
-    auth.api.getSession as unknown as ReturnType<typeof vi.fn>
-  ).mockResolvedValue(null);
+  vi.mocked(getUserContext).mockRejectedValue(new Error("Non autorisé"));
+  vi.mocked(requireOrganisme).mockRejectedValue(new Error("Non autorisé"));
 }
 
 function mockUser(overrides: {
   organismeId?: string | null;
   roles?: string[];
 }) {
-  mockPrisma.user.findUnique.mockResolvedValue({
+  const fakeUser = {
     id: "user-1",
     organismeId: "org-1",
     roles: [UserRole.SUPER_ADMIN],
     ...overrides,
-  });
+  };
+  vi.mocked(getUserContext).mockResolvedValue(fakeUser as any);
+  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as any);
+  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as any);
 }
 
 function makeFormData(mimeType: string, sizeBytes: number): FormData {
@@ -83,13 +89,25 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+vi.mock("@/lib/context", () => ({
+  getUserContext: vi.fn(),
+  requireOrganisme: vi.fn(),
+  getTenantPrisma: vi.fn(),
+}));
+
+import {
+  getUserContext,
+  requireOrganisme,
+  getTenantPrisma,
+} from "@/lib/context";
+
 // --- Imports under test ---
 
 import {
   uploadOrganismeLogoAction,
   deleteOrganismeLogoAction,
   getOrganismeLogoUrlAction,
-} from "@/app/actions/organisme-actions";
+} from "@/app/actions/logo.actions";
 
 // --- uploadOrganismeLogoAction ---
 

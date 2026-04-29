@@ -1,8 +1,6 @@
 import { notFound } from "next/navigation";
-import {
-  getMyOrganismeAction,
-  getOrganismeMembersAction,
-} from "@/app/actions/organisme-actions";
+import { getMyOrganismeAction } from "@/app/actions/organisme.actions";
+import { getOrganismeMembersAction } from "@/app/actions/members.actions";
 import { OrganismeDetailClient } from "@/app/admin/organismes/[id]/organisme-detail-client";
 
 export default async function MonOrganismePage() {
@@ -13,7 +11,7 @@ export default async function MonOrganismePage() {
   }
 
   const organisme = organismeResult.data;
-  const membersResult = await getOrganismeMembersAction(organisme.id);
+  const membersResult = await getOrganismeMembersAction();
   const members =
     membersResult.success && membersResult.data ? membersResult.data : [];
 

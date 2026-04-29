@@ -6,10 +6,8 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { OrganismesTable } from "@/components/admin/organismes-table";
-import {
-  Organisme,
-  deleteOrganismeAction,
-} from "@/app/actions/organisme-actions";
+import { Organisme } from "@/types/organisme";
+import { deleteOrganismeAction } from "@/app/actions/organisme.actions";
 import {
   AlertDialog,
   AlertDialogAction,

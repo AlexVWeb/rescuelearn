@@ -8,11 +8,8 @@ import { OrganismeForm } from "@/components/admin/organisme-form";
 import { MembresTab } from "./components/membres-tab";
 import { DocumentsTab } from "./components/documents-tab";
 import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
-import {
-  Organisme,
-  OrganismeMember,
-  updateOrganismeAction,
-} from "@/app/actions/organisme-actions";
+import { Organisme, OrganismeMember } from "@/types/organisme";
+import { updateOrganismeAction } from "@/app/actions/organisme.actions";
 
 interface OrganismeDetailClientProps {
   organisme: Organisme;

@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-import { Organisme } from "@/app/actions/organisme-actions";
+import { Organisme } from "@/types/organisme";
 
 interface OrganismesTableProps {
   data: Organisme[];

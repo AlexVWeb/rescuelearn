@@ -1,29 +1,25 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireOrganisme } from "./_context";
+import { requireOrganisme, getTenantPrisma } from "@/lib/context";
 import { ATTESTATION_RESULT } from "../types";
 
 export async function addTraineeToSession(
   sessionId: string,
   traineeId: string
 ) {
-  const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
 
-  // Parallélisation des deux requêtes indépendantes
+  // Les findFirst ici sont automatiquement filtrés par organismeId via l'extension
   const [session, trainee] = await Promise.all([
-    prisma.trainingSession.findFirst({
-      where: { id: sessionId, organismeId: user.organismeId },
-    }),
-    prisma.trainee.findFirst({
-      where: { id: traineeId, organismeId: user.organismeId },
-    }),
+    tenant.trainingSession.findFirst({ where: { id: sessionId } }),
+    tenant.trainee.findFirst({ where: { id: traineeId } }),
   ]);
 
   if (!session || !trainee)
     throw new Error("Entité introuvable ou non autorisée");
 
-  return prisma.inscription.create({
+  return tenant.inscription.create({
     data: { trainingSessionId: sessionId, traineeId },
   });
 }
@@ -31,6 +27,7 @@ export async function addTraineeToSession(
 export async function removeTraineeFromSession(inscriptionId: string) {
   const user = await requireOrganisme();
 
+  // Inscription n'est pas encore filtré automatiquement par l'extension car il n'a pas d'organismeId
   const inscription = await prisma.inscription.findUnique({
     where: { id: inscriptionId },
     include: { trainingSession: true },
@@ -74,7 +71,20 @@ export async function updateAttestationResult(
   inscriptionId: string,
   result: (typeof ATTESTATION_RESULT)[keyof typeof ATTESTATION_RESULT]
 ) {
-  await requireOrganisme();
+  const user = await requireOrganisme();
+
+  const inscription = await prisma.inscription.findUnique({
+    where: { id: inscriptionId },
+    include: { trainingSession: true },
+  });
+
+  if (
+    !inscription ||
+    inscription.trainingSession.organismeId !== user.organismeId
+  ) {
+    throw new Error("Inscription introuvable ou non autorisée");
+  }
+
   return prisma.inscription.update({
     where: { id: inscriptionId },
     data: {

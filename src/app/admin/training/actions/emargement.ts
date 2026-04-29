@@ -1,8 +1,7 @@
 "use server";
 
 import dayjs from "dayjs";
-import { prisma } from "@/lib/prisma";
-import { requireOrganisme } from "./_context";
+import { requireOrganisme, getTenantPrisma } from "@/lib/context";
 
 function generatePin() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -10,12 +9,17 @@ function generatePin() {
 
 export async function generateSlotPin(slotId: string) {
   const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
 
-  const slot = await prisma.slot.findUnique({
+  // On cherche le créneau. L'extension filtrera la session d'entraînement par organismeId
+  const slot = await tenant.slot.findUnique({
     where: { id: slotId },
     include: { trainingSession: true },
   });
 
+  // Si l'extension fonctionne sur trainingSession via l'include,
+  // slot.trainingSession sera null ou l'include échouera si l'organisme ne correspond pas.
+  // Par sécurité et clarté, on garde la vérification explicite.
   if (!slot || slot.trainingSession.organismeId !== user.organismeId) {
     throw new Error("Créneau introuvable ou non autorisé");
   }
@@ -23,13 +27,13 @@ export async function generateSlotPin(slotId: string) {
   const pin = generatePin();
   const now = dayjs().toDate();
 
-  const inscriptions = await prisma.inscription.findMany({
+  const inscriptions = await tenant.inscription.findMany({
     where: { trainingSessionId: slot.trainingSessionId },
   });
 
-  await prisma.$transaction(
+  await tenant.$transaction(
     inscriptions.map((inscription) =>
-      prisma.emargement.upsert({
+      tenant.emargement.upsert({
         where: {
           inscriptionId_slotId: { inscriptionId: inscription.id, slotId },
         },
@@ -49,8 +53,9 @@ export async function generateSlotPin(slotId: string) {
 
 export async function generateSessionPin(sessionId: string) {
   const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
 
-  const session = await prisma.trainingSession.findUnique({
+  const session = await tenant.trainingSession.findUnique({
     where: { id: sessionId },
     include: { slots: true },
   });
@@ -63,16 +68,16 @@ export async function generateSessionPin(sessionId: string) {
     session.slots.map((slot) => [slot.id, generatePin()])
   );
 
-  const inscriptions = await prisma.inscription.findMany({
+  const inscriptions = await tenant.inscription.findMany({
     where: { trainingSessionId: sessionId },
   });
 
   const now = dayjs().toDate();
 
-  await prisma.$transaction(
+  await tenant.$transaction(
     inscriptions.flatMap((ins) =>
       session.slots.map((slot) =>
-        prisma.emargement.upsert({
+        tenant.emargement.upsert({
           where: {
             inscriptionId_slotId: { inscriptionId: ins.id, slotId: slot.id },
           },
@@ -97,8 +102,9 @@ export async function updateEmargementStatus(
   status: string
 ) {
   const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
 
-  const inscription = await prisma.inscription.findUnique({
+  const inscription = await tenant.inscription.findUnique({
     where: { id: inscriptionId },
     include: { trainingSession: true },
   });
@@ -110,7 +116,7 @@ export async function updateEmargementStatus(
     throw new Error("Inscription introuvable ou non autorisée");
   }
 
-  return prisma.emargement.upsert({
+  return tenant.emargement.upsert({
     where: { inscriptionId_slotId: { inscriptionId, slotId } },
     update: { status },
     create: { inscriptionId, slotId, status },
@@ -122,8 +128,9 @@ export async function bulkUpdateEmargementStatus(
   status: string
 ) {
   const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
 
-  const slot = await prisma.slot.findUnique({
+  const slot = await tenant.slot.findUnique({
     where: { id: slotId },
     include: { trainingSession: true },
   });
@@ -132,13 +139,13 @@ export async function bulkUpdateEmargementStatus(
     throw new Error("Créneau introuvable ou non autorisé");
   }
 
-  const inscriptions = await prisma.inscription.findMany({
+  const inscriptions = await tenant.inscription.findMany({
     where: { trainingSessionId: slot.trainingSessionId },
   });
 
-  return prisma.$transaction(
+  return tenant.$transaction(
     inscriptions.map((ins) =>
-      prisma.emargement.upsert({
+      tenant.emargement.upsert({
         where: { inscriptionId_slotId: { inscriptionId: ins.id, slotId } },
         update: { status },
         create: { inscriptionId: ins.id, slotId, status },

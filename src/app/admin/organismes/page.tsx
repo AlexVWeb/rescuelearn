@@ -1,4 +1,4 @@
-import { getOrganismesAction } from "@/app/actions/organisme-actions";
+import { getOrganismesAction } from "@/app/actions/organisme.actions";
 import ClientPage from "./client-page";
 
 export default async function OrganismesPage(props: {

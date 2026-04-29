@@ -2,10 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  getOrganismeByIdAction,
-  getOrganismeMembersAction,
-} from "@/app/actions/organisme-actions";
+import { getOrganismeByIdAction } from "@/app/actions/organisme.actions";
+import { getOrganismeMembersAction } from "@/app/actions/members.actions";
 import { OrganismeDetailClient } from "./organisme-detail-client";
 
 export default async function OrganismeDetailPage({
@@ -17,7 +15,7 @@ export default async function OrganismeDetailPage({
 
   const [organismeResult, membersResult] = await Promise.all([
     getOrganismeByIdAction(id),
-    getOrganismeMembersAction(id),
+    getOrganismeMembersAction(),
   ]);
 
   if (!organismeResult.success || !organismeResult.data) {

@@ -19,9 +19,22 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 
+vi.mock("@/lib/context", () => ({
+  getUserContext: vi.fn(),
+  requireOrganisme: vi.fn(),
+  getTenantPrisma: vi.fn(),
+}));
+
+import {
+  getUserContext,
+  requireOrganisme,
+  getTenantPrisma,
+} from "@/lib/context";
+
 const mockPrisma = vi.hoisted(() => ({
   organisme: {
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
     update: vi.fn(),
   },
   user: {
@@ -31,6 +44,7 @@ const mockPrisma = vi.hoisted(() => ({
 
 vi.mock("@/lib/prisma", () => ({
   prisma: mockPrisma,
+  withOrganisme: vi.fn().mockReturnValue(mockPrisma),
 }));
 
 // --- Helpers ---
@@ -38,17 +52,24 @@ vi.mock("@/lib/prisma", () => ({
 import { auth } from "@/lib/auth";
 
 function mockSession(userId = "user-1") {
-  (
-    auth.api.getSession as unknown as ReturnType<typeof vi.fn>
-  ).mockResolvedValue({
-    user: { id: userId },
-  });
+  const fakeUser = {
+    id: userId,
+    organismeId: "org-1",
+    roles: [UserRole.ADMIN_ORGANISME],
+  };
+  vi.mocked(getUserContext).mockResolvedValue(fakeUser as any);
+  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as any);
+  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as any);
 }
 
 function mockUnauthenticated() {
-  (
-    auth.api.getSession as unknown as ReturnType<typeof vi.fn>
-  ).mockResolvedValue(null);
+  vi.mocked(requireOrganisme).mockRejectedValue(new Error("Non autorisé"));
+}
+
+function mockNoOrganisme() {
+  vi.mocked(requireOrganisme).mockRejectedValue(
+    new Error("Aucun organisme associé")
+  );
 }
 
 function mockUser(overrides: {
@@ -56,12 +77,15 @@ function mockUser(overrides: {
   organismeId?: string | null;
   roles?: string[];
 }) {
-  mockPrisma.user.findUnique.mockResolvedValue({
+  const fakeUser = {
     id: "user-1",
     organismeId: "org-1",
     roles: [UserRole.ADMIN_ORGANISME],
     ...overrides,
-  });
+  };
+  vi.mocked(getUserContext).mockResolvedValue(fakeUser as any);
+  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as any);
+  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as any);
 }
 
 beforeEach(() => {
@@ -73,7 +97,7 @@ beforeEach(() => {
 import {
   getMyOrganismeAction,
   updateOrganismeAction,
-} from "@/app/actions/organisme-actions";
+} from "@/app/actions/organisme.actions";
 
 describe("getMyOrganismeAction", () => {
   it("returns Unauthorized when not authenticated", async () => {
@@ -94,8 +118,7 @@ describe("getMyOrganismeAction", () => {
   });
 
   it("returns error when user has no organisme linked", async () => {
-    mockSession();
-    mockUser({ roles: [UserRole.ADMIN_ORGANISME], organismeId: null });
+    mockNoOrganisme();
 
     const result = await getMyOrganismeAction();
 

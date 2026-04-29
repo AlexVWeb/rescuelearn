@@ -1,7 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { requireOrganisme } from "./_context";
+import { requireOrganisme, getTenantPrisma } from "@/lib/context";
 import {
   SESSION_STATUS,
   ATTESTATION_RESULT,
@@ -10,16 +9,15 @@ import {
 import dayjs from "dayjs";
 
 export async function getDashboardStats() {
-  const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
   const now = dayjs();
   const monthStart = now.startOf("month").toDate();
   const monthEnd = now.endOf("month").toDate();
   const last30Days = now.subtract(30, "day").toDate();
 
   // 1. Upcoming Sessions
-  const upcomingSessions = await prisma.trainingSession.findMany({
+  const upcomingSessions = await tenant.trainingSession.findMany({
     where: {
-      organismeId: user.organismeId,
       status: { in: [SESSION_STATUS.PLANIFIEE, SESSION_STATUS.EN_COURS] },
     },
     select: {
@@ -44,9 +42,8 @@ export async function getDashboardStats() {
     };
   });
 
-  const allSessionsForChart = await prisma.trainingSession.findMany({
+  const allSessionsForChart = await tenant.trainingSession.findMany({
     where: {
-      organismeId: user.organismeId,
       startDate: {
         gte: now.subtract(6, "month").startOf("month").toDate(),
       },
@@ -69,9 +66,8 @@ export async function getDashboardStats() {
   }));
 
   // 2. Trainees Formed
-  const completedSessions = await prisma.trainingSession.findMany({
+  const completedSessions = await tenant.trainingSession.findMany({
     where: {
-      organismeId: user.organismeId,
       status: SESSION_STATUS.TERMINEE,
     },
     include: {
@@ -112,7 +108,10 @@ export async function getDashboardStats() {
       : 0;
 
   // 4. Presence Rate (last 30 days)
-  const emargements = await prisma.emargement.findMany({
+  // On utilise prisma directement ici car le filtrage par relation complexe (emargement -> trainingSession)
+  // n'est pas géré automatiquement par notre extension simplifiée
+  const user = await requireOrganisme();
+  const emargements = await tenant.emargement.findMany({
     where: {
       inscription: {
         trainingSession: {

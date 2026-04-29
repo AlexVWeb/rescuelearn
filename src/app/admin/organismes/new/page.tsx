@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { OrganismeForm } from "@/components/admin/organisme-form";
 import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
-import { createOrganismeAction } from "@/app/actions/organisme-actions";
+import { createOrganismeAction } from "@/app/actions/organisme.actions";
 
 export default function NewOrganismePage() {
   const router = useRouter();

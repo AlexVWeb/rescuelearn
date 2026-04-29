@@ -1,7 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireOrganisme, getUserContext } from "./_context";
+import {
+  requireOrganisme,
+  getUserContext,
+  getTenantPrisma,
+} from "@/lib/context";
 import { TrainingSessionService } from "../services/session.service";
 import type {
   CreateTrainingSessionInput,
@@ -10,11 +14,10 @@ import type {
 import { SESSION_STATUS } from "../types";
 
 export async function getUpcomingSessions() {
-  const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
 
-  return prisma.trainingSession.findMany({
+  return tenant.trainingSession.findMany({
     where: {
-      organismeId: user.organismeId,
       status: { in: [SESSION_STATUS.PLANIFIEE, SESSION_STATUS.EN_COURS] },
     },
     include: {
@@ -26,10 +29,9 @@ export async function getUpcomingSessions() {
 }
 
 export async function getAllSessions() {
-  const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
 
-  return prisma.trainingSession.findMany({
-    where: { organismeId: user.organismeId },
+  return tenant.trainingSession.findMany({
     include: {
       slots: true,
       _count: { select: { inscriptions: true } },
@@ -39,10 +41,10 @@ export async function getAllSessions() {
 }
 
 export async function getMonOrganisme() {
-  const user = await requireOrganisme();
+  const tenant = await getTenantPrisma();
 
-  return prisma.organisme.findUnique({
-    where: { id: user.organismeId },
+  return tenant.organisme.findUnique({
+    where: { id: "current" }, // L'ID sera ignoré et remplacé par organismeId par l'extension
   });
 }
 

@@ -26,7 +26,7 @@ import {
   uploadOrganismeLogoAction,
   deleteOrganismeLogoAction,
   getOrganismeLogoUrlAction,
-} from "@/app/actions/organisme-actions";
+} from "@/app/actions/logo.actions";
 
 interface DocumentsTabProps {
   organismeId: string;

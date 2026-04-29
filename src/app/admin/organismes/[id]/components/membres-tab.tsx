@@ -33,13 +33,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { UserRole } from "@/lib/roles";
+import { OrganismeMember } from "@/types/organisme";
 import {
-  OrganismeMember,
   updateMemberRoleAction,
   removeMemberFromOrganismeAction,
   addMemberToOrganismeAction,
   searchUsersAction,
-} from "@/app/actions/organisme-actions";
+} from "@/app/actions/members.actions";
 
 interface MembresTabProps {
   organismeId: string;

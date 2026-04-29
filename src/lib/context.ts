@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, withOrganisme } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -32,4 +32,10 @@ export async function requireOrganisme() {
   const user = await getUserContext();
   if (!user.organismeId) throw new Error("Aucun organisme associé");
   return user as typeof user & { organismeId: string };
+}
+
+/** Returns a Prisma client restricted to the current user's organisme. */
+export async function getTenantPrisma() {
+  const user = await requireOrganisme();
+  return withOrganisme(user.organismeId);
 }

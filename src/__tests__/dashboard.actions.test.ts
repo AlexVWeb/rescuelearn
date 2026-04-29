@@ -19,10 +19,12 @@ const mockPrisma = vi.hoisted(() => ({
   user: { findUnique: vi.fn() },
   trainingSession: { findMany: vi.fn() },
   emargement: { findMany: vi.fn() },
+  trainee: { findMany: vi.fn() },
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: mockPrisma,
+  withOrganisme: vi.fn().mockReturnValue(mockPrisma),
 }));
 
 // --- Helpers ---

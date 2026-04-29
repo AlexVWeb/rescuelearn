@@ -17,7 +17,7 @@ vi.mock("@/lib/auth", () => ({
 const mockPrisma = vi.hoisted(() => ({
   user: { findUnique: vi.fn() },
   slot: { findUnique: vi.fn() },
-  trainingSession: { findUnique: vi.fn() },
+  trainingSession: { findUnique: vi.fn(), findFirst: vi.fn() },
   inscription: { findMany: vi.fn(), findUnique: vi.fn() },
   emargement: {
     upsert: vi.fn(),
@@ -29,6 +29,7 @@ const mockPrisma = vi.hoisted(() => ({
 
 vi.mock("@/lib/prisma", () => ({
   prisma: mockPrisma,
+  withOrganisme: vi.fn().mockReturnValue(mockPrisma),
 }));
 
 // --- Helpers ---
