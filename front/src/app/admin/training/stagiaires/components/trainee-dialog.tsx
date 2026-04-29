@@ -27,14 +27,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createTrainee, updateTrainee } from "../../actions";
 
 const traineeSchema = z.object({
+  civility: z.string().optional(),
   firstName: z.string().min(2, "Prénom requis"),
   lastName: z.string().min(2, "Nom requis"),
   email: z.string().email("Email invalide").or(z.literal("")),
   phone: z.string().optional(),
   dateOfBirth: z.string().optional(),
+  birthPlace: z.string().optional(),
   address: z.string().optional(),
 });
 
@@ -43,11 +52,13 @@ type TraineeFormValues = z.infer<typeof traineeSchema>;
 interface TraineeDialogProps {
   trainee?: {
     id: string;
+    civility?: string | null;
     firstName: string;
     lastName: string;
     email: string | null;
     phone: string | null;
     dateOfBirth?: Date | null;
+    birthPlace?: string | null;
     address?: string | null;
   };
   children?: React.ReactNode;
@@ -79,6 +90,7 @@ export function TraineeDialog({
   const form = useForm<TraineeFormValues>({
     resolver: zodResolver(traineeSchema),
     defaultValues: {
+      civility: trainee?.civility || "",
       firstName: trainee?.firstName || "",
       lastName: trainee?.lastName || "",
       email: trainee?.email || "",
@@ -86,6 +98,7 @@ export function TraineeDialog({
       dateOfBirth: trainee?.dateOfBirth
         ? dayjs(trainee.dateOfBirth).format("YYYY-MM-DD")
         : "",
+      birthPlace: trainee?.birthPlace || "",
       address: trainee?.address || "",
     },
   });
@@ -94,8 +107,10 @@ export function TraineeDialog({
     try {
       const formattedData = {
         ...data,
+        civility: data.civility === "" ? null : data.civility,
         email: data.email === "" ? undefined : data.email,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+        birthPlace: data.birthPlace === "" ? null : data.birthPlace,
       };
 
       if (trainee) {
@@ -131,6 +146,33 @@ export function TraineeDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="civility"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Civilité</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="-" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="M">M.</SelectItem>
+                        <SelectItem value="Mme">Mme</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -172,19 +214,34 @@ export function TraineeDialog({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="dateOfBirth"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date de naissance</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date de naissance</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="birthPlace"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Lieu de naissance</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Lyon" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={form.control}
               name="address"
