@@ -187,7 +187,7 @@ export default async function DashboardPage() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {upcomingSessions.map((session) => (
+            {upcomingSessions.map((session: any) => (
               <Card
                 key={session.id}
                 className="group hover:ring-primary/20 relative overflow-hidden transition-all hover:shadow-lg hover:ring-1"

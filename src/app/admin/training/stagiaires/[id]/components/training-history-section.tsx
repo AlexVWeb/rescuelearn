@@ -6,7 +6,6 @@ import Link from "next/link";
 import { InscriptionWithSession, ExternalTraining } from "../../../types";
 import { ExternalTrainingDialog } from "./external-training-dialog";
 import { DeleteExternalTrainingButton } from "./delete-external-training-button";
-import { getPresignedUrl } from "@/lib/r2";
 import { computeFilieres } from "../../../lib/trainee-validity";
 
 const statusConfig: Record<
@@ -35,12 +34,10 @@ export async function TrainingHistorySection({
   externalTrainings,
   traineeId,
 }: Props) {
-  const trainingsWithUrls = await Promise.all(
-    externalTrainings.map(async (ext) => ({
-      ...ext,
-      signedUrl: ext.fileKey ? await getPresignedUrl(ext.fileKey) : null,
-    }))
-  );
+  const trainingsWithUrls = externalTrainings.map((ext) => ({
+    ...ext,
+    downloadUrl: ext.fileKey ? `/api/admin/documents/${ext.fileKey}` : null,
+  }));
 
   // === Validité par filière ===
   const filieres = computeFilieres(inscriptions, externalTrainings);
@@ -222,9 +219,9 @@ export async function TrainingHistorySection({
                         {ext.certificateNumber || "—"}
                       </td>
                       <td className="px-4 py-2">
-                        {ext.signedUrl ? (
+                        {ext.downloadUrl ? (
                           <a
-                            href={ext.signedUrl}
+                            href={ext.downloadUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"

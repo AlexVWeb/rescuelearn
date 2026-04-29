@@ -32,7 +32,7 @@ export async function generateSlotPin(slotId: string) {
   });
 
   await tenant.$transaction(
-    inscriptions.map((inscription) =>
+    inscriptions.map((inscription: any) =>
       tenant.emargement.upsert({
         where: {
           inscriptionId_slotId: { inscriptionId: inscription.id, slotId },
@@ -65,7 +65,7 @@ export async function generateSessionPin(sessionId: string) {
   }
 
   const pinBySlot = Object.fromEntries(
-    session.slots.map((slot) => [slot.id, generatePin()])
+    session.slots.map((slot: any) => [slot.id, generatePin()])
   );
 
   const inscriptions = await tenant.inscription.findMany({
@@ -75,8 +75,8 @@ export async function generateSessionPin(sessionId: string) {
   const now = dayjs().toDate();
 
   await tenant.$transaction(
-    inscriptions.flatMap((ins) =>
-      session.slots.map((slot) =>
+    inscriptions.flatMap((ins: any) =>
+      session.slots.map((slot: any) =>
         tenant.emargement.upsert({
           where: {
             inscriptionId_slotId: { inscriptionId: ins.id, slotId: slot.id },
@@ -144,7 +144,7 @@ export async function bulkUpdateEmargementStatus(
   });
 
   return tenant.$transaction(
-    inscriptions.map((ins) =>
+    inscriptions.map((ins: any) =>
       tenant.emargement.upsert({
         where: { inscriptionId_slotId: { inscriptionId: ins.id, slotId } },
         update: { status },

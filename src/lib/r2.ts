@@ -5,6 +5,7 @@ import {
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { encryptBuffer, decryptBuffer } from "./encryption";
 
 const r2 = new S3Client({
   region: "auto",
@@ -18,17 +19,48 @@ const r2 = new S3Client({
 export async function uploadFile(
   key: string,
   buffer: Buffer,
-  contentType: string
+  contentType: string,
+  shouldEncrypt = false
 ): Promise<string> {
+  const body = shouldEncrypt ? encryptBuffer(buffer) : buffer;
+
   await r2.send(
     new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
       Key: key,
-      Body: buffer,
+      Body: body,
       ContentType: contentType,
     })
   );
+  // Pour les fichiers chiffrés, l'URL publique n'est plus pertinente
   return `${process.env.R2_PUBLIC_URL}/${key}`;
+}
+
+/**
+ * Télécharge un fichier depuis R2 et le déchiffre si nécessaire.
+ */
+export async function getFile(
+  key: string,
+  shouldDecrypt = false
+): Promise<{ buffer: Buffer; contentType?: string }> {
+  const response = await r2.send(
+    new GetObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+    })
+  );
+
+  if (!response.Body) {
+    throw new Error("Fichier introuvable");
+  }
+
+  const bytes = await response.Body.transformToByteArray();
+  const buffer = Buffer.from(bytes);
+
+  return {
+    buffer: shouldDecrypt ? decryptBuffer(buffer) : buffer,
+    contentType: response.ContentType,
+  };
 }
 
 export async function getPresignedUrl(

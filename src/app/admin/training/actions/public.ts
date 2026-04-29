@@ -15,7 +15,7 @@ export async function getTraineesByPin(pin: string) {
 
   if (emargements.length === 0) throw new Error("Code PIN invalide");
 
-  return emargements.map((e) => ({
+  return emargements.map((e: any) => ({
     emargementId: e.id,
     slotLabel: e.slot.label,
     sessionTitle: e.slot.trainingSession.title,

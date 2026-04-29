@@ -63,8 +63,9 @@ model Trainee {
   firstName   String
   lastName    String
   email       String?
+  emailHash   String?
   phone       String?
-  dateOfBirth DateTime? @db.Date
+  dateOfBirth String?
   birthPlace  String?
   address     String?
 
@@ -76,6 +77,8 @@ model Trainee {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([emailHash, organismeId])
 }
 
 model ExternalTraining {

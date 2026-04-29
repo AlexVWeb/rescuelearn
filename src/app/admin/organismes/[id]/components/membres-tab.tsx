@@ -107,7 +107,7 @@ export function MembresTab({
     const result = await searchUsersAction(searchQuery);
     if (result.success && result.data) {
       setSearchResults(
-        result.data.filter((u) => !members.find((m) => m.id === u.id))
+        result.data.filter((u: any) => !members.find((m: any) => m.id === u.id))
       );
     }
     setSearching(false);

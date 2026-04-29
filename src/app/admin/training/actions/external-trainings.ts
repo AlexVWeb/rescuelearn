@@ -60,6 +60,6 @@ export async function uploadExternalTrainingFile(formData: FormData) {
     "external-trainings",
     `${Date.now()}-${file.name}`
   );
-  await uploadFile(key, buffer, file.type);
+  await uploadFile(key, buffer, file.type, true);
   return { key };
 }

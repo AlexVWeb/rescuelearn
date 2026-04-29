@@ -12,6 +12,7 @@ import type {
   SessionType,
   SessionStatus,
 } from "../types";
+import { hash } from "@/lib/encryption";
 
 const VALID_SESSION_TYPES = [
   "PSC",
@@ -73,19 +74,27 @@ export async function getAllTrainees(): Promise<TraineeListItem[]> {
     orderBy: { lastName: "asc" },
   });
 
-  return trainees.map(({ inscriptions, externalTrainings, ...trainee }) => {
-    const validCompetences = computeValidCompetences(
-      inscriptions,
-      externalTrainings
-    );
-    const nextExpiryResult = computeNextExpiry(inscriptions, externalTrainings);
-    return {
-      ...trainee,
-      validCompetences,
-      nextExpiry: nextExpiryResult?.expiryDate.toISOString() ?? null,
-      nextExpiryType: nextExpiryResult?.type ?? null,
-    };
-  }) as TraineeListItem[];
+  return trainees.map(
+    ({ inscriptions, externalTrainings, ...trainee }: any) => {
+      const validCompetences = computeValidCompetences(
+        inscriptions,
+        externalTrainings
+      );
+      const nextExpiryResult = computeNextExpiry(
+        inscriptions,
+        externalTrainings
+      );
+      const item: TraineeListItem = {
+        ...(trainee as any),
+        dateOfBirth: trainee.dateOfBirth ? new Date(trainee.dateOfBirth) : null,
+        validCompetences,
+        nextExpiry: nextExpiryResult?.expiryDate.toISOString() ?? null,
+        nextExpiryType: nextExpiryResult?.type ?? null,
+        _count: trainee._count,
+      };
+      return item;
+    }
+  );
 }
 
 export async function getTraineeWithHistory(
@@ -107,8 +116,9 @@ export async function getTraineeWithHistory(
   if (!raw) return null;
 
   return {
-    ...raw,
-    inscriptions: raw.inscriptions.map((inscription) => ({
+    ...(raw as any),
+    dateOfBirth: raw.dateOfBirth ? new Date(raw.dateOfBirth) : null,
+    inscriptions: raw.inscriptions.map((inscription: any) => ({
       ...inscription,
       trainingSession: {
         ...inscription.trainingSession,
@@ -123,17 +133,16 @@ export async function createTrainee(data: TraineeInput) {
   const user = await requireOrganisme();
   const tenant = await getTenantPrisma();
   return tenant.trainee.create({
-    data: { ...data, organismeId: user.organismeId },
+    data: { ...data, organismeId: user.organismeId } as any,
   });
 }
 
 export async function updateTrainee(id: string, data: TraineeInput) {
   const user = await requireOrganisme();
   const tenant = await getTenantPrisma();
-  // findUnique est converti en findFirst + organismeId par l'extension
   return tenant.trainee.update({
     where: { id, organismeId: user.organismeId },
-    data,
+    data: data as any,
   });
 }
 
@@ -172,13 +181,13 @@ export async function importAndEnrollTrainees(
       let trainee;
       if (traineeData.email) {
         trainee = await tenant.trainee.findFirst({
-          where: { email: traineeData.email },
+          where: { emailHash: hash(traineeData.email) },
         });
       }
 
       if (!trainee) {
         trainee = await tenant.trainee.create({
-          data: { ...traineeData, organismeId: user.organismeId },
+          data: { ...traineeData, organismeId: user.organismeId } as any,
         });
         created++;
       }
@@ -200,7 +209,8 @@ export async function importAndEnrollTrainees(
         });
         enrolled++;
       }
-    } catch {
+    } catch (e) {
+      console.error("Import error:", e);
       errors.push(`${traineeData.firstName} ${traineeData.lastName}`);
     }
   }

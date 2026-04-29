@@ -184,7 +184,7 @@ export async function importQuizAction(jsonData: any) {
   const data = parsed.data;
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // Handle Level
       let levelId: number | null = null;
       if (data.level) {
@@ -337,7 +337,7 @@ export async function updateQuestionAction(
 
   try {
     // Transaction to update question and replace options
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       await tx.question.update({
         where: { id },
         data: {
