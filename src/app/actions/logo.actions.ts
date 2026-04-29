@@ -3,7 +3,12 @@
 import { prisma, withOrganisme } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { UserRole, hasRole } from "@/lib/roles";
-import { uploadFile, deleteFile, getPresignedUrl } from "@/lib/r2";
+import {
+  uploadFile,
+  deleteFile,
+  getPresignedUrl,
+  getStorageKey,
+} from "@/lib/r2";
 import { getUserContext } from "@/lib/context";
 
 const ALLOWED_MIME_TYPES: Record<string, string> = {
@@ -55,7 +60,7 @@ export async function uploadOrganismeLogoAction(
       await deleteFile(organisme.logo);
     }
 
-    const key = `organismes/${id}/logo.${ext}`;
+    const key = getStorageKey(id, "logo", `logo.${ext}`);
     const buffer = Buffer.from(await file.arrayBuffer());
     await uploadFile(key, buffer, file.type);
 

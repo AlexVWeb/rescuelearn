@@ -54,10 +54,12 @@ export async function uploadExternalTrainingFile(formData: FormData) {
 
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
-  const key = `rescuelearn/${user.organismeId}/${Date.now()}-${file.name}`;
-
-  const { uploadFile } = await import("@/lib/r2");
-  const url = await uploadFile(key, buffer, file.type);
-
-  return { url, key };
+  const { uploadFile, getStorageKey } = await import("@/lib/r2");
+  const key = getStorageKey(
+    user.organismeId,
+    "external-trainings",
+    `${Date.now()}-${file.name}`
+  );
+  await uploadFile(key, buffer, file.type);
+  return { key };
 }

@@ -92,14 +92,12 @@ export function ExternalTrainingDialog({ traineeId }: Props) {
   function onSubmit(data: FormValues) {
     startTransition(async () => {
       try {
-        let fileUrl: string | undefined;
         let fileKey: string | undefined;
 
         if (file) {
           const formData = new FormData();
           formData.append("file", file);
           const result = await uploadExternalTrainingFile(formData);
-          fileUrl = result.url;
           fileKey = result.key;
         }
 
@@ -111,7 +109,6 @@ export function ExternalTrainingDialog({ traineeId }: Props) {
           obtainedAt: new Date(data.obtainedAt),
           certificateNumber: data.certificateNumber || undefined,
           isFC: data.isFC,
-          fileUrl,
           fileKey,
         });
 

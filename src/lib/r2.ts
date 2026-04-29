@@ -53,3 +53,12 @@ export async function deleteFile(key: string): Promise<void> {
     })
   );
 }
+
+export function getStorageKey(
+  organismeId: string,
+  type: "logo" | "external-trainings",
+  filename: string
+): string {
+  const mode = process.env.APP_MODE || "dev";
+  return `${mode}/organisme/${organismeId}/${type}/${filename}`;
+}

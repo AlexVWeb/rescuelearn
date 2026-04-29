@@ -23,6 +23,9 @@ const mockR2 = vi.hoisted(() => ({
   uploadFile: vi.fn(),
   deleteFile: vi.fn(),
   getPresignedUrl: vi.fn(),
+  getStorageKey: vi.fn(
+    (id, type, filename) => `dev/organisme/${id}/${type}/${filename}`
+  ),
 }));
 
 vi.mock("@/lib/r2", () => mockR2);
@@ -227,13 +230,13 @@ describe("uploadOrganismeLogoAction", () => {
 
     expect(result).toEqual({ success: true });
     expect(mockR2.uploadFile).toHaveBeenCalledWith(
-      "organismes/org-1/logo.png",
+      "dev/organisme/org-1/logo/logo.png",
       expect.any(Buffer),
       "image/png"
     );
     expect(mockPrisma.organisme.update).toHaveBeenCalledWith({
       where: { id: "org-1" },
-      data: { logo: "organismes/org-1/logo.png" },
+      data: { logo: "dev/organisme/org-1/logo/logo.png" },
     });
   });
 });
