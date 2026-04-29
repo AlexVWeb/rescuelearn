@@ -1,0 +1,10 @@
+bun x commitlint --edit "$1" || {
+  echo ""
+  echo "------------------------------------------------------------------"
+  echo "❌ Erreur : Le message de commit n'est pas au format conventionnel."
+  echo "Format attendu : <type>: <description>"
+  echo "Exemple : feat: ajout de la validation des types"
+  echo "Types courants : feat, fix, docs, style, refactor, test, chore"
+  echo "------------------------------------------------------------------"
+  exit 1
+}
