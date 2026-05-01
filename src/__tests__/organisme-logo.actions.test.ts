@@ -47,17 +47,15 @@ vi.mock("@/lib/prisma", () => ({
 
 // --- Helpers ---
 
-import { auth } from "@/lib/auth";
-
 function mockSession(userId = "user-1") {
   const fakeUser = {
     id: userId,
     organismeId: "org-1",
     roles: [UserRole.ADMIN_ORGANISME],
   };
-  vi.mocked(getUserContext).mockResolvedValue(fakeUser as any);
-  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as any);
-  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as any);
+  vi.mocked(getUserContext).mockResolvedValue(fakeUser as never);
+  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as never);
+  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as never);
 }
 
 function mockUnauthenticated() {
@@ -75,9 +73,9 @@ function mockUser(overrides: {
     roles: [UserRole.SUPER_ADMIN],
     ...overrides,
   };
-  vi.mocked(getUserContext).mockResolvedValue(fakeUser as any);
-  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as any);
-  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as any);
+  vi.mocked(getUserContext).mockResolvedValue(fakeUser as never);
+  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as never);
+  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as never);
 }
 
 function makeFormData(mimeType: string, sizeBytes: number): FormData {
@@ -380,7 +378,7 @@ describe("getLogoAsBase64", () => {
     global.fetch = vi.fn().mockResolvedValue({
       arrayBuffer: () => Promise.resolve(fakeBytes.buffer),
       headers: { get: () => "image/png" },
-    } as unknown as Response);
+    } as never as Response);
 
     const result = await getLogoAsBase64("organismes/org-1/logo.png");
 

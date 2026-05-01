@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { encrypt, decrypt, hash } from "./encryption";
 
-const globalForPrisma = globalThis as unknown as { prisma: any };
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 export const TRAINEE_ENCRYPTED_FIELDS = [
   "firstName",
@@ -13,15 +13,39 @@ export const TRAINEE_ENCRYPTED_FIELDS = [
   "address",
 ];
 export const EXTERNAL_TRAINING_ENCRYPTED_FIELDS = ["certificateNumber", "name"];
+export const ORGANISME_ENCRYPTED_FIELDS = ["smtpPassword"];
 
-function encryptData(data: any, fields: string[]) {
+type QueryCb<TArgs> = {
+  args: TArgs;
+  query: (args: TArgs) => Promise<unknown>;
+};
+
+type FindArgs = { where?: Record<string, unknown> };
+type CreateArgs = { data: Record<string, unknown> };
+type UpdateArgs = {
+  where?: Record<string, unknown>;
+  data: Record<string, unknown>;
+};
+type UpsertArgs = {
+  where?: Record<string, unknown>;
+  create: Record<string, unknown>;
+  update: Record<string, unknown>;
+};
+type FindFirstDelegate = {
+  findFirst: (args: Record<string, unknown>) => Promise<unknown>;
+};
+
+function encryptData(
+  data: Record<string, unknown> | null | undefined,
+  fields: string[]
+) {
   if (!data) return data;
   const res = { ...data };
   for (const field of fields) {
     if (res[field] !== undefined && res[field] !== null) {
       const val =
         res[field] instanceof Date
-          ? res[field].toISOString()
+          ? (res[field] as Date).toISOString()
           : String(res[field]);
       res[field] = encrypt(val);
     }
@@ -29,40 +53,42 @@ function encryptData(data: any, fields: string[]) {
   return res;
 }
 
-export function decryptData(data: any, fields: string[]): any {
+export function decryptData<T>(data: T, fields: string[]): T {
   if (!data) return data;
-  if (Array.isArray(data)) return data.map((d) => decryptData(d, fields));
+  if (Array.isArray(data))
+    return data.map((d) => decryptData(d, fields)) as unknown as T;
 
-  const res = { ...data };
+  const res = { ...(data as Record<string, unknown>) };
 
-  // 1. Decrypt direct fields
   for (const field of fields) {
     if (
       res[field] &&
       typeof res[field] === "string" &&
-      res[field].split(":").length === 3
+      (res[field] as string).split(":").length === 3
     ) {
       try {
-        res[field] = decrypt(res[field]);
+        res[field] = decrypt(res[field] as string);
       } catch {
-        // Ignore if not actually encrypted
+        // Ignore
       }
     }
   }
 
-  // 2. Recursively decrypt known relations if they exist in the object
   if (res.externalTrainings && Array.isArray(res.externalTrainings)) {
-    res.externalTrainings = res.externalTrainings.map((et: any) =>
+    res.externalTrainings = res.externalTrainings.map((et: unknown) =>
       decryptData(et, EXTERNAL_TRAINING_ENCRYPTED_FIELDS)
     );
   }
 
-  // We can add other relations here if needed (e.g. inscriptions -> trainee)
+  if (res.inscriptions && Array.isArray(res.inscriptions)) {
+    res.inscriptions = res.inscriptions.map((i: unknown) => decryptData(i, []));
+  }
+
   if (res.trainee && typeof res.trainee === "object") {
     res.trainee = decryptData(res.trainee, TRAINEE_ENCRYPTED_FIELDS);
   }
 
-  return res;
+  return res as unknown as T;
 }
 
 const baseClient = new PrismaClient({
@@ -74,291 +100,297 @@ export const prisma =
   baseClient.$extends({
     query: {
       trainee: {
-        async create({ args, query }: { args: any; query: any }) {
-          const data = args.data as any;
-          if (data.email && !data.emailHash) data.emailHash = hash(data.email);
-          args.data = encryptData(data, TRAINEE_ENCRYPTED_FIELDS);
+        async create({ args, query }: QueryCb<CreateArgs>) {
+          const data = args.data;
+          if (data.email && !data.emailHash && typeof data.email === "string")
+            data.emailHash = hash(data.email);
+          data.lastActivityAt = new Date();
+          args.data = encryptData(data, TRAINEE_ENCRYPTED_FIELDS) as Record<
+            string,
+            unknown
+          >;
           return decryptData(await query(args), TRAINEE_ENCRYPTED_FIELDS);
         },
-        async update({ args, query }: { args: any; query: any }) {
-          const data = args.data as any;
-          if (data.email) data.emailHash = hash(data.email);
-          args.data = encryptData(data, TRAINEE_ENCRYPTED_FIELDS);
+        async update({ args, query }: QueryCb<UpdateArgs>) {
+          const data = args.data;
+          if (data.email && typeof data.email === "string")
+            data.emailHash = hash(data.email);
+          data.lastActivityAt = new Date();
+          args.data = encryptData(data, TRAINEE_ENCRYPTED_FIELDS) as Record<
+            string,
+            unknown
+          >;
           return decryptData(await query(args), TRAINEE_ENCRYPTED_FIELDS);
         },
-        async upsert({ args, query }: { args: any; query: any }) {
-          const create = args.create as any;
-          const update = args.update as any;
-          if (create.email && !create.emailHash)
+        async upsert({ args, query }: QueryCb<UpsertArgs>) {
+          const create = args.create;
+          const update = args.update;
+          if (
+            create.email &&
+            !create.emailHash &&
+            typeof create.email === "string"
+          )
             create.emailHash = hash(create.email);
-          if (update.email) update.emailHash = hash(update.email);
-          args.create = encryptData(create, TRAINEE_ENCRYPTED_FIELDS);
-          args.update = encryptData(update, TRAINEE_ENCRYPTED_FIELDS);
+          if (update.email && typeof update.email === "string")
+            update.emailHash = hash(update.email);
+          args.create = encryptData(create, TRAINEE_ENCRYPTED_FIELDS) as Record<
+            string,
+            unknown
+          >;
+          args.update = encryptData(update, TRAINEE_ENCRYPTED_FIELDS) as Record<
+            string,
+            unknown
+          >;
           return decryptData(await query(args), TRAINEE_ENCRYPTED_FIELDS);
         },
-        async findMany({ args, query }: { args: any; query: any }) {
+        async findMany({ args, query }: QueryCb<unknown>) {
           return decryptData(await query(args), TRAINEE_ENCRYPTED_FIELDS);
         },
-        async findFirst({ args, query }: { args: any; query: any }) {
+        async findFirst({ args, query }: QueryCb<unknown>) {
           return decryptData(await query(args), TRAINEE_ENCRYPTED_FIELDS);
         },
-        async findUnique({ args, query }: { args: any; query: any }) {
+        async findUnique({ args, query }: QueryCb<unknown>) {
           return decryptData(await query(args), TRAINEE_ENCRYPTED_FIELDS);
         },
       },
       externalTraining: {
-        async create({ args, query }: { args: any; query: any }) {
+        async create({ args, query }: QueryCb<CreateArgs>) {
           args.data = encryptData(
             args.data,
             EXTERNAL_TRAINING_ENCRYPTED_FIELDS
-          );
+          ) as Record<string, unknown>;
           return decryptData(
             await query(args),
             EXTERNAL_TRAINING_ENCRYPTED_FIELDS
           );
         },
-        async update({ args, query }: { args: any; query: any }) {
+        async update({ args, query }: QueryCb<UpdateArgs>) {
           args.data = encryptData(
             args.data,
             EXTERNAL_TRAINING_ENCRYPTED_FIELDS
-          );
+          ) as Record<string, unknown>;
           return decryptData(
             await query(args),
             EXTERNAL_TRAINING_ENCRYPTED_FIELDS
           );
         },
-        async findMany({ args, query }: { args: any; query: any }) {
+        async findMany({ args, query }: QueryCb<unknown>) {
           return decryptData(
             await query(args),
             EXTERNAL_TRAINING_ENCRYPTED_FIELDS
           );
         },
-        async findFirst({ args, query }: { args: any; query: any }) {
+        async findFirst({ args, query }: QueryCb<unknown>) {
           return decryptData(
             await query(args),
             EXTERNAL_TRAINING_ENCRYPTED_FIELDS
           );
         },
-        async findUnique({ args, query }: { args: any; query: any }) {
+        async findUnique({ args, query }: QueryCb<unknown>) {
           return decryptData(
             await query(args),
             EXTERNAL_TRAINING_ENCRYPTED_FIELDS
           );
+        },
+      },
+      inscription: {
+        async create({ args, query }: QueryCb<unknown>) {
+          const res = (await query(args)) as Record<string, unknown>;
+          if (res.traineeId) {
+            await prisma.trainee.update({
+              where: { id: res.traineeId as string },
+              data: { lastActivityAt: new Date() },
+            });
+          }
+          return decryptData(res, []);
+        },
+        async findMany({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+        async findFirst({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+        async findUnique({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+      },
+      trainingSession: {
+        async findMany({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+        async findFirst({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+        async findUnique({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+      },
+      organisme: {
+        async create({ args, query }: QueryCb<CreateArgs>) {
+          args.data = encryptData(
+            args.data,
+            ORGANISME_ENCRYPTED_FIELDS
+          ) as Record<string, unknown>;
+          return decryptData(await query(args), ORGANISME_ENCRYPTED_FIELDS);
+        },
+        async update({ args, query }: QueryCb<UpdateArgs>) {
+          args.data = encryptData(
+            args.data,
+            ORGANISME_ENCRYPTED_FIELDS
+          ) as Record<string, unknown>;
+          return decryptData(await query(args), ORGANISME_ENCRYPTED_FIELDS);
+        },
+        async findMany({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), ORGANISME_ENCRYPTED_FIELDS);
+        },
+        async findFirst({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), ORGANISME_ENCRYPTED_FIELDS);
+        },
+        async findUnique({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), ORGANISME_ENCRYPTED_FIELDS);
         },
       },
     },
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== "production")
+  globalForPrisma.prisma = prisma as unknown as PrismaClient;
 
-/**
- * Returns an extended Prisma client that automatically filters by organismeId
- * for models that have it (Trainee, TrainingSession, ExternalTraining).
- */
 export function withOrganisme(organismeId: string) {
-  return prisma.$extends({
+  return (prisma as unknown as PrismaClient).$extends({
     query: {
       trainee: {
-        findMany: async ({ args, query }: { args: any; query: any }) => {
+        findMany: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        findFirst: async ({ args, query }: { args: any; query: any }) => {
+        findFirst: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        findUnique: async ({ args, query }: { args: any; query: any }) => {
-          return prisma.trainee.findFirst({
+        findUnique: async ({ args }: QueryCb<FindArgs>) => {
+          return (prisma.trainee as unknown as FindFirstDelegate).findFirst({
             ...args,
             where: { ...args.where, organismeId },
           });
         },
-        create: async ({ args, query }: { args: any; query: any }) => {
-          const data = args.data as Record<string, unknown>;
-          data.organismeId = organismeId;
+        create: async ({ args, query }: QueryCb<CreateArgs>) => {
+          args.data.organismeId = organismeId;
           return query(args);
         },
-        update: async ({ args, query }: { args: any; query: any }) => {
+        update: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        updateMany: async ({ args, query }: { args: any; query: any }) => {
+        upsert: async ({ args, query }: QueryCb<UpsertArgs>) => {
           args.where = { ...args.where, organismeId };
+          args.create.organismeId = organismeId;
+          args.update.organismeId = organismeId;
           return query(args);
         },
-        delete: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        deleteMany: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        upsert: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          const createData = args.create as Record<string, unknown>;
-          const updateData = args.update as Record<string, unknown>;
-          createData.organismeId = organismeId;
-          updateData.organismeId = organismeId;
-          return query(args);
-        },
-        count: async ({ args, query }: { args: any; query: any }) => {
+        count: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
       },
       trainingSession: {
-        findMany: async ({ args, query }: { args: any; query: any }) => {
+        findMany: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        findFirst: async ({ args, query }: { args: any; query: any }) => {
+        findFirst: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        findUnique: async ({ args, query }: { args: any; query: any }) => {
-          return prisma.trainingSession.findFirst({
+        findUnique: async ({ args }: QueryCb<FindArgs>) => {
+          return (
+            prisma.trainingSession as unknown as FindFirstDelegate
+          ).findFirst({
             ...args,
             where: { ...args.where, organismeId },
           });
         },
-        create: async ({ args, query }: { args: any; query: any }) => {
-          const data = args.data as Record<string, unknown>;
-          data.organismeId = organismeId;
+        create: async ({ args, query }: QueryCb<CreateArgs>) => {
+          args.data.organismeId = organismeId;
           return query(args);
         },
-        update: async ({ args, query }: { args: any; query: any }) => {
+        update: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        updateMany: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        delete: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        deleteMany: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        upsert: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          const createData = args.create as Record<string, unknown>;
-          const updateData = args.update as Record<string, unknown>;
-          createData.organismeId = organismeId;
-          updateData.organismeId = organismeId;
-          return query(args);
-        },
-        count: async ({ args, query }: { args: any; query: any }) => {
+        count: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
       },
       externalTraining: {
-        findMany: async ({ args, query }: { args: any; query: any }) => {
+        findMany: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        findFirst: async ({ args, query }: { args: any; query: any }) => {
+        findFirst: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        findUnique: async ({ args, query }: { args: any; query: any }) => {
-          return prisma.externalTraining.findFirst({
+        findUnique: async ({ args }: QueryCb<FindArgs>) => {
+          return (
+            prisma.externalTraining as unknown as FindFirstDelegate
+          ).findFirst({
             ...args,
             where: { ...args.where, organismeId },
           });
         },
-        create: async ({ args, query }: { args: any; query: any }) => {
-          const data = args.data as Record<string, unknown>;
-          data.organismeId = organismeId;
+        create: async ({ args, query }: QueryCb<CreateArgs>) => {
+          args.data.organismeId = organismeId;
           return query(args);
         },
-        update: async ({ args, query }: { args: any; query: any }) => {
+        update: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        updateMany: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        delete: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        deleteMany: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        upsert: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          const createData = args.create as Record<string, unknown>;
-          const updateData = args.update as Record<string, unknown>;
-          createData.organismeId = organismeId;
-          updateData.organismeId = organismeId;
-          return query(args);
-        },
-        count: async ({ args, query }: { args: any; query: any }) => {
+        count: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
       },
       organisme: {
-        findUnique: async ({ args, query }: { args: any; query: any }) => {
+        findUnique: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, id: organismeId };
           return query(args);
         },
-        findFirst: async ({ args, query }: { args: any; query: any }) => {
+        findFirst: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, id: organismeId };
           return query(args);
         },
-        update: async ({ args, query }: { args: any; query: any }) => {
+        update: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, id: organismeId };
           return query(args);
         },
-        delete: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, id: organismeId };
-          return query(args);
-        },
-        count: async ({ args, query }: { args: any; query: any }) => {
+        count: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, id: organismeId };
           return query(args);
         },
       },
       user: {
-        findMany: async ({ args, query }: { args: any; query: any }) => {
+        findMany: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        findFirst: async ({ args, query }: { args: any; query: any }) => {
+        findFirst: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        findUnique: async ({ args, query }: { args: any; query: any }) => {
-          return prisma.user.findFirst({
+        findUnique: async ({ args }: QueryCb<FindArgs>) => {
+          return (prisma.user as unknown as FindFirstDelegate).findFirst({
             ...args,
             where: { ...args.where, organismeId },
           });
         },
-        update: async ({ args, query }: { args: any; query: any }) => {
+        update: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },
-        updateMany: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        delete: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        deleteMany: async ({ args, query }: { args: any; query: any }) => {
-          args.where = { ...args.where, organismeId };
-          return query(args);
-        },
-        count: async ({ args, query }: { args: any; query: any }) => {
+        count: async ({ args, query }: QueryCb<FindArgs>) => {
           args.where = { ...args.where, organismeId };
           return query(args);
         },

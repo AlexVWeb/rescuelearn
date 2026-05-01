@@ -11,6 +11,14 @@ export type Organisme = {
   address: string | null;
   postalCode: string | null;
   city: string | null;
+  retentionYearsActive: number;
+  retentionYearsArchive: number;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpUser: string | null;
+  smtpPassword: string | null;
+  smtpFrom: string | null;
+  smtpSecure: boolean;
   createdAt: Date;
   updatedAt: Date;
 };

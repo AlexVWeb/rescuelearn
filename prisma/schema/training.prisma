@@ -12,6 +12,18 @@ model Organisme {
   postalCode      String?
   city            String?
 
+  // Paramètres de rétention
+  retentionYearsActive  Int @default(5)  // Données actives (compte, dossiers)
+  retentionYearsArchive Int @default(10) // Preuves de diplômes (archive légale)
+
+  // Configuration SMTP
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUser     String?
+  smtpPassword String? // Chiffré via Prisma extension
+  smtpFrom     String?
+  smtpSecure   Boolean @default(true)
+
   users            User[]
   trainingSessions TrainingSession[]
   trainees         Trainee[]
@@ -60,14 +72,20 @@ model Slot {
 model Trainee {
   id          String    @id @default(cuid())
   civility    String?
-  firstName   String
-  lastName    String
+  firstName   String?   // Rendu optionnel pour anonymisation
+  lastName    String?   // Rendu optionnel pour anonymisation
   email       String?
   emailHash   String?
   phone       String?
   dateOfBirth String?
   birthPlace  String?
   address     String?
+
+  // Champs de suivi et statistiques pour la rétention
+  isAnonymized   Boolean  @default(false)
+  lastActivityAt DateTime @default(now())
+  ageAtFormation Int?     // Conservé après anonymisation pour stats
+  department     String?  // Conservé après anonymisation pour stats
 
   organismeId String
   organisme   Organisme @relation(fields: [organismeId], references: [id], onDelete: Cascade)

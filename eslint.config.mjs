@@ -47,7 +47,7 @@ export default [
       "no-unused-vars": "off",
       "no-redeclare": "off",
       "@typescript-eslint/no-unused-vars": "warn",
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "error",
       "react/no-unescaped-entities": "off",
       "react-hooks/purity": "off",
     },

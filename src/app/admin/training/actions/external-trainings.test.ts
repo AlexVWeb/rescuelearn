@@ -38,7 +38,7 @@ describe("ExternalTraining Actions", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(requireOrganisme).mockResolvedValue(mockUser as any);
+    vi.mocked(requireOrganisme).mockResolvedValue(mockUser as never);
   });
 
   describe("createExternalTraining", () => {
@@ -46,7 +46,7 @@ describe("ExternalTraining Actions", () => {
       vi.mocked(prisma.trainee.findUnique).mockResolvedValue({
         id: "trainee-1",
         organismeId: "other-org",
-      } as any);
+      } as never);
 
       await expect(
         createExternalTraining({
@@ -63,10 +63,10 @@ describe("ExternalTraining Actions", () => {
       vi.mocked(prisma.trainee.findUnique).mockResolvedValue({
         id: "trainee-1",
         organismeId: "org-1",
-      } as any);
+      } as never);
       vi.mocked(prisma.externalTraining.create).mockResolvedValue({
         id: "new-id",
-      } as any);
+      } as never);
 
       const data = {
         traineeId: "trainee-1",
@@ -126,10 +126,10 @@ describe("ExternalTraining Actions", () => {
         id: "ext-1",
         organismeId: "org-1",
         fileKey: "some-key",
-      } as any);
+      } as never);
       vi.mocked(prisma.externalTraining.delete).mockResolvedValue({
         id: "ext-1",
-      } as any);
+      } as never);
 
       await deleteExternalTraining("ext-1");
 
@@ -143,7 +143,7 @@ describe("ExternalTraining Actions", () => {
       vi.mocked(prisma.externalTraining.findUnique).mockResolvedValue({
         id: "ext-1",
         organismeId: "other-org",
-      } as any);
+      } as never);
 
       await expect(deleteExternalTraining("ext-1")).rejects.toThrow(
         "Formation introuvable ou non autorisée"

@@ -18,6 +18,22 @@ export const organismeSchema = z.object({
     .optional()
     .or(z.literal("")),
   city: z.string().optional(),
+  retentionYearsActive: z.coerce
+    .number()
+    .min(1, "Minimum 1 an")
+    .max(10, "Maximum 10 ans"),
+  retentionYearsArchive: z.coerce
+    .number()
+    .min(5, "Minimum 5 ans")
+    .max(20, "Maximum 20 ans"),
+
+  // Configuration SMTP
+  smtpHost: z.string().optional().or(z.literal("")),
+  smtpPort: z.coerce.number().optional(),
+  smtpUser: z.string().optional().or(z.literal("")),
+  smtpPassword: z.string().optional().or(z.literal("")),
+  smtpFrom: z.string().email("Email invalide").optional().or(z.literal("")),
+  smtpSecure: z.boolean().default(true),
 });
 
 export type OrganismeFormValues = z.infer<typeof organismeSchema>;

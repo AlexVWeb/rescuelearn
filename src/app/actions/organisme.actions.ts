@@ -86,6 +86,14 @@ export async function createOrganismeAction(data: OrganismeFormValues) {
         address: data.address || null,
         postalCode: data.postalCode || null,
         city: data.city || null,
+        retentionYearsActive: data.retentionYearsActive,
+        retentionYearsArchive: data.retentionYearsArchive,
+        smtpHost: data.smtpHost || null,
+        smtpPort: data.smtpPort || null,
+        smtpUser: data.smtpUser || null,
+        smtpPassword: data.smtpPassword || null,
+        smtpFrom: data.smtpFrom || null,
+        smtpSecure: data.smtpSecure,
       },
     });
     revalidatePath("/admin/organismes");
@@ -151,6 +159,14 @@ export async function updateOrganismeAction(
         address: data.address || null,
         postalCode: data.postalCode || null,
         city: data.city || null,
+        retentionYearsActive: data.retentionYearsActive,
+        retentionYearsArchive: data.retentionYearsArchive,
+        smtpHost: data.smtpHost || null,
+        smtpPort: data.smtpPort || null,
+        smtpUser: data.smtpUser || null,
+        smtpPassword: data.smtpPassword || null,
+        smtpFrom: data.smtpFrom || null,
+        smtpSecure: data.smtpSecure,
       },
     });
     revalidatePath("/admin/organismes");

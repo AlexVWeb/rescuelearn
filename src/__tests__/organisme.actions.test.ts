@@ -57,9 +57,9 @@ function mockSession(userId = "user-1") {
     organismeId: "org-1",
     roles: [UserRole.ADMIN_ORGANISME],
   };
-  vi.mocked(getUserContext).mockResolvedValue(fakeUser as any);
-  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as any);
-  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as any);
+  vi.mocked(getUserContext).mockResolvedValue(fakeUser as never);
+  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as never);
+  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as never);
 }
 
 function mockUnauthenticated() {
@@ -83,9 +83,9 @@ function mockUser(overrides: {
     roles: [UserRole.ADMIN_ORGANISME],
     ...overrides,
   };
-  vi.mocked(getUserContext).mockResolvedValue(fakeUser as any);
-  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as any);
-  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as any);
+  vi.mocked(getUserContext).mockResolvedValue(fakeUser as never);
+  vi.mocked(requireOrganisme).mockResolvedValue(fakeUser as never);
+  vi.mocked(getTenantPrisma).mockResolvedValue(mockPrisma as never);
 }
 
 beforeEach(() => {
@@ -154,6 +154,14 @@ describe("updateOrganismeAction - ownership check", () => {
     address: "",
     postalCode: "",
     city: "",
+    retentionYearsActive: 5,
+    retentionYearsArchive: 10,
+    smtpHost: "",
+    smtpPort: 465,
+    smtpUser: "",
+    smtpPassword: "",
+    smtpFrom: "",
+    smtpSecure: true,
   };
 
   it("returns Forbidden when non-super-admin tries to update another organisme", async () => {
