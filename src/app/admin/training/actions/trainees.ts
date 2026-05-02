@@ -6,7 +6,8 @@ import {
   computeValidCompetences,
   computeNextExpiry,
 } from "../lib/trainee-validity";
-import type {
+import {
+  Trainee,
   TraineeListItem,
   TraineeWithHistory,
   SessionType,
@@ -74,27 +75,22 @@ export async function getAllTrainees(): Promise<TraineeListItem[]> {
     orderBy: { lastName: "asc" },
   });
 
-  return trainees.map(
-    ({ inscriptions, externalTrainings, ...trainee }: any) => {
-      const validCompetences = computeValidCompetences(
-        inscriptions,
-        externalTrainings
-      );
-      const nextExpiryResult = computeNextExpiry(
-        inscriptions,
-        externalTrainings
-      );
-      const item: TraineeListItem = {
-        ...(trainee as any),
-        dateOfBirth: trainee.dateOfBirth ? new Date(trainee.dateOfBirth) : null,
-        validCompetences,
-        nextExpiry: nextExpiryResult?.expiryDate.toISOString() ?? null,
-        nextExpiryType: nextExpiryResult?.type ?? null,
-        _count: trainee._count,
-      };
-      return item;
-    }
-  );
+  return trainees.map(({ inscriptions, externalTrainings, ...trainee }) => {
+    const validCompetences = computeValidCompetences(
+      inscriptions,
+      externalTrainings
+    );
+    const nextExpiryResult = computeNextExpiry(inscriptions, externalTrainings);
+    const item: TraineeListItem = {
+      ...(trainee as Trainee),
+      dateOfBirth: trainee.dateOfBirth ? new Date(trainee.dateOfBirth) : null,
+      validCompetences,
+      nextExpiry: nextExpiryResult?.expiryDate.toISOString() ?? null,
+      nextExpiryType: nextExpiryResult?.type ?? null,
+      _count: trainee._count,
+    };
+    return item;
+  });
 }
 
 export async function getTraineeWithHistory(
@@ -116,9 +112,9 @@ export async function getTraineeWithHistory(
   if (!raw) return null;
 
   return {
-    ...(raw as any),
+    ...(raw as TraineeWithHistory),
     dateOfBirth: raw.dateOfBirth ? new Date(raw.dateOfBirth) : null,
-    inscriptions: raw.inscriptions.map((inscription: any) => ({
+    inscriptions: raw.inscriptions.map((inscription) => ({
       ...inscription,
       trainingSession: {
         ...inscription.trainingSession,
@@ -132,17 +128,26 @@ export async function getTraineeWithHistory(
 export async function createTrainee(data: TraineeInput) {
   const user = await requireOrganisme();
   const tenant = await getTenantPrisma();
+  const { dateOfBirth, ...rest } = data;
   return tenant.trainee.create({
-    data: { ...data, organismeId: user.organismeId } as any,
+    data: {
+      ...rest,
+      organismeId: user.organismeId,
+      dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : undefined,
+    },
   });
 }
 
 export async function updateTrainee(id: string, data: TraineeInput) {
   const user = await requireOrganisme();
   const tenant = await getTenantPrisma();
+  const { dateOfBirth, ...rest } = data;
   return tenant.trainee.update({
     where: { id, organismeId: user.organismeId },
-    data: data as any,
+    data: {
+      ...rest,
+      dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : undefined,
+    },
   });
 }
 
@@ -186,8 +191,13 @@ export async function importAndEnrollTrainees(
       }
 
       if (!trainee) {
+        const { dateOfBirth, ...rest } = traineeData;
         trainee = await tenant.trainee.create({
-          data: { ...traineeData, organismeId: user.organismeId } as any,
+          data: {
+            ...rest,
+            organismeId: user.organismeId,
+            dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : undefined,
+          },
         });
         created++;
       }
@@ -216,4 +226,48 @@ export async function importAndEnrollTrainees(
   }
 
   return { created, enrolled, skipped, errors };
+}
+export async function importTrainees(data: TraineeInput[]): Promise<{
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+}> {
+  const user = await requireOrganisme();
+  const tenant = withOrganisme(user.organismeId);
+
+  let created = 0,
+    updated = 0,
+    skipped = 0;
+  const errors: string[] = [];
+
+  for (const traineeData of data) {
+    try {
+      let trainee;
+      if (traineeData.email) {
+        trainee = await tenant.trainee.findFirst({
+          where: { emailHash: hash(traineeData.email) },
+        });
+      }
+
+      if (!trainee) {
+        const { dateOfBirth, ...rest } = traineeData;
+        await tenant.trainee.create({
+          data: {
+            ...rest,
+            organismeId: user.organismeId,
+            dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : undefined,
+          },
+        });
+        created++;
+      } else {
+        skipped++;
+      }
+    } catch (e) {
+      console.error("Import error:", e);
+      errors.push(`${traineeData.firstName} ${traineeData.lastName}`);
+    }
+  }
+
+  return { created, updated, skipped, errors };
 }

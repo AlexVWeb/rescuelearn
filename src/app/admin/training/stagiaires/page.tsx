@@ -1,7 +1,8 @@
 import { getAllTrainees } from "../actions";
 import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+import { UserPlus, FileUp } from "lucide-react";
 import { TraineeDialog } from "./components/trainee-dialog";
+import { TraineeImportDialog } from "./components/trainee-import-dialog";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./components/columns";
 
@@ -19,11 +20,18 @@ export default async function StagiairesPage() {
             Gérez tous les stagiaires enregistrés par votre organisme.
           </p>
         </div>
-        <TraineeDialog>
-          <Button className="w-full sm:w-auto">
-            <UserPlus className="mr-2 h-4 w-4" /> Ajouter Stagiaire
-          </Button>
-        </TraineeDialog>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <TraineeImportDialog>
+            <Button variant="outline" className="w-full sm:w-auto">
+              <FileUp className="mr-2 h-4 w-4" /> Importer CSV
+            </Button>
+          </TraineeImportDialog>
+          <TraineeDialog>
+            <Button className="w-full sm:w-auto">
+              <UserPlus className="mr-2 h-4 w-4" /> Ajouter Stagiaire
+            </Button>
+          </TraineeDialog>
+        </div>
       </div>
 
       <DataTable

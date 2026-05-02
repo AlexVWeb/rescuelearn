@@ -50,3 +50,38 @@ export function parseRows(rows: Record<string, unknown>[]): ParsedTrainee[] {
       };
     });
 }
+export async function readFileAsTrainees(file: File): Promise<ParsedTrainee[]> {
+  return new Promise((resolve, reject) => {
+    const isCSV = file.name.toLowerCase().endsWith(".csv");
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        let workbook: XLSX.WorkBook;
+        if (isCSV) {
+          const text = e.target?.result as string;
+          workbook = XLSX.read(text, { type: "string", FS: ";" });
+        } else {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          workbook = XLSX.read(data, { type: "array" });
+        }
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+          defval: "",
+          raw: false,
+        });
+        resolve(parseRows(rows));
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    reader.onerror = () => reject(new Error("Erreur de lecture du fichier"));
+
+    if (isCSV) {
+      reader.readAsText(file, "UTF-8");
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
+  });
+}
