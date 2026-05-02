@@ -1,4 +1,5 @@
 import { RetentionService } from "../lib/retention-service";
+import { logger } from "../lib/logger";
 
 async function main() {
   console.log("🚀 Démarrage de la maintenance des données...");
@@ -6,19 +7,19 @@ async function main() {
   try {
     // 1. Alertes
     const emailsSent = await RetentionService.sendRetentionAlerts();
-    console.log(`📢 ${emailsSent} organismes alertés par email.`);
+    logger.info(`${emailsSent} organismes alertés par email.`);
 
     // 2. Anonymisation (Base Active -> Archive)
     const anonymized = await RetentionService.anonymizeInactiveTrainees();
-    console.log(`👤 ${anonymized} stagiaires anonymisés.`);
+    logger.info(`${anonymized} stagiaires anonymisés.`);
 
     // 3. Purge définitive (Archive -> Suppression)
     const purged = await RetentionService.purgeExpiredTrainees();
-    console.log(`🗑️ ${purged} stagiaires purgés définitivement.`);
+    logger.info(`${purged} stagiaires purgés définitivement.`);
 
-    console.log("✅ Maintenance terminée avec succès.");
+    logger.info("✅ Maintenance terminée avec succès.");
   } catch (error) {
-    console.error("❌ Erreur lors de la maintenance :", error);
+    logger.error("❌ Erreur lors de la maintenance :", error);
     process.exit(1);
   }
 }

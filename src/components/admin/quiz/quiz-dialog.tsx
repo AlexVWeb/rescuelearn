@@ -30,6 +30,7 @@ import {
   Quiz,
 } from "@/app/actions/quiz-actions";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 const quizSchema = z.object({
   title: z.string().min(3, "Le titre doit faire au moins 3 caractères."),
@@ -49,7 +50,7 @@ export function QuizDialog({ open, onOpenChange, quiz }: QuizDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof quizSchema>>({
-    resolver: zodResolver(quizSchema) as any,
+    resolver: zodResolver(quizSchema),
     defaultValues: {
       title: "",
       timePerQuestion: 30,
@@ -87,7 +88,7 @@ export function QuizDialog({ open, onOpenChange, quiz }: QuizDialogProps) {
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to save quiz", error);
     } finally {
       setIsLoading(false);
     }

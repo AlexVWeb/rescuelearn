@@ -1,5 +1,6 @@
 import { z } from "zod";
 import axios from "axios";
+import { logger } from "@/lib/logger";
 
 export const SiretResponseSchema = z.object({
   results: z.array(
@@ -79,7 +80,7 @@ export class SiretService {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
         return null;
       }
-      console.error("Error fetching SIRET data:", error);
+      logger.error("Error fetching SIRET data:", error);
       throw error;
     }
   }

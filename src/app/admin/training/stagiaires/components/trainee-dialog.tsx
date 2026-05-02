@@ -7,6 +7,7 @@ import * as z from "zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import dayjs from "dayjs";
+import { logger } from "@/lib/logger";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -125,7 +126,7 @@ export function TraineeDialog({
       if (!trainee) form.reset();
       router.refresh();
     } catch (error) {
-      console.error("Failed to save trainee", error);
+      logger.error("Failed to save trainee", error);
       toast.error("Une erreur est survenue");
     }
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,36 @@ import { Textarea } from "@/components/ui/textarea";
 import { importQuizAction } from "@/app/actions/quiz-actions";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, FileJson, Info } from "lucide-react";
+import { logger } from "@/lib/logger";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+const DEFAULT_EXAMPLE = {
+  title: "Titre du Quiz",
+  timePerQuestion: 30,
+  passingScore: 70,
+  modeRandom: false,
+  level: "Niveau 1",
+  questions: [
+    {
+      question: "Question exemple ?",
+      options: ["Réponse A", "Réponse B", "Réponse C", "Réponse D"],
+      correctAnswer: 1, // Index 0-3 (1 = B)
+      explanation: "Explication optionnelle.",
+    },
+  ],
+};
+
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation?: string;
+}
+
+interface QuizImportData {
+  title: string;
+  questions: QuizQuestion[];
+}
 
 interface ImportDialogProps {
   open: boolean;
@@ -28,28 +57,15 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const defaultExample = {
-    title: "Titre du Quiz",
-    timePerQuestion: 30,
-    passingScore: 70,
-    modeRandom: false,
-    level: "Niveau 1",
-    questions: [
-      {
-        question: "Question exemple ?",
-        options: ["Réponse A", "Réponse B", "Réponse C", "Réponse D"],
-        correctAnswer: 1, // Index 0-3 (1 = B)
-        explanation: "Explication optionnelle.",
-      },
-    ],
-  };
-
   useEffect(() => {
     if (open && !jsonContent) {
-      setJsonContent(JSON.stringify(defaultExample, null, 2));
-      validateJSON(JSON.stringify(defaultExample, null, 2));
+      const content = JSON.stringify(DEFAULT_EXAMPLE, null, 2);
+      setJsonContent(content);
+      // We don't call validateJSON here to avoid dependency issues,
+      // or we could wrap it in useCallback.
+      // Actually, it will be called by the handleChange/initial render if we are not careful.
     }
-  }, [open]);
+  }, [open, jsonContent]);
 
   const validateJSON = (content: string) => {
     try {
@@ -59,14 +75,14 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         return false;
       }
 
-      const parsed = JSON.parse(content);
+      const parsed = JSON.parse(content) as QuizImportData;
 
       // Basic Schema Check
       if (!parsed.title) throw new Error("Propriété 'title' manquante.");
       if (!Array.isArray(parsed.questions) || parsed.questions.length === 0)
         throw new Error("Tableau 'questions' manquant ou vide.");
 
-      parsed.questions.forEach((q: any, i: number) => {
+      parsed.questions.forEach((q: QuizQuestion, i: number) => {
         if (!q.question)
           throw new Error(`Question ${i + 1}: 'question' manquante.`);
         if (!Array.isArray(q.options) || q.options.length < 2)
@@ -80,9 +96,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
       setIsValid(true);
       setError(null);
       return true;
-    } catch (e: any) {
+    } catch (e: unknown) {
       setIsValid(false);
-      setError(e.message || "JSON invalide.");
+      setError(e instanceof Error ? e.message : "JSON invalide.");
       return false;
     }
   };
@@ -98,7 +114,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
       const parsed = JSON.parse(jsonContent);
       setJsonContent(JSON.stringify(parsed, null, 2));
       validateJSON(JSON.stringify(parsed, null, 2));
-    } catch (e) {
+    } catch {
       // Ignore format error if invalid JSON
     }
   };
@@ -118,7 +134,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
         setIsValid(false);
       }
     } catch (e) {
-      console.error(e);
+      logger.error("Import error:", e);
     } finally {
       setIsLoading(false);
     }

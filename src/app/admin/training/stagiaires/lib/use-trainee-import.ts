@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { importAndEnrollTrainees, importTrainees } from "../../actions";
+import { logger } from "@/lib/logger";
 import { ParsedTrainee, readFileAsTrainees } from "./trainee-import";
 
 export function useTraineeImport(sessionId?: string) {
@@ -24,7 +25,7 @@ export function useTraineeImport(sessionId?: string) {
       }
       setPreview(parsed);
     } catch (err) {
-      console.error("Erreur lecture fichier:", err);
+      logger.error("Erreur lecture fichier:", err);
       toast.error("Impossible de lire le fichier");
     }
   }, []);
@@ -57,7 +58,7 @@ export function useTraineeImport(sessionId?: string) {
       router.refresh();
       return true;
     } catch (err) {
-      console.error("Import error:", err);
+      logger.error("Import error:", err);
       toast.error("Une erreur est survenue lors de l'import");
       return false;
     } finally {

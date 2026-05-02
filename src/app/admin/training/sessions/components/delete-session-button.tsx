@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +44,7 @@ export function DeleteSessionButton({
         setOpen(false);
         router.refresh();
       } catch (error) {
-        console.error("Failed to delete session", error);
+        logger.error("Failed to delete session", error);
         toast.error("Erreur lors de la suppression de la session");
       }
     });

@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 import { Button } from "@/components/ui/button";
 import { deleteTrainee } from "../../actions";
@@ -22,7 +23,7 @@ export function DeleteTraineeButton({ traineeId }: DeleteTraineeButtonProps) {
           await deleteTrainee(traineeId);
           router.refresh();
         } catch (error) {
-          console.error("Failed to delete trainee", error);
+          logger.error("Failed to delete trainee", error);
         }
       });
     }

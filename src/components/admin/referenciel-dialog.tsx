@@ -29,6 +29,7 @@ import {
   Referenciel,
 } from "@/app/actions/referenciel-actions";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 import { FileUpload } from "@/components/ui/file-upload";
 
 const referencielSchema = z.object({
@@ -54,7 +55,7 @@ export function ReferencielDialog({
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof referencielSchema>>({
-    resolver: zodResolver(referencielSchema) as any,
+    resolver: zodResolver(referencielSchema),
     defaultValues: {
       title: "",
       yearEdition: dayjs().year(),
@@ -93,26 +94,26 @@ export function ReferencielDialog({
         const result = await updateReferencielAction(referenciel.id, formData);
         if (!result.success) {
           // Handle error (ideally with toast)
-          console.error(result.error);
+          logger.error("Failed to update referenciel:", result.error);
         }
       } else {
         // Create
         if (!file) {
           // Force file for creation
-          console.error("File is required");
+          logger.error("File is required for referenciel creation");
           setIsLoading(false);
           return; // Or show error
         }
         const result = await createReferencielAction(formData);
         if (!result.success) {
-          console.error(result.error);
+          logger.error("Failed to create referenciel:", result.error);
         }
       }
 
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      console.error(error);
+      logger.error("Unexpected error in referenciel submission:", error);
     } finally {
       setIsLoading(false);
     }

@@ -1,10 +1,12 @@
 "use server";
 
+import { randomInt } from "node:crypto";
 import dayjs from "dayjs";
 import { requireOrganisme, getTenantPrisma } from "@/lib/context";
+import { Inscription, Slot } from "@prisma/client";
 
 function generatePin() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
 }
 
 export async function generateSlotPin(slotId: string) {
@@ -32,7 +34,7 @@ export async function generateSlotPin(slotId: string) {
   });
 
   await tenant.$transaction(
-    inscriptions.map((inscription: any) =>
+    inscriptions.map((inscription: Inscription) =>
       tenant.emargement.upsert({
         where: {
           inscriptionId_slotId: { inscriptionId: inscription.id, slotId },
@@ -65,7 +67,7 @@ export async function generateSessionPin(sessionId: string) {
   }
 
   const pinBySlot = Object.fromEntries(
-    session.slots.map((slot: any) => [slot.id, generatePin()])
+    session.slots.map((slot: Slot) => [slot.id, generatePin()])
   );
 
   const inscriptions = await tenant.inscription.findMany({
@@ -75,8 +77,8 @@ export async function generateSessionPin(sessionId: string) {
   const now = dayjs().toDate();
 
   await tenant.$transaction(
-    inscriptions.flatMap((ins: any) =>
-      session.slots.map((slot: any) =>
+    inscriptions.flatMap((ins: Inscription) =>
+      session.slots.map((slot: Slot) =>
         tenant.emargement.upsert({
           where: {
             inscriptionId_slotId: { inscriptionId: ins.id, slotId: slot.id },
@@ -144,7 +146,7 @@ export async function bulkUpdateEmargementStatus(
   });
 
   return tenant.$transaction(
-    inscriptions.map((ins: any) =>
+    inscriptions.map((ins: Inscription) =>
       tenant.emargement.upsert({
         where: { inscriptionId_slotId: { inscriptionId: ins.id, slotId } },
         update: { status },

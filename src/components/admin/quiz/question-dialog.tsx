@@ -37,6 +37,7 @@ import {
   getAllQuizzesSimpleAction,
 } from "@/app/actions/quiz-actions";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 // Assumes 4 options always
 const questionSchema = z.object({
@@ -70,7 +71,7 @@ export function QuestionDialog({
   }, []);
 
   const form = useForm<z.infer<typeof questionSchema>>({
-    resolver: zodResolver(questionSchema) as any,
+    resolver: zodResolver(questionSchema),
     defaultValues: {
       text: "",
       quizId: 0,
@@ -91,7 +92,7 @@ export function QuestionDialog({
         text: question.text,
         quizId: question.quizId,
         explanation: question.explanation || "",
-        correctAnswer: question.correctAnswer as any,
+        correctAnswer: question.correctAnswer as "A" | "B" | "C" | "D",
         optionA: opts[0]?.text || "",
         optionB: opts[1]?.text || "",
         optionC: opts[2]?.text || "",
@@ -136,7 +137,7 @@ export function QuestionDialog({
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to save question", error);
     } finally {
       setIsLoading(false);
     }

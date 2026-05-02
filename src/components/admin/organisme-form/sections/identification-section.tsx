@@ -16,6 +16,7 @@ import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
 import { SiretService } from "@/services/siret.service";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface IdentificationSectionProps {
   form: UseFormReturn<OrganismeFormValues>;
@@ -52,7 +53,7 @@ export function IdentificationSection({ form }: IdentificationSectionProps) {
         toast.error("Aucun organisme trouvé pour ce SIRET");
       }
     } catch (error) {
-      console.error("SIRET lookup error:", error);
+      logger.error("SIRET lookup error:", error);
       toast.error("Erreur lors de la récupération des informations");
     } finally {
       setIsSearching(false);

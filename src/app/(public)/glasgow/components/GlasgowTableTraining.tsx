@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { secureShuffle } from "@/lib/crypto";
 import type {
   GlasgowData,
   GameMode,
@@ -95,7 +96,7 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
     }
 
     // Mélanger et sélectionner le nombre demandé
-    const shuffled = [...availableCells].sort(() => Math.random() - 0.5);
+    const shuffled = secureShuffle(availableCells);
     const actualNumToHide = Math.min(numCellsToHide, availableCells.length);
     const selected = shuffled.slice(0, actualNumToHide);
 

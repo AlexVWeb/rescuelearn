@@ -36,6 +36,7 @@ import {
   SNVScenario,
 } from "@/app/actions/snv-actions";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 const scenarioSchema = z.object({
   title: z.string().min(3, "Le titre doit faire au moins 3 caractères."),
@@ -60,7 +61,7 @@ export function SNVScenarioDialog({
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof scenarioSchema>>({
-    resolver: zodResolver(scenarioSchema) as any,
+    resolver: zodResolver(scenarioSchema),
     defaultValues: {
       title: "",
       level: "Débutant",
@@ -72,7 +73,7 @@ export function SNVScenarioDialog({
     if (scenario) {
       form.reset({
         title: scenario.title,
-        level: scenario.level as any,
+        level: scenario.level as "Débutant" | "Intermédiaire" | "Avancé",
         description: scenario.description,
       });
     } else {
@@ -95,7 +96,7 @@ export function SNVScenarioDialog({
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to save SNV scenario:", error);
     } finally {
       setIsLoading(false);
     }

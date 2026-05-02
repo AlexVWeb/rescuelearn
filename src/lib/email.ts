@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { logger } from "./logger";
 
 /**
  * Configuration SMTP pour un organisme.
@@ -52,17 +53,14 @@ export const EmailService = {
 
         return { success: true, method: "smtp" };
       } catch (error) {
-        console.error("❌ Erreur SMTP :", error);
+        logger.error("❌ Erreur SMTP :", error);
         // Fallback console en cas d'erreur SMTP pour ne pas perdre la trace ?
       }
     }
 
     // Fallback Console (Dev / Non configuré)
-    console.log("--- SIMULATION EMAIL (Fallback) ---");
-    console.log(`À : ${to}`);
-    console.log(`Sujet : ${subject}`);
-    console.log(`Contenu : ${text}`);
-    console.log("------------------------------------");
+    logger.info("--- SIMULATION EMAIL (Fallback) ---");
+    logger.info("Email Details", { to, subject, text });
 
     return { success: true, method: "console" };
   },

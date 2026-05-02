@@ -36,6 +36,7 @@ import {
   getAllScenariosSimpleAction,
 } from "@/app/actions/snv-actions";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 const victimSchema = z.object({
   description: z
@@ -71,7 +72,7 @@ export function SNVVictimDialog({
   }, []);
 
   const form = useForm<z.infer<typeof victimSchema>>({
-    resolver: zodResolver(victimSchema) as any,
+    resolver: zodResolver(victimSchema),
     defaultValues: {
       description: "",
       explanation: "",
@@ -110,7 +111,7 @@ export function SNVVictimDialog({
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      console.error(error);
+      logger.error("Failed to save SNV victim:", error);
     } finally {
       setIsLoading(false);
     }

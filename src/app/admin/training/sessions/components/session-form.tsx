@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -101,7 +102,7 @@ export function SessionForm({
         }
       }
     } catch (error) {
-      console.error("Failed to save session", error);
+      logger.error("Failed to save session", error);
       toast.error(
         error instanceof Error
           ? error.message

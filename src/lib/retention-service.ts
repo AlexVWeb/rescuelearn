@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { logger } from "./logger";
 import { deleteFile } from "./r2";
 import { EmailService, SMTPConfig } from "./email";
 import dayjs from "dayjs";
@@ -150,7 +151,7 @@ export const RetentionService = {
             try {
               await deleteFile(training.fileKey);
             } catch (error) {
-              console.error(
+              logger.error(
                 `Erreur suppression fichier R2 ${training.fileKey}:`,
                 error
               );

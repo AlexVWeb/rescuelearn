@@ -17,6 +17,7 @@ import { AddressSection } from "./organisme-form/sections/address-section";
 import { RetentionSection } from "./organisme-form/sections/retention-section";
 import { SMTPSection } from "./organisme-form/sections/smtp-section";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface OrganismeFormProps {
   defaultValues?: Partial<OrganismeFormValues>;
@@ -69,7 +70,7 @@ export function OrganismeForm({
   const isConfig = !showOnly || showOnly === "config";
 
   const onError = (errors: FieldErrors<OrganismeFormValues>) => {
-    console.error("Form validation errors:", errors);
+    logger.error("Form validation errors:", errors);
     const errorValues = Object.values(errors);
     if (errorValues.length > 0) {
       const firstError = errorValues[0];
