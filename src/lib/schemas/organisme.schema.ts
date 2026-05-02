@@ -17,7 +17,22 @@ export const organismeSchema = z.object({
     .regex(/^\d{5}$/, "Code postal invalide (5 chiffres)")
     .optional()
     .or(z.literal("")),
-  city: z.string().optional(),
+  city: z.string().optional().or(z.literal("")),
+
+  // Représentant Légal
+  legalRepFirstName: z.string().optional().or(z.literal("")),
+  legalRepLastName: z.string().optional().or(z.literal("")),
+  legalRepJobTitle: z.string().optional().or(z.literal("")),
+
+  // Informations Administratives
+  legalStatus: z.string().optional().or(z.literal("")),
+  tvaNumber: z.string().optional().or(z.literal("")),
+  federationName: z.string().optional().or(z.literal("")),
+
+  // Certification Qualiopi
+  isQualiopi: z.boolean().default(false),
+  qualiopiCertifiedBy: z.string().optional().or(z.literal("")),
+
   retentionYearsActive: z.coerce
     .number()
     .min(1, "Minimum 1 an")

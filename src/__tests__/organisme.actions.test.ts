@@ -162,6 +162,14 @@ describe("updateOrganismeAction - ownership check", () => {
     smtpPassword: "",
     smtpFrom: "",
     smtpSecure: true,
+    legalRepFirstName: "Jean",
+    legalRepLastName: "Dupont",
+    legalRepJobTitle: "Gérant",
+    legalStatus: "SARL",
+    tvaNumber: "FR12345678901",
+    federationName: "",
+    isQualiopi: true,
+    qualiopiCertifiedBy: "Jean Dupont",
   };
 
   it("returns Forbidden when non-super-admin tries to update another organisme", async () => {

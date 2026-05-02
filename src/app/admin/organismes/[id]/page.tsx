@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getOrganismeByIdAction } from "@/app/actions/organisme.actions";
 import { getOrganismeMembersAction } from "@/app/actions/members.actions";
 import { OrganismeDetailClient } from "./organisme-detail-client";
+import { CopyButton } from "@/components/copy-button";
 
 export default async function OrganismeDetailPage({
   params,
@@ -38,11 +39,12 @@ export default async function OrganismeDetailPage({
           <h1 className="text-2xl font-bold tracking-tight">
             {organisme.name}
           </h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground flex items-center gap-2 text-sm">
             Code d&apos;invitation :{" "}
             <code className="bg-muted rounded px-1">
               {organisme.inviteCode}
             </code>
+            <CopyButton value={organisme.inviteCode} />
           </p>
         </div>
       </div>

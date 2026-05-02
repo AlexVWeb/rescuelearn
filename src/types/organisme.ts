@@ -11,6 +11,14 @@ export type Organisme = {
   address: string | null;
   postalCode: string | null;
   city: string | null;
+  legalRepFirstName: string | null;
+  legalRepLastName: string | null;
+  legalRepJobTitle: string | null;
+  legalStatus: string | null;
+  tvaNumber: string | null;
+  federationName: string | null;
+  isQualiopi: boolean;
+  qualiopiCertifiedBy: string | null;
   retentionYearsActive: number;
   retentionYearsArchive: number;
   smtpHost: string | null;

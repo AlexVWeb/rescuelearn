@@ -41,17 +41,18 @@ export function OrganismeDetailClient({
   };
 
   return (
-    <Tabs defaultValue="informations">
+    <Tabs defaultValue="profil">
       <TabsList>
-        <TabsTrigger value="informations">Informations</TabsTrigger>
+        <TabsTrigger value="profil">Profil</TabsTrigger>
+        <TabsTrigger value="configuration">Configuration</TabsTrigger>
         <TabsTrigger value="membres">Membres</TabsTrigger>
         <TabsTrigger value="documents">Documents</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="informations" className="mt-6">
+      <TabsContent value="profil" className="mt-6">
         <OrganismeForm
           defaultValues={{
-            name: organisme.name,
+            ...organisme,
             siret: organisme.siret ?? "",
             agreementNumber: organisme.agreementNumber ?? "",
             email: organisme.email ?? "",
@@ -60,10 +61,57 @@ export function OrganismeDetailClient({
             address: organisme.address ?? "",
             postalCode: organisme.postalCode ?? "",
             city: organisme.city ?? "",
+            legalRepFirstName: organisme.legalRepFirstName ?? "",
+            legalRepLastName: organisme.legalRepLastName ?? "",
+            legalRepJobTitle: organisme.legalRepJobTitle ?? "",
+            legalStatus: organisme.legalStatus ?? "",
+            tvaNumber: organisme.tvaNumber ?? "",
+            federationName: organisme.federationName ?? "",
+            qualiopiCertifiedBy: organisme.qualiopiCertifiedBy ?? "",
+            smtpHost: organisme.smtpHost ?? "",
+            smtpUser: organisme.smtpUser ?? "",
+            smtpPassword: organisme.smtpPassword ?? "",
+            smtpFrom: organisme.smtpFrom ?? "",
+            smtpPort: organisme.smtpPort ?? undefined,
           }}
           onSubmit={handleSubmit}
           loading={loading}
-          submitLabel="Mettre à jour"
+          submitLabel="Mettre à jour le profil"
+          showOnly="profil"
+        />
+      </TabsContent>
+
+      <TabsContent value="configuration" className="mt-6">
+        <OrganismeForm
+          defaultValues={{
+            ...organisme,
+            // (Mêmes valeurs que ci-dessus pour la cohérence,
+            // mais l'idée est que ce formulaire est le même pour l'instant)
+            siret: organisme.siret ?? "",
+            agreementNumber: organisme.agreementNumber ?? "",
+            email: organisme.email ?? "",
+            phone: organisme.phone ?? "",
+            website: organisme.website ?? "",
+            address: organisme.address ?? "",
+            postalCode: organisme.postalCode ?? "",
+            city: organisme.city ?? "",
+            legalRepFirstName: organisme.legalRepFirstName ?? "",
+            legalRepLastName: organisme.legalRepLastName ?? "",
+            legalRepJobTitle: organisme.legalRepJobTitle ?? "",
+            legalStatus: organisme.legalStatus ?? "",
+            tvaNumber: organisme.tvaNumber ?? "",
+            federationName: organisme.federationName ?? "",
+            qualiopiCertifiedBy: organisme.qualiopiCertifiedBy ?? "",
+            smtpHost: organisme.smtpHost ?? "",
+            smtpUser: organisme.smtpUser ?? "",
+            smtpPassword: organisme.smtpPassword ?? "",
+            smtpFrom: organisme.smtpFrom ?? "",
+            smtpPort: organisme.smtpPort ?? undefined,
+          }}
+          onSubmit={handleSubmit}
+          loading={loading}
+          submitLabel="Mettre à jour la configuration"
+          showOnly="config"
         />
       </TabsContent>
 

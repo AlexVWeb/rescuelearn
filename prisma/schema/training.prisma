@@ -11,6 +11,20 @@ model Organisme {
   address         String?
   postalCode      String?
   city            String?
+  
+  // Représentant Légal
+  legalRepFirstName String?
+  legalRepLastName  String?
+  legalRepJobTitle  String?
+
+  // Informations Administratives
+  legalStatus    String?
+  tvaNumber      String?
+  federationName String?
+
+  // Certification Qualiopi
+  isQualiopi         Boolean @default(false)
+  qualiopiCertifiedBy String?
 
   // Paramètres de rétention
   retentionYearsActive  Int @default(5)  // Données actives (compte, dossiers)
