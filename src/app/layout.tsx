@@ -81,6 +81,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { Toaster } from "@/components/ui/sonner";
+
 export default function RootLayout({
   children,
 }: {
@@ -90,6 +92,7 @@ export default function RootLayout({
     <html lang="fr">
       <body className={inter.className}>
         {children}
+        <Toaster position="top-right" richColors />
         <Analytics />
         <SpeedInsights />
       </body>

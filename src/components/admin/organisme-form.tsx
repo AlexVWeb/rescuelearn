@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { ContactSection } from "./organisme-form/sections/contact-section";
 import { AddressSection } from "./organisme-form/sections/address-section";
 import { RetentionSection } from "./organisme-form/sections/retention-section";
 import { SMTPSection } from "./organisme-form/sections/smtp-section";
+import { toast } from "sonner";
 
 interface OrganismeFormProps {
   defaultValues?: Partial<OrganismeFormValues>;
@@ -67,9 +68,24 @@ export function OrganismeForm({
   const isProfil = !showOnly || showOnly === "profil";
   const isConfig = !showOnly || showOnly === "config";
 
+  const onError = (errors: FieldErrors<OrganismeFormValues>) => {
+    console.error("Form validation errors:", errors);
+    const errorValues = Object.values(errors);
+    if (errorValues.length > 0) {
+      const firstError = errorValues[0];
+      toast.error(
+        firstError?.message?.toString() ||
+          "Veuillez corriger les erreurs dans le formulaire"
+      );
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, onError)}
+        className="space-y-6"
+      >
         {isProfil && (
           <>
             <IdentificationSection form={form} />
