@@ -16,6 +16,7 @@
     "format:check": "prettier --check .",
     "prepare": "cd .. && husky front/.husky",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "type-check": "tsc --noEmit",
     "validate": "prisma validate"
@@ -81,6 +82,7 @@
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "4.0.18",
     "@vitest/ui": "4.0.18",
     "eslint": "9.26.0",
     "eslint-config-next": "16.1.0",

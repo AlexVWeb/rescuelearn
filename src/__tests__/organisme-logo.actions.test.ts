@@ -399,3 +399,29 @@ describe("getLogoAsBase64", () => {
     expect(result).toBeNull();
   });
 });
+
+describe("Logo Actions - Error Handling", () => {
+  it("deleteOrganismeLogoAction handles general errors", async () => {
+    mockUser({ roles: [UserRole.SUPER_ADMIN] });
+    mockPrisma.organisme.findUnique.mockRejectedValue(
+      new Error("Database error")
+    );
+    const result = await deleteOrganismeLogoAction("org-1");
+    expect(result).toEqual({
+      success: false,
+      error: "Erreur lors de la suppression",
+    });
+  });
+
+  it("getOrganismeLogoUrlAction handles general errors", async () => {
+    mockUser({ roles: [UserRole.SUPER_ADMIN] });
+    mockPrisma.organisme.findUnique.mockRejectedValue(
+      new Error("Database error")
+    );
+    const result = await getOrganismeLogoUrlAction("org-1");
+    expect(result).toEqual({
+      success: false,
+      error: "Erreur lors de la récupération du logo",
+    });
+  });
+});

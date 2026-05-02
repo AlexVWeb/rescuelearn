@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { decryptData, TRAINEE_ENCRYPTED_FIELDS } from "./prisma";
+import { decryptData, TRAINEE_ENCRYPTED_FIELDS, withOrganisme } from "./prisma";
 import { encrypt } from "./encryption";
 
 describe("Prisma Extension - Recursive Decryption", () => {
@@ -50,5 +50,40 @@ describe("Prisma Extension - Recursive Decryption", () => {
     const decrypted = decryptData(mockInscription, []);
 
     expect(decrypted.trainee.firstName).toBe("Jean");
+  });
+
+  describe("Tenant Isolation (withOrganisme)", () => {
+    it("should be defined", () => {
+      const tenantPrisma = withOrganisme("org-123");
+      expect(tenantPrisma).toBeDefined();
+    });
+  });
+
+  describe("Edge Cases", () => {
+    it("should handle null or undefined data", () => {
+      expect(decryptData(null, [])).toBeNull();
+      expect(decryptData(undefined, [])).toBeUndefined();
+    });
+
+    it("should handle arrays of data", () => {
+      const encrypted = encrypt("Secret");
+      const data = [{ firstName: encrypted }, { firstName: encrypted }];
+      const decrypted = decryptData(data, ["firstName"]);
+      expect(decrypted[0].firstName).toBe("Secret");
+      expect(decrypted[1].firstName).toBe("Secret");
+    });
+
+    it("should ignore non-string fields or invalid formats", () => {
+      const data = { age: 25, status: "active" };
+      const decrypted = decryptData(data, ["age", "status"]);
+      expect(decrypted.age).toBe(25);
+      expect(decrypted.status).toBe("active");
+    });
+
+    it("should handle decryption failure gracefully", () => {
+      const data = { firstName: "iv:tag:badhex" };
+      const decrypted = decryptData(data, ["firstName"]);
+      expect(decrypted.firstName).toBe("iv:tag:badhex");
+    });
   });
 });

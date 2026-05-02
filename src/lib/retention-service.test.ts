@@ -3,6 +3,8 @@ import { RetentionService } from "./retention-service";
 import { prisma } from "./prisma";
 import dayjs from "dayjs";
 import { Organisme, Trainee } from "@prisma/client";
+import { deleteFile } from "./r2";
+import { EmailService } from "./email";
 
 vi.mock("./prisma", () => ({
   prisma: {
@@ -26,8 +28,6 @@ vi.mock("./email", () => ({
     send: vi.fn().mockResolvedValue({ success: true }),
   },
 }));
-
-import { EmailService } from "./email";
 
 describe("RetentionService", () => {
   beforeEach(() => {
@@ -129,6 +129,37 @@ describe("RetentionService", () => {
           host: "smtp.test.com",
           user: "user",
         }),
+      })
+    );
+  });
+
+  it("should handle deleteFile errors gracefully during purge", async () => {
+    vi.mocked(deleteFile).mockRejectedValue(new Error("R2 Error"));
+    const mockOrg = { id: "o1", retentionYearsArchive: 10 };
+    const mockTrainee = {
+      id: "t1",
+      lastActivityAt: dayjs().subtract(11, "years").toDate(),
+      externalTrainings: [{ fileKey: "key1" }],
+    };
+
+    vi.mocked(prisma.organisme.findMany).mockResolvedValue([
+      mockOrg,
+    ] as unknown as Organisme[]);
+    vi.mocked(prisma.trainee.findMany).mockResolvedValue([
+      mockTrainee,
+    ] as unknown as Trainee[]);
+
+    await RetentionService.purgeExpiredTrainees();
+
+    expect(prisma.trainee.delete).toHaveBeenCalled();
+  });
+
+  it("should update lastActivityAt in touchTrainee", async () => {
+    await RetentionService.touchTrainee("t1");
+    expect(prisma.trainee.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "t1" },
+        data: expect.objectContaining({ lastActivityAt: expect.any(Date) }),
       })
     );
   });
