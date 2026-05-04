@@ -1,4 +1,7 @@
+import { UserRole } from "@/lib/roles";
+
 export type Organisme = {
+  // ... existing fields (truncated in replacement content for brevity but kept in target)
   id: string;
   name: string;
   agreementNumber: string | null;
@@ -37,6 +40,6 @@ export type OrganismeMember = {
   firstName: string | null;
   lastName: string | null;
   email: string;
-  roles: unknown;
+  roles: UserRole[];
   createdAt: Date;
 };

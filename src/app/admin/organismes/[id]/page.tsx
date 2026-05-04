@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getOrganismeByIdAction } from "@/app/actions/organisme.actions";
 import { getOrganismeMembersAction } from "@/app/actions/members.actions";
+import { getPendingInvitationsAction } from "@/app/actions/invitation.actions";
 import { OrganismeDetailClient } from "./organisme-detail-client";
 import { CopyButton } from "@/components/copy-button";
 
@@ -14,10 +15,13 @@ export default async function OrganismeDetailPage({
 }) {
   const { id } = await params;
 
-  const [organismeResult, membersResult] = await Promise.all([
-    getOrganismeByIdAction(id),
-    getOrganismeMembersAction(),
-  ]);
+  const [organismeResult, membersResult, invitationsResult] = await Promise.all(
+    [
+      getOrganismeByIdAction(id),
+      getOrganismeMembersAction(),
+      getPendingInvitationsAction(id),
+    ]
+  );
 
   if (!organismeResult.success || !organismeResult.data) {
     notFound();
@@ -26,6 +30,10 @@ export default async function OrganismeDetailPage({
   const organisme = organismeResult.data;
   const members =
     membersResult.success && membersResult.data ? membersResult.data : [];
+  const invitations =
+    invitationsResult.success && invitationsResult.data
+      ? invitationsResult.data
+      : [];
 
   return (
     <div className="space-y-6">
@@ -49,7 +57,11 @@ export default async function OrganismeDetailPage({
         </div>
       </div>
 
-      <OrganismeDetailClient organisme={organisme} members={members} />
+      <OrganismeDetailClient
+        organisme={organisme}
+        members={members}
+        invitations={invitations}
+      />
     </div>
   );
 }

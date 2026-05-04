@@ -3,6 +3,7 @@
 import { prisma, withOrganisme } from "@/lib/prisma";
 import { UserRole, hasRole } from "@/lib/roles";
 import { requireOrganisme, getUserContext } from "@/lib/context";
+import { logger } from "@/lib/logger";
 
 export async function getOrganismeMembersAction() {
   const user = await requireOrganisme();
@@ -22,9 +23,15 @@ export async function getOrganismeMembersAction() {
       },
       orderBy: { createdAt: "asc" },
     });
-    return { success: true, data: members };
+
+    const typedMembers = members.map((m) => ({
+      ...m,
+      roles: (Array.isArray(m.roles) ? m.roles : []) as UserRole[],
+    }));
+
+    return { success: true, data: typedMembers };
   } catch (error) {
-    console.error("Failed to fetch members:", error);
+    logger.error("Failed to fetch members:", error);
     return { success: false, error: "Failed to fetch members" };
   }
 }
@@ -40,7 +47,7 @@ export async function updateMemberRoleAction(userId: string, roles: string[]) {
     });
     return { success: true };
   } catch (error) {
-    console.error("Failed to update member role:", error);
+    logger.error("Failed to update member role:", error);
     return { success: false, error: "Failed to update member role" };
   }
 }
@@ -56,7 +63,7 @@ export async function removeMemberFromOrganismeAction(userId: string) {
     });
     return { success: true };
   } catch (error) {
-    console.error("Failed to remove member:", error);
+    logger.error("Failed to remove member:", error);
     return { success: false, error: "Failed to remove member" };
   }
 }
@@ -79,7 +86,7 @@ export async function addMemberToOrganismeAction(
     });
     return { success: true };
   } catch (error) {
-    console.error("Failed to add member:", error);
+    logger.error("Failed to add member:", error);
     return { success: false, error: "Failed to add member" };
   }
 }
@@ -111,7 +118,8 @@ export async function searchUsersAction(query: string) {
       take: 10,
     });
     return { success: true, data: users };
-  } catch (_) {
+  } catch (error) {
+    logger.error("Failed to search users:", error);
     return { success: false, error: "Failed to search users" };
   }
 }

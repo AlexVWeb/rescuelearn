@@ -34,6 +34,13 @@ export function OrganismeForm({
   submitLabel = "Enregistrer",
   showOnly,
 }: OrganismeFormProps) {
+  // Nettoyage des valeurs null venant de la DB pour éviter les warnings React (controlled/uncontrolled)
+  const sanitizedDefaultValues = defaultValues
+    ? Object.fromEntries(
+        Object.entries(defaultValues).filter(([_, v]) => v !== null)
+      )
+    : {};
+
   const form = useForm<OrganismeFormValues>({
     resolver: zodResolver(organismeSchema),
     defaultValues: {
@@ -57,12 +64,12 @@ export function OrganismeForm({
       retentionYearsActive: 5,
       retentionYearsArchive: 10,
       smtpHost: "",
-      smtpPort: 465,
+      smtpPort: 587,
       smtpUser: "",
       smtpPassword: "",
       smtpFrom: "",
       smtpSecure: true,
-      ...defaultValues,
+      ...sanitizedDefaultValues,
     },
   });
 

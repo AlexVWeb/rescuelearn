@@ -61,3 +61,17 @@ model Verification {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+model Invitation {
+  id          String   @id @default(cuid())
+  email       String
+  role        String
+  organismeId String
+  organisme   Organisme @relation(fields: [organismeId], references: [id])
+  token       String   @unique
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([email, organismeId])
+  @@index([token])
+}

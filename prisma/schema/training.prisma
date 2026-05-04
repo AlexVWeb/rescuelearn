@@ -39,6 +39,7 @@ model Organisme {
   smtpSecure   Boolean @default(true)
 
   users            User[]
+  invitations      Invitation[]
   trainingSessions TrainingSession[]
   trainees         Trainee[]
 

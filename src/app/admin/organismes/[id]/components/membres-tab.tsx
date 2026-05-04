@@ -4,9 +4,8 @@ import dayjs from "dayjs";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -32,41 +31,45 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { UserRole } from "@/lib/roles";
-import { OrganismeMember } from "@/types/organisme";
 import {
   updateMemberRoleAction,
   removeMemberFromOrganismeAction,
-  addMemberToOrganismeAction,
-  searchUsersAction,
 } from "@/app/actions/members.actions";
+import {
+  cancelInvitationAction,
+  resendInvitationAction,
+} from "@/app/actions/invitation.actions";
+import { InviteMemberDialog } from "@/components/admin/invite-member-dialog";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
+import { UserRole } from "@/lib/roles";
+import { OrganismeMember } from "@/types/organisme";
+
+export interface InvitationInfo {
+  id: string;
+  email: string;
+  role: string;
+  createdAt: string | Date;
+  expiresAt: string | Date;
+}
 
 interface MembresTabProps {
   organismeId: string;
   members: OrganismeMember[];
+  invitations: InvitationInfo[];
 }
-
-type SearchUser = {
-  id: string;
-  name: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  email: string;
-  organismeId: string | null;
-};
 
 const ROLES = [UserRole.ADMIN_ORGANISME, UserRole.FORMATEUR];
 
 export function MembresTab({
   organismeId,
   members: initialMembers,
+  invitations,
 }: MembresTabProps) {
   const router = useRouter();
   const [members, setMembers] = useState(initialMembers);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const getMemberName = (m: OrganismeMember) => {
     if (m.firstName || m.lastName)
@@ -101,83 +104,38 @@ export function MembresTab({
     setMemberToRemove(null);
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    setSearching(true);
-    const result = await searchUsersAction(searchQuery);
-    if (result.success && result.data) {
-      setSearchResults(
-        result.data.filter((u: any) => !members.find((m: any) => m.id === u.id))
-      );
-    }
-    setSearching(false);
-  };
-
-  const handleAdd = async (userId: string) => {
-    const result = await addMemberToOrganismeAction(userId, organismeId);
+  const handleCancelInvitation = async (invitationId: string) => {
+    const result = await cancelInvitationAction(invitationId);
     if (result.success) {
-      toast.success("Membre ajouté");
-      setSearchResults([]);
-      setSearchQuery("");
+      toast.success("Invitation annulée");
       router.refresh();
     } else {
-      toast.error(result.error ?? "Erreur");
+      toast.error(result.error || "Erreur");
+    }
+  };
+  const handleResendInvitation = async (invitationId: string) => {
+    setResendingId(invitationId);
+    const result = await resendInvitationAction(invitationId);
+    setResendingId(null);
+    if (result.success) {
+      toast.success("Invitation renvoyée avec succès");
+      router.refresh();
+    } else {
+      toast.error(result.error || "Erreur");
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex gap-2">
-        <Input
-          placeholder="Rechercher un utilisateur par email ou nom..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          className="max-w-sm"
-        />
-        <Button variant="outline" onClick={handleSearch} disabled={searching}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Rechercher
-        </Button>
-      </div>
-
-      {searchResults.length > 0 && (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nom / Email</TableHead>
-                <TableHead>Organisme actuel</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {searchResults.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell>
-                    <div className="font-medium">
-                      {u.firstName ?? u.name ?? "—"}
-                    </div>
-                    <div className="text-muted-foreground text-xs">
-                      {u.email}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {u.organismeId
-                      ? "Rattaché à un autre organisme"
-                      : "Sans organisme"}
-                  </TableCell>
-                  <TableCell>
-                    <Button size="sm" onClick={() => handleAdd(u.id)}>
-                      Ajouter
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+    <div className="space-y-10">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Membres rattachés</h3>
+          <p className="text-muted-foreground text-sm">
+            Liste des utilisateurs ayant accès à cet organisme.
+          </p>
         </div>
-      )}
+        <InviteMemberDialog organismeId={organismeId} />
+      </div>
 
       <div className="rounded-md border">
         <Table>
@@ -247,6 +205,71 @@ export function MembresTab({
           </TableBody>
         </Table>
       </div>
+
+      {invitations.length > 0 && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-medium">Invitations en attente</h3>
+            <p className="text-muted-foreground text-sm">
+              Personnes invitées n&apos;ayant pas encore créé leur compte.
+            </p>
+          </div>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Rôle prévu</TableHead>
+                  <TableHead>Envoyé le</TableHead>
+                  <TableHead>Expire le</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invitations.map((inv) => (
+                  <TableRow key={inv.id}>
+                    <TableCell className="font-medium">{inv.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{inv.role}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {dayjs(inv.createdAt).format("DD/MM/YYYY")}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {dayjs(inv.expiresAt).format("DD/MM/YYYY")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground h-8 w-8 hover:text-blue-600"
+                          onClick={() => handleResendInvitation(inv.id)}
+                          disabled={resendingId === inv.id}
+                          title="Renvoyer l'email d'invitation"
+                        >
+                          <Mail
+                            className={`h-4 w-4 ${resendingId === inv.id ? "animate-pulse" : ""}`}
+                          />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-destructive h-8 w-8"
+                          onClick={() => handleCancelInvitation(inv.id)}
+                          title="Annuler l'invitation"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
 
       <AlertDialog
         open={!!memberToRemove}

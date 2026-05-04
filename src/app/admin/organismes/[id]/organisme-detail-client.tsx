@@ -10,15 +10,18 @@ import { DocumentsTab } from "./components/documents-tab";
 import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
 import { Organisme, OrganismeMember } from "@/types/organisme";
 import { updateOrganismeAction } from "@/app/actions/organisme.actions";
+import { InvitationInfo } from "./components/membres-tab";
 
 interface OrganismeDetailClientProps {
   organisme: Organisme;
   members: OrganismeMember[];
+  invitations: InvitationInfo[];
 }
 
 export function OrganismeDetailClient({
   organisme,
   members,
+  invitations,
 }: OrganismeDetailClientProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -116,7 +119,11 @@ export function OrganismeDetailClient({
       </TabsContent>
 
       <TabsContent value="membres" className="mt-6">
-        <MembresTab organismeId={organisme.id} members={members} />
+        <MembresTab
+          organismeId={organisme.id}
+          members={members}
+          invitations={invitations}
+        />
       </TabsContent>
 
       <TabsContent value="documents" className="mt-6">
