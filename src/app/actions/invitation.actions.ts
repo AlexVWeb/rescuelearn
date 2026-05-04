@@ -65,7 +65,7 @@ export async function inviteMemberAction(input: InviteMemberInput) {
         where: { id: existingUser.id },
         data: {
           organismeId,
-          roles: JSON.stringify(newRoles),
+          roles: newRoles,
         },
       });
 
@@ -217,7 +217,7 @@ export async function acceptInvitationAction(input: AcceptInvitationInput) {
         firstName,
         lastName,
         organismeId: invitation.organismeId,
-        roles: JSON.stringify([invitation.role]),
+        roles: [invitation.role],
         emailVerified: true,
       },
     });

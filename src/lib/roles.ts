@@ -15,5 +15,23 @@ export const userRoleSchema = z.enum([
 ]);
 
 export function hasRole(roles: unknown, role: UserRole): boolean {
-  return Array.isArray(roles) && (roles as string[]).includes(role);
+  if (!roles) return false;
+
+  let rolesArray: string[] = [];
+
+  if (Array.isArray(roles)) {
+    rolesArray = roles as string[];
+  } else if (typeof roles === "string") {
+    try {
+      const parsed = JSON.parse(roles);
+      if (Array.isArray(parsed)) {
+        rolesArray = parsed;
+      }
+    } catch {
+      // Not a JSON string, handle as a single role string if applicable
+      rolesArray = [roles];
+    }
+  }
+
+  return rolesArray.includes(role);
 }
