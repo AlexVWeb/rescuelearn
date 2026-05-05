@@ -1,8 +1,10 @@
 model Organisme {
   id              String  @id @default(uuid())
   name            String
-  agreementNumber String? // n° d'agrément
+  slug            String  @unique
   logo            String?
+  metadata        String?
+  agreementNumber String? // n° d'agrément
   inviteCode      String  @unique @default(cuid())
   siret           String?
   email           String?
@@ -39,6 +41,7 @@ model Organisme {
   smtpSecure   Boolean @default(true)
 
   users            User[]
+  members          Member[]
   invitations      Invitation[]
   trainingSessions TrainingSession[]
   trainees         Trainee[]

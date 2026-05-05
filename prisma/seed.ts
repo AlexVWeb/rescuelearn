@@ -25,10 +25,14 @@ function promptHidden(question: string): Promise<string> {
       output: process.stdout,
     });
 
-    // Remplace l'output pour masquer la saisie
-    (rl as any).stdoutMuted = true;
-    (rl as any)._writeToOutput = (str: string) => {
-      if ((rl as any).stdoutMuted && str.trim()) {
+    // Remplace l'output pour masquer la saisie (API interne non exposée dans les types)
+    const rlInternal = rl as unknown as {
+      stdoutMuted: boolean;
+      _writeToOutput: (str: string) => void;
+    };
+    rlInternal.stdoutMuted = true;
+    rlInternal._writeToOutput = (str: string) => {
+      if (rlInternal.stdoutMuted && str.trim()) {
         process.stdout.write("*");
       } else {
         process.stdout.write(str);
@@ -68,6 +72,7 @@ async function main() {
   const organisme = await prisma.organisme.create({
     data: {
       name: "Administration RescueLearn",
+      slug: "administration-rescuelearn",
       agreementNumber: "ADMIN-001",
       siret: "12345678910121",
     },

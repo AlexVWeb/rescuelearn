@@ -49,7 +49,7 @@ export default async function InvitationPage({
           <CardDescription className="text-base">
             Vous avez été invité à rejoindre <br />
             <span className="text-lg font-semibold text-blue-700">
-              {invitation.organisme.name}
+              {invitation.organization.name}
             </span>
           </CardDescription>
         </CardHeader>

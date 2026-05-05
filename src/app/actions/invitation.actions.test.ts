@@ -11,6 +11,19 @@ import {
   AcceptInvitationInput,
 } from "@/lib/schemas/invitation.schema";
 
+// --- Auth mock ---
+const mockAuthApi = vi.hoisted(() => ({
+  createInvitation: vi.fn(),
+}));
+
+vi.mock("@/lib/auth", () => ({
+  auth: { api: mockAuthApi },
+}));
+
+vi.mock("next/headers", () => ({
+  headers: vi.fn().mockResolvedValue(new Headers()),
+}));
+
 // --- Mocks ---
 const mockPrisma = vi.hoisted(() => ({
   user: {
@@ -20,10 +33,14 @@ const mockPrisma = vi.hoisted(() => ({
   },
   invitation: {
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     upsert: vi.fn(),
     delete: vi.fn(),
+  },
+  member: {
+    create: vi.fn(),
   },
   organisme: {
     findUnique: vi.fn(),
@@ -107,13 +124,13 @@ describe("Invitation Actions", () => {
       expect(mockPrisma.user.update).toHaveBeenCalled();
     });
 
-    it("should create invitation and send email if user does not exist", async () => {
+    it("should create invitation and send email if user does not exist (SUPER_ADMIN)", async () => {
       vi.mocked(getUserContext).mockResolvedValue({
         id: "u1",
         roles: ["SUPER_ADMIN"],
       } as unknown as Awaited<ReturnType<typeof getUserContext>>);
       mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.invitation.findUnique.mockResolvedValue(null);
+      mockPrisma.invitation.findFirst.mockResolvedValue(null);
       mockPrisma.organisme.findUnique.mockResolvedValue({
         id: validPayload.organismeId,
         name: "Org 1",
@@ -125,8 +142,57 @@ describe("Invitation Actions", () => {
 
       expect(result.success).toBe(true);
       expect(result.message).toContain("envoyée");
-      expect(mockPrisma.invitation.upsert).toHaveBeenCalled();
+      expect(mockPrisma.invitation.create).toHaveBeenCalled();
       expect(EmailService.sendInvitationEmail).toHaveBeenCalled();
+      expect(mockAuthApi.createInvitation).not.toHaveBeenCalled();
+    });
+
+    it("should use auth.api.createInvitation when caller is ADMIN_ORGANISME", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["ADMIN_ORGANISME"],
+        organismeId: validPayload.organismeId,
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.invitation.findFirst.mockResolvedValue(null);
+      mockAuthApi.createInvitation.mockResolvedValue({
+        id: "inv-1",
+        token: "tok-1",
+      });
+
+      const result = await inviteMemberAction(validPayload);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("envoyée");
+      // Le rôle système "FORMATEUR" est mappé vers "member" (rôle Better-Auth org)
+      expect(mockAuthApi.createInvitation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({
+            email: validPayload.email,
+            role: "member",
+            organizationId: validPayload.organismeId,
+          }),
+        })
+      );
+      expect(mockPrisma.invitation.create).not.toHaveBeenCalled();
+    });
+
+    it("should return error if auth.api.createInvitation throws (ADMIN_ORGANISME)", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["ADMIN_ORGANISME"],
+        organismeId: validPayload.organismeId,
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.invitation.findFirst.mockResolvedValue(null);
+      mockAuthApi.createInvitation.mockRejectedValue(
+        new Error("Permission denied")
+      );
+
+      const result = await inviteMemberAction(validPayload);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("erreur");
     });
   });
 
@@ -144,7 +210,8 @@ describe("Invitation Actions", () => {
         id: "inv-1",
         email: "new@example.com",
         role: "FORMATEUR",
-        organismeId: "org-1",
+        organizationId: "org-1",
+        status: "pending",
         expiresAt: new Date(Date.now() + 10000),
       });
       mockPrisma.user.findUnique.mockResolvedValue(null);
@@ -154,6 +221,7 @@ describe("Invitation Actions", () => {
 
       expect(result.success).toBe(true);
       expect(mockPrisma.user.create).toHaveBeenCalled();
+      expect(mockPrisma.member.create).toHaveBeenCalled();
       expect(mockPrisma.account.create).toHaveBeenCalled();
       expect(mockPrisma.invitation.delete).toHaveBeenCalled();
     });
@@ -170,8 +238,8 @@ describe("Invitation Actions", () => {
         id: "inv-1",
         email: "test@example.com",
         role: "FORMATEUR",
-        organismeId: "org-1",
-        organisme: { id: "org-1", name: "Org 1" },
+        organizationId: "org-1",
+        organization: { id: "org-1", name: "Org 1" },
       });
 
       const result = await resendInvitationAction("inv-1");
@@ -190,7 +258,7 @@ describe("Invitation Actions", () => {
 
       mockPrisma.invitation.findUnique.mockResolvedValue({
         id: "inv-1",
-        organismeId: "org-1",
+        organizationId: "org-1",
       });
 
       const result = await resendInvitationAction("inv-1");

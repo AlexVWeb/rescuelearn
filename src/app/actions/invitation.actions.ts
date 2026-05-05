@@ -1,18 +1,21 @@
 "use server";
 
+import { hashPassword } from "better-auth/crypto";
+import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
+
+import { auth } from "@/lib/auth";
+import { getUserContext } from "@/lib/context";
+import { EmailService } from "@/lib/email";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { UserRole, hasRole } from "@/lib/roles";
 import {
   inviteMemberSchema,
   acceptInvitationSchema,
   InviteMemberInput,
   AcceptInvitationInput,
 } from "@/lib/schemas/invitation.schema";
-import { getUserContext } from "@/lib/context";
-import { UserRole, hasRole } from "@/lib/roles";
-import { EmailService } from "@/lib/email";
-import { hashPassword } from "better-auth/crypto";
-import { revalidatePath } from "next/cache";
-import { logger } from "@/lib/logger";
 
 /**
  * Invite un nouveau membre ou rattache un utilisateur existant.
@@ -77,8 +80,8 @@ export async function inviteMemberAction(input: InviteMemberInput) {
     }
 
     // 2. Vérifier s'il y a déjà une invitation en cours
-    const existingInvitation = await prisma.invitation.findUnique({
-      where: { email_organismeId: { email, organismeId } },
+    const existingInvitation = await prisma.invitation.findFirst({
+      where: { email, organizationId: organismeId, status: "pending" },
     });
 
     if (existingInvitation && existingInvitation.expiresAt > new Date()) {
@@ -88,50 +91,64 @@ export async function inviteMemberAction(input: InviteMemberInput) {
       };
     }
 
-    // 3. Créer une invitation
-    const token = crypto.randomUUID();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    // 3. Créer l'invitation
+    if (isOrgAdmin) {
+      // ADMIN_ORGANISME : déléguer à Better-Auth (gère DB + email via sendInvitationEmail)
+      // Mapper nos rôles système vers les rôles Better-Auth org
+      const orgRole: "admin" | "member" =
+        role === UserRole.ADMIN_ORGANISME ? "admin" : "member";
 
-    await prisma.invitation.upsert({
-      where: { email_organismeId: { email, organismeId } },
-      create: {
-        email,
-        role,
-        organismeId,
-        token,
-        expiresAt,
-      },
-      update: {
-        role,
-        token,
-        expiresAt,
-        createdAt: new Date(),
-      },
-    });
+      try {
+        await auth.api.createInvitation({
+          headers: await headers(),
+          body: { email, role: orgRole, organizationId: organismeId },
+        });
+      } catch (err) {
+        logger.error("Better-Auth createInvitation failed:", err);
+        return {
+          success: false,
+          error: "Une erreur est survenue lors de l'invitation.",
+        };
+      }
+    } else {
+      // SUPER_ADMIN : chemin direct Prisma + email (pas forcément membre de l'org)
+      const token = crypto.randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
 
-    // 4. Envoyer l'email via le service configuré
-    const organisme = await prisma.organisme.findUnique({
-      where: { id: organismeId },
-    });
+      await prisma.invitation.create({
+        data: {
+          email,
+          role,
+          organizationId: organismeId,
+          token,
+          expiresAt,
+          inviterId: user.id,
+        },
+      });
 
-    if (!organisme) return { success: false, error: "Organisme introuvable" };
+      const organisme = await prisma.organisme.findUnique({
+        where: { id: organismeId },
+      });
 
-    const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invitation/${token}`;
+      if (!organisme) return { success: false, error: "Organisme introuvable" };
 
-    await EmailService.sendInvitationEmail({
-      to: email,
-      organismeName: organisme.name,
-      invitationUrl,
-      smtp: {
-        host: organisme.smtpHost,
-        port: organisme.smtpPort,
-        user: organisme.smtpUser,
-        pass: organisme.smtpPassword,
-        from: organisme.smtpFrom,
-        secure: organisme.smtpSecure,
-      },
-    });
+      const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invitation/${token}`;
+
+      await EmailService.sendInvitationEmail({
+        to: email,
+        organismeName: organisme.name,
+        invitationUrl,
+        smtp: {
+          host: organisme.smtpHost,
+          port: organisme.smtpPort,
+          user: organisme.smtpUser,
+          pass: organisme.smtpPassword,
+          from: organisme.smtpFrom,
+          secure: organisme.smtpSecure,
+        },
+      });
+    }
 
     revalidatePath(`/admin/organismes/${organismeId}`);
     return { success: true, message: "Invitation envoyée avec succès." };
@@ -152,13 +169,17 @@ export async function getInvitationAction(token: string) {
     const invitation = await prisma.invitation.findUnique({
       where: { token },
       include: {
-        organisme: {
+        organization: {
           select: { name: true },
         },
       },
     });
 
-    if (!invitation || invitation.expiresAt < new Date()) {
+    if (
+      !invitation ||
+      invitation.expiresAt < new Date() ||
+      invitation.status !== "pending"
+    ) {
       return { success: false, error: "Invitation invalide ou expirée." };
     }
 
@@ -216,9 +237,18 @@ export async function acceptInvitationAction(input: AcceptInvitationInput) {
         name: `${firstName} ${lastName}`,
         firstName,
         lastName,
-        organismeId: invitation.organismeId,
+        organismeId: invitation.organizationId,
         roles: [invitation.role],
         emailVerified: true,
+      },
+    });
+
+    // Création du membre de l'organisation
+    await prisma.member.create({
+      data: {
+        organizationId: invitation.organizationId,
+        userId: user.id,
+        role: "admin", // Par défaut admin si invité via ce flux pour l'instant, ou mapper invitation.role
       },
     });
 
@@ -260,7 +290,8 @@ export async function getPendingInvitationsAction(organismeId: string) {
   try {
     const invitations = await prisma.invitation.findMany({
       where: {
-        organismeId,
+        organizationId: organismeId,
+        status: "pending",
         expiresAt: { gt: new Date() },
       },
       orderBy: { createdAt: "desc" },
@@ -291,7 +322,7 @@ export async function cancelInvitationAction(invitationId: string) {
     const isSuperAdmin = hasRole(user.roles, UserRole.SUPER_ADMIN);
     const isOrgAdmin =
       hasRole(user.roles, UserRole.ADMIN_ORGANISME) &&
-      user.organismeId === invitation.organismeId;
+      user.organismeId === invitation.organizationId;
 
     if (!isSuperAdmin && !isOrgAdmin) {
       return { success: false, error: "Non autorisé" };
@@ -301,7 +332,7 @@ export async function cancelInvitationAction(invitationId: string) {
       where: { id: invitationId },
     });
 
-    revalidatePath(`/admin/organismes/${invitation.organismeId}`);
+    revalidatePath(`/admin/organismes/${invitation.organizationId}`);
     return { success: true };
   } catch (error) {
     logger.error("Failed to cancel invitation:", error);
@@ -318,7 +349,7 @@ export async function resendInvitationAction(invitationId: string) {
   try {
     const invitation = await prisma.invitation.findUnique({
       where: { id: invitationId },
-      include: { organisme: true },
+      include: { organization: true },
     });
 
     if (!invitation) return { success: false, error: "Invitation introuvable" };
@@ -326,7 +357,7 @@ export async function resendInvitationAction(invitationId: string) {
     const isSuperAdmin = hasRole(user.roles, UserRole.SUPER_ADMIN);
     const isOrgAdmin =
       hasRole(user.roles, UserRole.ADMIN_ORGANISME) &&
-      user.organismeId === invitation.organismeId;
+      user.organismeId === invitation.organizationId;
 
     if (!isSuperAdmin && !isOrgAdmin) {
       return { success: false, error: "Non autorisé" };
@@ -347,7 +378,7 @@ export async function resendInvitationAction(invitationId: string) {
     });
 
     // 2. Renvoyer l'email
-    const { organisme } = invitation;
+    const { organization: organisme } = invitation;
     const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invitation/${token}`;
 
     await EmailService.sendInvitationEmail({
@@ -364,7 +395,7 @@ export async function resendInvitationAction(invitationId: string) {
       },
     });
 
-    revalidatePath(`/admin/organismes/${invitation.organismeId}`);
+    revalidatePath(`/admin/organismes/${invitation.organizationId}`);
     return { success: true, message: "Invitation renvoyée avec succès." };
   } catch (error) {
     logger.error("Failed to resend invitation:", error);

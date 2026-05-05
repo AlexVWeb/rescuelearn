@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronsUpDown, LogOut, UserCog } from "lucide-react";
+import { ChevronsUpDown, LogOut, UserCog, Building2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -20,6 +21,17 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  getAvailableOrganizations,
+  switchOrganization,
+} from "@/app/actions/organisation-switch.actions";
+
+interface Organization {
+  id: string;
+  name: string;
+  logo: string | null;
+  role: string;
+}
 
 export function NavUser({
   user,
@@ -32,6 +44,41 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [currentOrganizationId, setCurrentOrganizationId] = useState<
+    string | null
+  >(null);
+  const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
+
+  useEffect(() => {
+    loadOrganizations();
+  }, []);
+
+  const loadOrganizations = async () => {
+    try {
+      const result = await getAvailableOrganizations();
+      if (result.success && result.data) {
+        setOrganizations(result.data);
+        setCurrentOrganizationId(result.currentOrganizationId);
+      }
+    } catch (err) {
+      // Silent error handling client-side (errors logged server-side)
+    } finally {
+      setIsLoadingOrgs(false);
+    }
+  };
+
+  const handleSwitchOrganization = async (organizationId: string) => {
+    try {
+      const result = await switchOrganization(organizationId);
+      if (result.success) {
+        setCurrentOrganizationId(organizationId);
+        router.refresh();
+      }
+    } catch (err) {
+      // Silent error handling (errors logged server-side)
+    }
+  };
 
   const handleLogout = async () => {
     await authClient.signOut({
@@ -87,6 +134,29 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {!isLoadingOrgs && organizations.length > 1 && (
+              <>
+                <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+                  Organisations
+                </DropdownMenuLabel>
+                {organizations.map((org) => (
+                  <DropdownMenuItem
+                    key={org.id}
+                    onClick={() => handleSwitchOrganization(org.id)}
+                    className="cursor-pointer"
+                  >
+                    <Building2 className="mr-2 h-4 w-4" />
+                    <span className="flex-1">{org.name}</span>
+                    {currentOrganizationId === org.id && (
+                      <span className="text-muted-foreground ml-2 text-xs">
+                        ✓
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem asChild>
               <Link href="/admin/profile">
                 <UserCog className="mr-2 h-4 w-4" />

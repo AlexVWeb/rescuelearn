@@ -19,8 +19,21 @@ model User {
   
   sessions      Session[]
   accounts      Account[]
+  members       Member[]
+  invitations   Invitation[]
   
   trainingSessions TrainingSession[]
+}
+
+model Member {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  role           String
+  createdAt      DateTime @default(now())
+  
+  organization   Organisme @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Session {
@@ -63,15 +76,18 @@ model Verification {
 }
 
 model Invitation {
-  id          String   @id @default(cuid())
-  email       String
-  role        String
-  organismeId String
-  organisme   Organisme @relation(fields: [organismeId], references: [id])
-  token       String   @unique
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String
+  role           String?
+  status         String   @default("pending")
+  token          String   @unique
+  expiresAt      DateTime
+  inviterId      String
+  createdAt      DateTime @default(now())
 
-  @@unique([email, organismeId])
+  user           User      @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  organization   Organisme @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([token])
 }

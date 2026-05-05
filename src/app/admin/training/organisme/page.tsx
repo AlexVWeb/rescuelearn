@@ -19,7 +19,10 @@ export default async function MonOrganismePage() {
   const invitationsResult = await getPendingInvitationsAction(organisme.id);
   const invitations =
     invitationsResult.success && invitationsResult.data
-      ? invitationsResult.data
+      ? invitationsResult.data.map((inv) => ({
+          ...inv,
+          role: inv.role || "FORMATEUR",
+        }))
       : [];
 
   return (

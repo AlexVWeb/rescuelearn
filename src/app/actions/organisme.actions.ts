@@ -78,6 +78,13 @@ export async function createOrganismeAction(data: OrganismeFormValues) {
     const organisme = await prisma.organisme.create({
       data: {
         name: data.name,
+        slug: data.name
+          .toLowerCase()
+          .trim()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, ""),
         siret: data.siret || null,
         agreementNumber: data.agreementNumber || null,
         email: data.email || null,
