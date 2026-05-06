@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -32,7 +32,7 @@ interface PageParams {
   id: string;
 }
 
-const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
+const SNVGameContent = ({ params }: { params: Promise<PageParams> }) => {
   const [scenario, setScenario] = useState<SNVScenario | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -469,4 +469,16 @@ const SNVGame = ({ params }: { params: Promise<PageParams> }) => {
   );
 };
 
-export default SNVGame;
+export default function SNVPage(props: { params: Promise<PageParams> }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-full w-full items-center justify-center bg-gray-50">
+          <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-yellow-600"></div>
+        </div>
+      }
+    >
+      <SNVGameContent {...props} />
+    </Suspense>
+  );
+}

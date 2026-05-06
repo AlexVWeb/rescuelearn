@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import {
   getSessionDetails,
   getAllTrainees,
@@ -35,16 +36,18 @@ export default async function SessionDetailsPage({
   }
 
   return (
-    <SessionTabsLayout
-      session={
-        session as TrainingSession & {
-          slots: Slot[];
-          inscriptions: Inscription[];
+    <Suspense fallback={<div>Chargement...</div>}>
+      <SessionTabsLayout
+        session={
+          session as TrainingSession & {
+            slots: Slot[];
+            inscriptions: Inscription[];
+          }
         }
-      }
-      allTrainees={allTrainees}
-      formateur={formateur}
-      organismeLogoBase64={organismeLogoBase64}
-    />
+        allTrainees={allTrainees}
+        formateur={formateur}
+        organismeLogoBase64={organismeLogoBase64}
+      />
+    </Suspense>
   );
 }

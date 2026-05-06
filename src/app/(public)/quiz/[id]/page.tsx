@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, use } from "react";
+import React, { useState, useEffect, useCallback, use, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Award,
@@ -33,7 +33,7 @@ interface PageProps {
   }>;
 }
 
-export default function QuizPage({ params }: PageProps) {
+function QuizPageContent({ params }: PageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -510,5 +510,19 @@ export default function QuizPage({ params }: PageProps) {
       <Analytics />
       <SpeedInsights />
     </div>
+  );
+}
+
+export default function QuizPage(props: PageProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gray-50">
+          <div className="h-32 w-32 animate-spin rounded-full border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      }
+    >
+      <QuizPageContent {...props} />
+    </Suspense>
   );
 }
