@@ -1,18 +1,16 @@
 model SNVScenario {
-  id          Int    @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   title       String
   level       String
-  description String @db.Text
-  
-  victimes SNVVictim[]
+  description String
+  victimes    SNVVictim[]
 }
 
 model SNVVictim {
-  id            Int    @id @default(autoincrement())
-  description   String @db.Text
+  id            Int         @id @default(autoincrement())
+  description   String
   correctAnswer Int
-  explanation   String @db.Text
-  
-  scenarioId Int
-  scenario   SNVScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  explanation   String
+  scenarioId    Int
+  scenario      SNVScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
 }

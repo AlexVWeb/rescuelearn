@@ -123,4 +123,43 @@ export const EmailService = {
 
     return this.send({ to, subject, text, html, smtp });
   },
+  /**
+   * Envoie un email de réinitialisation de mot de passe (Identité globale RescueLearn).
+   */
+  async sendPasswordResetEmail({
+    to,
+    resetUrl,
+  }: {
+    to: string;
+    resetUrl: string;
+  }) {
+    const subject = "Réinitialisation de votre mot de passe - RescueLearn";
+    const text = `Bonjour,\n\nVous avez demandé la réinitialisation de votre mot de passe RescueLearn.\n\nPour choisir un nouveau mot de passe, veuillez cliquer sur le lien suivant :\n${resetUrl}\n\nCe lien expirera dans 1 heure.\n\nSi vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email en toute sécurité.\n\nL'équipe RescueLearn`;
+
+    const html = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+        <div style="background-color: #2563eb; padding: 32px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.025em;">RescueLearn</h1>
+        </div>
+        <div style="padding: 40px 32px; background-color: #ffffff;">
+          <h2 style="margin-top: 0; color: #111827; font-size: 20px; font-weight: 600;">Réinitialisation de votre mot de passe</h2>
+          <p>Bonjour,</p>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe pour votre compte <strong>RescueLearn</strong>.</p>
+          <p>Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe :</p>
+          <div style="margin: 32px 0; text-align: center;">
+            <a href="${resetUrl}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">Réinitialiser mon mot de passe</a>
+          </div>
+          <p style="color: #4b5563; font-size: 14px;">Ce lien expirera dans 1 heure.</p>
+          <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #f3f4f6;">
+            <p style="color: #6b7280; font-size: 13px; margin: 0;">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email en toute sécurité. Votre mot de passe actuel restera inchangé.</p>
+          </div>
+        </div>
+        <div style="background-color: #f9fafb; padding: 24px 32px; text-align: center; border-top: 1px solid #f3f4f6;">
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} RescueLearn. La plateforme des formateurs en secourisme.</p>
+        </div>
+      </div>
+    `;
+
+    return this.send({ to, subject, text, html });
+  },
 };

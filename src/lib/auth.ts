@@ -22,10 +22,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
-      await EmailService.send({
+      await EmailService.sendPasswordResetEmail({
         to: user.email,
-        subject: "Réinitialisation de votre mot de passe - RescueLearn",
-        text: `Bonjour,\n\nCliquez sur ce lien pour réinitialiser votre mot de passe :\n${url}\n\nCe lien expirera dans 1 heure.\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez cet email.\n\nL'équipe RescueLearn`,
+        resetUrl: url,
       });
     },
   },

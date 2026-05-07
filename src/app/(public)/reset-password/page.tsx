@@ -2,13 +2,14 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
+import { Path } from "react-hook-form";
 
 import { authClient } from "@/lib/auth-client";
+import { logger } from "@/lib/logger";
 import {
   Form,
   FormControl,
@@ -24,7 +25,9 @@ const resetSchema = z
     password: z.string().min(8, {
       message: "Le mot de passe doit contenir au moins 8 caractères.",
     }),
-    confirm: z.string(),
+    confirm: z
+      .string()
+      .min(1, { message: "Veuillez confirmer le mot de passe." }),
   })
   .refine((data) => data.password === data.confirm, {
     message: "Les mots de passe ne correspondent pas.",
@@ -41,11 +44,20 @@ function ResetPasswordContent() {
   const [success, setSuccess] = useState(false);
 
   const form = useForm<z.infer<typeof resetSchema>>({
-    resolver: zodResolver(resetSchema),
     defaultValues: { password: "", confirm: "" },
   });
 
   async function onSubmit(values: z.infer<typeof resetSchema>) {
+    const result = resetSchema.safeParse(values);
+    if (!result.success) {
+      result.error.issues.forEach((issue) => {
+        form.setError(issue.path[0] as Path<z.infer<typeof resetSchema>>, {
+          message: issue.message,
+        });
+      });
+      return;
+    }
+
     if (!token) {
       setError("Lien invalide ou expiré. Veuillez faire une nouvelle demande.");
       return;
@@ -62,6 +74,7 @@ function ResetPasswordContent() {
           setLoading(false);
         },
         onError: (ctx) => {
+          logger.error("Erreur réinitialisation mot de passe", ctx.error);
           setError(ctx.error.message);
           setLoading(false);
         },
