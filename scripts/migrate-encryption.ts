@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { PrismaClient } from "@prisma/client";
 import { encrypt, hash } from "../src/lib/encryption";
 import { getFile, uploadFile } from "../src/lib/r2";
@@ -20,17 +21,17 @@ const TRAINEE_FIELDS = [
 const EXTERNAL_FIELDS = ["certificateNumber", "name"];
 
 async function main() {
-  console.log("Début de la migration de chiffrement...");
+  logger.info("Début de la migration de chiffrement...");
 
   // 1. Migration des stagiaires
   const trainees = await prisma.trainee.findMany();
-  console.log(`${trainees.length} stagiaires à traiter.`);
+  logger.info(`${trainees.length} stagiaires à traiter.`);
 
   for (const trainee of trainees) {
-    const updateData: any = {};
+    const updateData: Record<string, string> = {};
 
     for (const field of TRAINEE_FIELDS) {
-      const val = (trainee as any)[field];
+      const val = (trainee as Record<string, unknown>)[field];
       if (val && typeof val === "string" && !val.includes(":")) {
         updateData[field] = encrypt(val);
       }
@@ -38,7 +39,7 @@ async function main() {
 
     // Gestion de la date de naissance (anciennement Date, maintenant String chiffré)
     // Note: Si prisma generate a déjà été lancé, le type peut être différent.
-    const dob = (trainee as any).dateOfBirth;
+    const dob = (trainee as Record<string, unknown>).dateOfBirth;
     if (
       dob &&
       (dob instanceof Date || (typeof dob === "string" && !dob.includes(":")))
@@ -63,19 +64,19 @@ async function main() {
         where: { id: trainee.id },
         data: updateData,
       });
-      console.log(`Stagiaire ${trainee.id} mis à jour.`);
+      logger.info(`Stagiaire ${trainee.id} mis à jour.`);
     }
   }
 
   // 2. Migration des formations externes
   const externals = await prisma.externalTraining.findMany();
-  console.log(`${externals.length} formations externes à traiter.`);
+  logger.info(`${externals.length} formations externes à traiter.`);
 
   for (const ext of externals) {
-    const updateData: any = {};
+    const updateData: Record<string, string> = {};
 
     for (const field of EXTERNAL_FIELDS) {
-      const val = (ext as any)[field];
+      const val = (ext as Record<string, unknown>)[field];
       if (val && typeof val === "string" && !val.includes(":")) {
         updateData[field] = encrypt(val);
       }
@@ -86,7 +87,7 @@ async function main() {
         where: { id: ext.id },
         data: updateData,
       });
-      console.log(`Formation externe ${ext.id} mise à jour.`);
+      logger.info(`Formation externe ${ext.id} mise à jour.`);
     }
 
     // 3. Migration des fichiers R2
@@ -102,19 +103,19 @@ async function main() {
           contentType || "application/octet-stream",
           true
         );
-        console.log(`Fichier R2 ${ext.fileKey} chiffré.`);
+        logger.info(`Fichier R2 ${ext.fileKey} chiffré.`);
       } catch (e) {
-        console.error(`Erreur chiffrement fichier ${ext.fileKey}:`, e);
+        logger.error(`Erreur chiffrement fichier ${ext.fileKey}:`, e);
       }
     }
   }
 
-  console.log("Migration terminée avec succès.");
+  logger.info("Migration terminée avec succès.");
 }
 
 main()
   .catch((e) => {
-    console.error("Erreur pendant la migration:", e);
+    logger.error("Erreur pendant la migration:", e);
     process.exit(1);
   })
   .finally(async () => {

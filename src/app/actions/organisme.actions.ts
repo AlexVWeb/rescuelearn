@@ -1,4 +1,5 @@
 "use server";
+import { logger } from "@/lib/logger";
 
 import { prisma, withOrganisme } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -47,7 +48,7 @@ export async function getOrganismesAction(
       },
     };
   } catch (error) {
-    console.error("Failed to fetch organismes:", error);
+    logger.error("Failed to fetch organismes:", error);
     return { success: false, error: "Failed to fetch organismes" };
   }
 }
@@ -63,7 +64,7 @@ export async function getOrganismeByIdAction(id: string) {
     if (!organisme) return { success: false, error: "Organisme introuvable" };
     return { success: true, data: organisme as Organisme };
   } catch (error) {
-    console.error("Failed to fetch organisme:", error);
+    logger.error("Failed to fetch organisme:", error);
     return { success: false, error: "Failed to fetch organisme" };
   }
 }
@@ -114,7 +115,7 @@ export async function createOrganismeAction(data: OrganismeFormValues) {
     revalidatePath("/admin/organismes");
     return { success: true, data: organisme as Organisme };
   } catch (error) {
-    console.error("Failed to create organisme:", error);
+    logger.error("Failed to create organisme:", error);
     return { success: false, error: "Failed to create organisme" };
   }
 }
@@ -143,7 +144,7 @@ export async function getMyOrganismeAction() {
           error: "Aucun organisme associé à votre compte",
         };
     }
-    console.error("Failed to fetch my organisme:", error);
+    logger.error("Failed to fetch my organisme:", error);
     return { success: false, error: "Failed to fetch organisme" };
   }
 }
@@ -196,7 +197,7 @@ export async function updateOrganismeAction(
     revalidatePath(`/admin/organismes/${id}`);
     return { success: true };
   } catch (error) {
-    console.error("Failed to update organisme:", error);
+    logger.error("Failed to update organisme:", error);
     return { success: false, error: "Failed to update organisme" };
   }
 }
@@ -216,7 +217,7 @@ export async function deleteOrganismeAction(id: string) {
     revalidatePath("/admin/organismes");
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete organisme:", error);
+    logger.error("Failed to delete organisme:", error);
     return { success: false, error: "Failed to delete organisme" };
   }
 }

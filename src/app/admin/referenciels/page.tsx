@@ -1,4 +1,7 @@
-import { getReferencielsAction } from "@/app/actions/referenciel-actions";
+import {
+  getReferencielsAction,
+  Referenciel,
+} from "@/app/actions/referenciel-actions";
 import ClientPage from "./client-page";
 
 export default async function ReferencielsPage(props: {
@@ -9,7 +12,8 @@ export default async function ReferencielsPage(props: {
   const search = searchParams?.search || "";
 
   const result = await getReferencielsAction(page, 100, search);
-  const referenciels: any[] = result.success && result.data ? result.data : [];
+  const referenciels: Referenciel[] =
+    result.success && result.data ? result.data : [];
 
   return <ClientPage initialReferenciels={referenciels} />;
 }

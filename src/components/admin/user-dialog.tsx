@@ -78,7 +78,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
   const [error, setError] = useState("");
 
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema) as any,
+    resolver: zodResolver(userSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -135,7 +135,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
       } else {
         setError(result.error || "Something went wrong");
       }
-    } catch (e) {
+    } catch {
       setError("An unexpected error occurred");
     } finally {
       setLoading(false);

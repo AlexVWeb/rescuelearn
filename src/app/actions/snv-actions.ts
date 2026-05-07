@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { logger } from "@/lib/logger";
 
 // --- Types ---
 // Matches Prisma model
@@ -69,7 +70,7 @@ export async function getScenariosAction(
       },
     };
   } catch (error) {
-    console.error("Failed to fetch scenarios:", error);
+    logger.error("Failed to fetch scenarios:", error);
     return { success: false, error: "Failed to fetch scenarios" };
   }
 }
@@ -93,7 +94,7 @@ export async function createScenarioAction(data: {
     revalidatePath("/admin/snv/scenarios");
     return { success: true };
   } catch (error) {
-    console.error("Failed to create scenario:", error);
+    logger.error("Failed to create scenario:", error);
     return { success: false, error: "Failed to create scenario" };
   }
 }
@@ -117,7 +118,7 @@ export async function updateScenarioAction(
     revalidatePath("/admin/snv/scenarios");
     return { success: true };
   } catch (error) {
-    console.error("Failed to update scenario:", error);
+    logger.error("Failed to update scenario:", error);
     return { success: false, error: "Failed to update scenario" };
   }
 }
@@ -133,7 +134,7 @@ export async function deleteScenarioAction(id: number) {
     revalidatePath("/admin/snv/scenarios");
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete scenario:", error);
+    logger.error("Failed to delete scenario:", error);
     return { success: false, error: "Failed to delete scenario" };
   }
 }
@@ -182,7 +183,7 @@ export async function getVictimsAction(
       },
     };
   } catch (error) {
-    console.error("Failed to fetch victims:", error);
+    logger.error("Failed to fetch victims:", error);
     return { success: false, error: "Failed to fetch victims" };
   }
 }
@@ -208,7 +209,7 @@ export async function createVictimAction(data: {
     revalidatePath("/admin/snv/victims");
     return { success: true };
   } catch (error) {
-    console.error("Failed to create victim:", error);
+    logger.error("Failed to create victim:", error);
     return { success: false, error: "Failed to create victim" };
   }
 }
@@ -238,7 +239,7 @@ export async function updateVictimAction(
     revalidatePath("/admin/snv/victims");
     return { success: true };
   } catch (error) {
-    console.error("Failed to update victim:", error);
+    logger.error("Failed to update victim:", error);
     return { success: false, error: "Failed to update victim" };
   }
 }
@@ -254,7 +255,7 @@ export async function deleteVictimAction(id: number) {
     revalidatePath("/admin/snv/victims");
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete victim:", error);
+    logger.error("Failed to delete victim:", error);
     return { success: false, error: "Failed to delete victim" };
   }
 }
@@ -270,7 +271,7 @@ export async function getAllScenariosSimpleAction() {
       orderBy: { title: "asc" },
     });
   } catch (error) {
-    console.error("Failed to fetch all scenarios:", error);
+    logger.error("Failed to fetch all scenarios:", error);
     return [];
   }
 }

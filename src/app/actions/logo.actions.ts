@@ -1,4 +1,5 @@
 "use server";
+import { logger } from "@/lib/logger";
 
 import { prisma, withOrganisme } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -75,7 +76,7 @@ export async function uploadOrganismeLogoAction(
     if (error instanceof Error && error.message === "Non autorisé") {
       return { success: false, error: "Unauthorized" };
     }
-    console.error("Failed to upload logo:", error);
+    logger.error("Failed to upload logo:", error);
     return { success: false, error: "Erreur lors de l'upload" };
   }
 }
@@ -114,7 +115,7 @@ export async function deleteOrganismeLogoAction(id: string) {
     if (error instanceof Error && error.message === "Non autorisé") {
       return { success: false, error: "Unauthorized" };
     }
-    console.error("Failed to delete logo:", error);
+    logger.error("Failed to delete logo:", error);
     return { success: false, error: "Erreur lors de la suppression" };
   }
 }
@@ -141,7 +142,7 @@ export async function getOrganismeLogoUrlAction(
     if (error instanceof Error && error.message === "Non autorisé") {
       return { success: false, error: "Unauthorized" };
     }
-    console.error("Failed to get logo URL:", error);
+    logger.error("Failed to get logo URL:", error);
     return { success: false, error: "Erreur lors de la récupération du logo" };
   }
 }

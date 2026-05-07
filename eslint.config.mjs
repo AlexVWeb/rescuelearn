@@ -50,6 +50,19 @@ export default [
       "@typescript-eslint/no-explicit-any": "error",
       "react/no-unescaped-entities": "off",
       "react-hooks/purity": "off",
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.object.name='console'][callee.property.name=/^(log|error|warn)$/]",
+          message: "Direct use of console.log, console.warn, or console.error is forbidden. Use the centralized logger from '@/lib/logger' instead to ensure security and PII sanitization.",
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/lib/logger.ts"],
+    rules: {
+      "no-restricted-syntax": "off",
     },
   },
   {

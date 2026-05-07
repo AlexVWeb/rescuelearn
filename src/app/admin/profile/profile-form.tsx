@@ -61,7 +61,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
   const [profileSuccess, setProfileSuccess] = useState(false);
 
   const profileForm = useForm<ProfileValues>({
-    resolver: zodResolver(profileSchema) as any,
+    resolver: zodResolver(profileSchema),
     defaultValues: {
       firstName: user.firstName ?? "",
       lastName: user.lastName ?? "",
@@ -86,7 +86,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const passwordForm = useForm<PasswordValues>({
-    resolver: zodResolver(passwordSchema) as any,
+    resolver: zodResolver(passwordSchema),
     defaultValues: {
       currentPassword: "",
       newPassword: "",

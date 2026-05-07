@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -29,7 +30,7 @@ export async function getAdminStatsAction() {
       },
     };
   } catch (error) {
-    console.error("Erreur lors de la récupération des statistiques :", error);
+    logger.error("Erreur lors de la récupération des statistiques :", error);
     return { success: false, error: "Erreur serveur" };
   }
 }

@@ -10,11 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
 import { SessionChart, PresenceChart } from "./_components/charts";
 import {
   Calendar,
@@ -187,7 +182,7 @@ export default async function DashboardPage() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {upcomingSessions.map((session: any) => (
+            {upcomingSessions.map((session) => (
               <Card
                 key={session.id}
                 className="group hover:ring-primary/20 relative overflow-hidden transition-all hover:shadow-lg hover:ring-1"

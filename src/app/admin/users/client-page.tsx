@@ -18,7 +18,7 @@ import { Plus } from "lucide-react";
 import { User, deleteUserAction } from "@/app/actions/user-actions";
 import { useRouter } from "next/navigation";
 interface ClientPageProps {
-  initialUsers: any[]; // Using any temporarily to avoid strict type mismatch if inferred types differ
+  initialUsers: User[];
 }
 
 export default function ClientPage({ initialUsers }: ClientPageProps) {
@@ -28,8 +28,7 @@ export default function ClientPage({ initialUsers }: ClientPageProps) {
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const router = useRouter();
 
-  // Safe cast
-  const users = initialUsers as User[];
+  const users = initialUsers;
 
   const handleEdit = (user: User) => {
     setSelectedUser(user);

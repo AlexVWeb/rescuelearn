@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import axios from "axios";
 import { ApiQuiz, QuizComponentData } from "../interfaces/Quiz";
 
@@ -35,7 +36,7 @@ export const quizService = {
       );
       return transformApiQuizToComponentData(response.data);
     } catch (error) {
-      console.error("Erreur lors de la récupération du quiz:", error);
+      logger.error("Erreur lors de la récupération du quiz:", error);
       throw error;
     }
   },

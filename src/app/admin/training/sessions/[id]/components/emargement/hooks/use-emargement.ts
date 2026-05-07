@@ -1,4 +1,5 @@
 "use client";
+import { logger } from "@/lib/logger";
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -88,7 +89,7 @@ export function useEmargement({
       await updateEmargementStatus(inscriptionId, slotId, status);
       router.refresh();
     } catch (error) {
-      console.error(error);
+      logger.error(error);
     } finally {
       setLoading(false);
     }
@@ -114,7 +115,7 @@ export function useEmargement({
       await bulkUpdateEmargementStatus(slotId, status);
       router.refresh();
     } catch (error) {
-      console.error(error);
+      logger.error(error);
     } finally {
       setLoading(false);
     }
@@ -126,7 +127,7 @@ export function useEmargement({
       await generateSlotPin(slotId);
       router.refresh();
     } catch (error) {
-      console.error(error);
+      logger.error(error);
     } finally {
       setLoading(false);
     }
@@ -145,7 +146,7 @@ export function useEmargement({
       await generateSessionPin(sessionId);
       router.refresh();
     } catch (error) {
-      console.error(error);
+      logger.error(error);
     } finally {
       setLoading(false);
     }

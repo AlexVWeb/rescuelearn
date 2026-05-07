@@ -82,7 +82,7 @@ export async function linkUserToOrganisme(inviteCode: string) {
 
     return { success: true };
   } catch (error) {
-    console.error(
+    logger.error(
       "Erreur lors de la liaison de l'utilisateur à l'organisme:",
       error
     );

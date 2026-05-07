@@ -1,4 +1,5 @@
 "use client";
+import { logger } from "@/lib/logger";
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,7 +22,7 @@ export function LearningBar() {
         setError(null);
         let fetchedCards = await learningCardService.getAllCards();
         fetchedCards = shuffleArray(fetchedCards);
-        console.log(fetchedCards);
+        logger.info(fetchedCards);
         if (Array.isArray(fetchedCards)) {
           setCards(fetchedCards);
         } else {

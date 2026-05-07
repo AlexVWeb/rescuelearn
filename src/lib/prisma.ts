@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
@@ -93,7 +94,7 @@ export function decryptData<T>(data: T, fields: string[]): T {
   return res as unknown as T;
 }
 
-console.log(
+logger.info(
   "🔌 Initialisation Prisma avec DATABASE_URL:",
   process.env.DATABASE_URL?.replace(/:[^:@]+@/, ":****@")
 );

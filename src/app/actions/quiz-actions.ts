@@ -1,6 +1,8 @@
 "use server";
+import { logger } from "@/lib/logger";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -75,7 +77,7 @@ export async function getQuizzesAction(
       },
     };
   } catch (error) {
-    console.error("Failed to fetch quizzes:", error);
+    logger.error("Failed to fetch quizzes:", error);
     return { success: false, error: "Failed to fetch quizzes" };
   }
 }
@@ -101,7 +103,7 @@ export async function createQuizAction(data: {
     revalidatePath("/admin/quiz/quizzes");
     return { success: true };
   } catch (error) {
-    console.error("Failed to create quiz:", error);
+    logger.error("Failed to create quiz:", error);
     return { success: false, error: "Failed to create quiz" };
   }
 }
@@ -131,7 +133,7 @@ export async function updateQuizAction(
     revalidatePath("/admin/quiz/quizzes");
     return { success: true };
   } catch (error) {
-    console.error("Failed to update quiz:", error);
+    logger.error("Failed to update quiz:", error);
     return { success: false, error: "Failed to update quiz" };
   }
 }
@@ -147,7 +149,7 @@ export async function deleteQuizAction(id: number) {
     revalidatePath("/admin/quiz/quizzes");
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete quiz:", error);
+    logger.error("Failed to delete quiz:", error);
     return { success: false, error: "Failed to delete quiz" };
   }
 }
@@ -172,7 +174,7 @@ const importSchema = z.object({
     .min(1),
 });
 
-export async function importQuizAction(jsonData: any) {
+export async function importQuizAction(jsonData: unknown) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return { success: false, error: "Unauthorized" };
 
@@ -184,7 +186,7 @@ export async function importQuizAction(jsonData: any) {
   const data = parsed.data;
 
   try {
-    await prisma.$transaction(async (tx: any) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Handle Level
       let levelId: number | null = null;
       if (data.level) {
@@ -218,7 +220,7 @@ export async function importQuizAction(jsonData: any) {
         const letters = ["A", "B", "C", "D"];
         const correctLetter = letters[q.correctAnswer] || "A";
 
-        const question = await tx.question.create({
+        await tx.question.create({
           data: {
             text: q.question,
             explanation: q.explanation,
@@ -235,7 +237,7 @@ export async function importQuizAction(jsonData: any) {
     revalidatePath("/admin/quiz/quizzes");
     return { success: true };
   } catch (error) {
-    console.error("Failed to import quiz:", error);
+    logger.error("Failed to import quiz:", error);
     return { success: false, error: "Failed to import quiz" };
   }
 }
@@ -287,7 +289,7 @@ export async function getQuestionsAction(
       },
     };
   } catch (error) {
-    console.error("Failed to fetch questions:", error);
+    logger.error("Failed to fetch questions:", error);
     return { success: false, error: "Failed to fetch questions" };
   }
 }
@@ -317,7 +319,7 @@ export async function createQuestionAction(data: {
     revalidatePath("/admin/quiz/questions");
     return { success: true };
   } catch (error) {
-    console.error("Failed to create question:", error);
+    logger.error("Failed to create question:", error);
     return { success: false, error: "Failed to create question" };
   }
 }
@@ -337,7 +339,7 @@ export async function updateQuestionAction(
 
   try {
     // Transaction to update question and replace options
-    await prisma.$transaction(async (tx: any) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.question.update({
         where: { id },
         data: {
@@ -365,7 +367,7 @@ export async function updateQuestionAction(
     revalidatePath("/admin/quiz/questions");
     return { success: true };
   } catch (error) {
-    console.error("Failed to update question:", error);
+    logger.error("Failed to update question:", error);
     return { success: false, error: "Failed to update question" };
   }
 }
@@ -381,7 +383,7 @@ export async function deleteQuestionAction(id: number) {
     revalidatePath("/admin/quiz/questions");
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete question:", error);
+    logger.error("Failed to delete question:", error);
     return { success: false, error: "Failed to delete question" };
   }
 }
@@ -396,7 +398,7 @@ export async function getAllQuizzesSimpleAction() {
       orderBy: { title: "asc" },
     });
   } catch (error) {
-    console.error("Failed to fetch all quizzes:", error);
+    logger.error("Failed to fetch all quizzes:", error);
     return [];
   }
 }

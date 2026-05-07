@@ -1,10 +1,11 @@
 "use server";
+import { logger } from "@/lib/logger";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { randomUUID } from "crypto";
 
 export type Referenciel = {
   id: number;
@@ -48,7 +49,7 @@ export async function getReferencielsAction(
       },
     };
   } catch (error) {
-    console.error("Failed to fetch referenciels:", error);
+    logger.error("Failed to fetch referenciels:", error);
     return { success: false, error: "Failed to fetch referenciels" };
   }
 }
@@ -61,7 +62,7 @@ export async function deleteReferencielAction(id: number) {
     revalidatePath("/admin/referenciels");
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete referenciel:", error);
+    logger.error("Failed to delete referenciel:", error);
     return { success: false, error: "Failed to delete referenciel" };
   }
 }
@@ -123,7 +124,7 @@ export async function createReferencielAction(formData: FormData) {
     revalidatePath("/admin/referenciels");
     return { success: true };
   } catch (error) {
-    console.error("Failed to create referenciel:", error);
+    logger.error("Failed to create referenciel:", error);
     return { success: false, error: "Failed to create referenciel" };
   }
 }
@@ -134,7 +135,7 @@ export async function updateReferencielAction(id: number, formData: FormData) {
     const yearEdition = parseInt(formData.get("yearEdition") as string);
     const file = formData.get("file") as File | null;
 
-    const data: any = {
+    const data: Prisma.ReferencielUpdateInput = {
       title,
       yearEdition,
     };
@@ -152,7 +153,7 @@ export async function updateReferencielAction(id: number, formData: FormData) {
     revalidatePath("/admin/referenciels");
     return { success: true };
   } catch (error) {
-    console.error("Failed to update referenciel:", error);
+    logger.error("Failed to update referenciel:", error);
     return { success: false, error: "Failed to update referenciel" };
   }
 }

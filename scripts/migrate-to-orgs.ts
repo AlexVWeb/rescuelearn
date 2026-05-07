@@ -1,7 +1,8 @@
+import { logger } from "@/lib/logger";
 import { prisma } from "../src/lib/prisma";
 
 async function migrate() {
-  console.log("🚀 Starting migration to organizations...");
+  logger.info("🚀 Starting migration to organizations...");
 
   // 1. Update Organismes with slugs
   const organismes = await prisma.organisme.findMany();
@@ -29,7 +30,7 @@ async function migrate() {
         where: { id: org.id },
         data: { slug: uniqueSlug },
       });
-      console.log(`✅ Updated slug for ${org.name}: ${uniqueSlug}`);
+      logger.info(`✅ Updated slug for ${org.name}: ${uniqueSlug}`);
     }
   }
 
@@ -68,7 +69,7 @@ async function migrate() {
             }
           }
         } catch (e) {
-          console.error(`Error parsing roles for ${user.email}:`, e);
+          logger.error(`Error parsing roles for ${user.email}:`, e);
         }
 
         await prisma.member.create({
@@ -78,19 +79,19 @@ async function migrate() {
             role,
           },
         });
-        console.log(
+        logger.info(
           `✅ Created membership for ${user.email} in org ${user.organismeId} as ${role}`
         );
       }
     }
   }
 
-  console.log("🏁 Migration finished!");
+  logger.info("🏁 Migration finished!");
 }
 
 migrate()
   .catch((e) => {
-    console.error(e);
+    logger.error(e);
     process.exit(1);
   })
   .finally(async () => {

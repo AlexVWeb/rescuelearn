@@ -1,4 +1,5 @@
 "use server";
+import { logger } from "@/lib/logger";
 
 import { requireOrganisme, getTenantPrisma } from "@/lib/context";
 import { withOrganisme } from "@/lib/prisma";
@@ -220,7 +221,7 @@ export async function importAndEnrollTrainees(
         enrolled++;
       }
     } catch (e) {
-      console.error("Import error:", e);
+      logger.error("Import error:", e);
       errors.push(`${traineeData.firstName} ${traineeData.lastName}`);
     }
   }
@@ -264,7 +265,7 @@ export async function importTrainees(data: TraineeInput[]): Promise<{
         skipped++;
       }
     } catch (e) {
-      console.error("Import error:", e);
+      logger.error("Import error:", e);
       errors.push(`${traineeData.firstName} ${traineeData.lastName}`);
     }
   }

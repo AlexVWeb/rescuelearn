@@ -1,4 +1,5 @@
 "use client";
+import { logger } from "@/lib/logger";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,7 @@ export function InscriptionsTab({
       setSelectedTrainee("");
       router.refresh();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     } finally {
       setLoading(false);
     }
@@ -97,7 +98,7 @@ export function InscriptionsTab({
       await addTraineeToSession(sessionId, traineeId);
       router.refresh();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     } finally {
       setLoading(false);
     }
@@ -110,7 +111,7 @@ export function InscriptionsTab({
       await removeTraineeFromSession(id);
       router.refresh();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     } finally {
       setLoading(false);
     }
@@ -122,7 +123,7 @@ export function InscriptionsTab({
       await updateInscriptionStatus(id, status);
       router.refresh();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     } finally {
       setLoading(false);
     }

@@ -70,16 +70,28 @@ function formatError(error: unknown): unknown {
  * Centralized logger that prevents sensitive data leakage (CWE-532).
  */
 export const logger = {
-  info: (message: string, data?: unknown) => {
-    console.log(`[INFO] ${message}`, data ? sanitize(data) : "");
+  info: (message: unknown, data?: unknown) => {
+    if (typeof message === "string") {
+      console.log(`[INFO] ${message}`, data ? sanitize(data) : "");
+    } else {
+      console.log(`[INFO]`, sanitize(message));
+    }
   },
 
-  warn: (message: string, data?: unknown) => {
-    console.warn(`[WARN] ${message}`, data ? sanitize(data) : "");
+  warn: (message: unknown, data?: unknown) => {
+    if (typeof message === "string") {
+      console.warn(`[WARN] ${message}`, data ? sanitize(data) : "");
+    } else {
+      console.warn(`[WARN]`, sanitize(message));
+    }
   },
 
-  error: (message: string, error?: unknown) => {
-    const formattedError = error ? formatError(error) : "";
-    console.error(`[ERROR] ${message}`, sanitize(formattedError));
+  error: (message: unknown, error?: unknown) => {
+    if (typeof message === "string") {
+      const formattedError = error ? formatError(error) : "";
+      console.error(`[ERROR] ${message}`, sanitize(formattedError));
+    } else {
+      console.error(`[ERROR]`, sanitize(formatError(message)));
+    }
   },
 };

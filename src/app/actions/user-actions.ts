@@ -1,4 +1,5 @@
 "use server";
+import { logger } from "@/lib/logger";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -45,9 +46,16 @@ export async function getUsersAction(
       prisma.user.count({ where }),
     ]);
 
+    const mappedUsers: User[] = users.map((u) => ({
+      ...u,
+      roles: (typeof u.roles === "string"
+        ? JSON.parse(u.roles)
+        : u.roles) as UserRole[],
+    }));
+
     return {
       success: true,
-      data: users,
+      data: mappedUsers,
       meta: {
         total,
         page,
@@ -56,7 +64,7 @@ export async function getUsersAction(
       },
     };
   } catch (error) {
-    console.error("Failed to fetch users:", error);
+    logger.error("Failed to fetch users:", error);
     return { success: false, error: "Failed to fetch users" };
   }
 }
@@ -93,7 +101,7 @@ export async function createUserAction(data: {
     revalidatePath("/admin/users");
     return { success: true };
   } catch (error) {
-    console.error("Failed to create user:", error);
+    logger.error("Failed to create user:", error);
     return { success: false, error: "Failed to create user" };
   }
 }
@@ -111,7 +119,7 @@ export async function deleteUserAction(userId: string) {
     revalidatePath("/admin/users");
     return { success: true };
   } catch (error) {
-    console.error("Failed to delete user:", error);
+    logger.error("Failed to delete user:", error);
     return { success: false, error: "Failed to delete user" };
   }
 }
@@ -136,7 +144,7 @@ export async function updateUserAction(
     revalidatePath("/admin/users");
     return { success: true };
   } catch (error) {
-    console.error("Failed to update user:", error);
+    logger.error("Failed to update user:", error);
     return { success: false, error: "Failed to update user" };
   }
 }

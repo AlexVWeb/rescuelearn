@@ -15,13 +15,13 @@ export async function getTraineesByPin(pin: string) {
 
   if (emargements.length === 0) throw new Error("Code PIN invalide");
 
-  return emargements.map((e: any) => ({
+  return emargements.map((e) => ({
     emargementId: e.id,
     slotLabel: e.slot.label,
     sessionTitle: e.slot.trainingSession.title,
     traineeId: e.inscription.trainee.id,
-    firstName: e.inscription.trainee.firstName,
-    lastName: e.inscription.trainee.lastName,
+    firstName: e.inscription.trainee.firstName || "",
+    lastName: e.inscription.trainee.lastName || "",
     status: e.status,
   }));
 }

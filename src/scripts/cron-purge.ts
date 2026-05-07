@@ -1,8 +1,8 @@
+import { logger } from "@/lib/logger";
 import { RetentionService } from "../lib/retention-service";
-import { logger } from "../lib/logger";
 
 async function main() {
-  console.log("🚀 Démarrage de la maintenance des données...");
+  logger.info("🚀 Démarrage de la maintenance des données...");
 
   try {
     // 1. Alertes

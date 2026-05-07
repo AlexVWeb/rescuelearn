@@ -1,4 +1,4 @@
-import { getVictimsAction } from "@/app/actions/snv-actions";
+import { getVictimsAction, SNVVictim } from "@/app/actions/snv-actions";
 import VictimsClientPage from "./client-page";
 
 export default async function VictimsPage(props: {
@@ -11,5 +11,5 @@ export default async function VictimsPage(props: {
   const result = await getVictimsAction(page, 100, search);
   const victims = result.success ? result.data : [];
 
-  return <VictimsClientPage initialVictims={victims as any} />;
+  return <VictimsClientPage initialVictims={victims as SNVVictim[]} />;
 }

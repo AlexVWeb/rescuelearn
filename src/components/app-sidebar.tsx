@@ -16,6 +16,7 @@ import {
 import { NavMain } from "@/components/nav-main";
 import { UserRole } from "@/lib/roles";
 import { NavUser } from "@/components/nav-user";
+import { User } from "@/app/actions/user-actions";
 import {
   Sidebar,
   SidebarContent,
@@ -166,7 +167,7 @@ const getNavData = (userRoles: string[]) => {
 export function AppSidebar({
   user,
   ...props
-}: React.ComponentProps<typeof Sidebar> & { user: any }) {
+}: React.ComponentProps<typeof Sidebar> & { user: User }) {
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
   const data = getNavData(userRoles);
 

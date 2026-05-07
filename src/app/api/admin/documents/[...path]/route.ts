@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrganisme } from "@/lib/context";
 import { getFile } from "@/lib/r2";
@@ -21,7 +22,7 @@ export async function GET(
     const isSuperAdmin = hasRole(user.roles, UserRole.SUPER_ADMIN);
 
     if (!isSuperAdmin && organismeIdInKey !== user.organismeId) {
-      console.warn(
+      logger.warn(
         `Accès refusé pour l'utilisateur ${user.id} sur le fichier ${key}`
       );
       return new NextResponse("Accès refusé", { status: 403 });
@@ -40,7 +41,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Erreur lors du téléchargement du document:", error);
+    logger.error("Erreur lors du téléchargement du document:", error);
     return new NextResponse("Erreur interne", { status: 500 });
   }
 }

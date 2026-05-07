@@ -1,4 +1,5 @@
 "use client";
+import { logger } from "@/lib/logger";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -40,7 +41,7 @@ export default function LearningPage() {
         setFilteredCards(cards);
         setFilters(fetchedFilters);
       } catch (error) {
-        console.error("Erreur lors du chargement des données:", error);
+        logger.error("Erreur lors du chargement des données:", error);
       } finally {
         setIsLoading(false);
       }

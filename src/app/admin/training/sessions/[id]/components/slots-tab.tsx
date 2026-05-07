@@ -1,4 +1,5 @@
 "use client";
+import { logger } from "@/lib/logger";
 
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
@@ -73,7 +74,7 @@ export function SlotsTab({
     if (!newSlot.label && nextSuggestion) {
       setNewSlot(nextSuggestion);
     }
-  }, [slots, sessionStartDate, sessionEndDate]);
+  }, [slots, sessionStartDate, sessionEndDate, newSlot.label]);
 
   const isDateValid =
     !newSlot.date ||
@@ -117,7 +118,7 @@ export function SlotsTab({
 
       router.refresh();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       toast.error("Erreur lors de l'ajout du créneau");
     } finally {
       setLoading(false);
@@ -144,7 +145,7 @@ export function SlotsTab({
       toast.success("Créneau supprimé");
       router.refresh();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       toast.error("Erreur lors de la suppression");
     } finally {
       setLoading(false);

@@ -3,7 +3,11 @@
 import { Bar, BarChart } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
 
-export function SessionChart({ data }: { data: any[] }) {
+export function SessionChart({
+  data,
+}: {
+  data: { name: string; total: number }[];
+}) {
   return (
     <ChartContainer config={{}} className="aspect-auto h-full w-full">
       <BarChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>

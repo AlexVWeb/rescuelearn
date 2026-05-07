@@ -1,4 +1,5 @@
 "use client";
+import { logger } from "@/lib/logger";
 
 import React, { useState, useEffect, useCallback, use, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -110,7 +111,7 @@ function QuizPageContent({ params }: PageProps) {
         setTimeLeft(data.timePerQuestion);
         setError(null);
       } catch (err) {
-        console.error("Erreur lors du chargement du quiz:", err);
+        logger.error("Erreur lors du chargement du quiz:", err);
         setError(
           "Erreur lors du chargement du quiz. Veuillez vérifier que l'ID est correct."
         );

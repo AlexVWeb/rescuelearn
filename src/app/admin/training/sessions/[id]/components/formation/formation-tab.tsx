@@ -1,4 +1,5 @@
 "use client";
+import { logger } from "@/lib/logger";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -59,7 +60,6 @@ interface FormationTabProps {
 }
 
 export function FormationTab({
-  sessionId: _sessionId,
   session,
   inscriptions,
   formateur,
@@ -82,7 +82,7 @@ export function FormationTab({
       );
       router.refresh();
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     } finally {
       setLoading(false);
     }

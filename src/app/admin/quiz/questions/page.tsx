@@ -1,4 +1,4 @@
-import { getQuestionsAction } from "@/app/actions/quiz-actions";
+import { getQuestionsAction, Question } from "@/app/actions/quiz-actions";
 import QuestionsClientPage from "./client-page";
 
 export default async function QuestionsPage(props: {
@@ -11,5 +11,5 @@ export default async function QuestionsPage(props: {
   const result = await getQuestionsAction(page, 100, search);
   const questions = result.success ? result.data : [];
 
-  return <QuestionsClientPage initialQuestions={questions as any} />;
+  return <QuestionsClientPage initialQuestions={questions as Question[]} />;
 }

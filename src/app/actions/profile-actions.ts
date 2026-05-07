@@ -1,4 +1,5 @@
 "use server";
+import { logger } from "@/lib/logger";
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -28,11 +29,14 @@ export async function updateProfileAction(data: {
     });
     revalidatePath("/admin/profile");
     return { success: true };
-  } catch (error: any) {
-    if (error?.code === "P2002") {
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error as { code?: string }).code === "P2002"
+    ) {
       return { success: false, error: "Cet email est déjà utilisé" };
     }
-    console.error("Failed to update profile:", error);
+    logger.error("Failed to update profile:", error);
     return { success: false, error: "Erreur lors de la mise à jour" };
   }
 }

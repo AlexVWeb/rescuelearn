@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { uploadFile, getFile } from "./r2";
+import { uploadFile } from "./r2";
 
 // Mock AWS SDK
 vi.mock("@aws-sdk/client-s3", () => {

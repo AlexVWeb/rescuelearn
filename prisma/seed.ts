@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { PrismaClient } from "@prisma/client";
 import * as readline from "readline";
 import { hashPassword } from "better-auth/crypto";
@@ -48,7 +49,7 @@ function promptHidden(question: string): Promise<string> {
 }
 
 async function main() {
-  console.log("🚀 Seed RescueLearn - Création du SUPER_ADMIN\n");
+  logger.info("🚀 Seed RescueLearn - Création du SUPER_ADMIN\n");
 
   const email = await prompt("📧 Email du SUPER_ADMIN : ");
   const name = await prompt("👤 Nom complet : ");
@@ -56,16 +57,16 @@ async function main() {
   const confirmPassword = await promptHidden("🔒 Confirmer le mot de passe : ");
 
   if (password !== confirmPassword) {
-    console.error("\n❌ Les mots de passe ne correspondent pas.");
+    logger.error("\n❌ Les mots de passe ne correspondent pas.");
     process.exit(1);
   }
 
   if (password.length < 8) {
-    console.error("\n❌ Le mot de passe doit faire au moins 8 caractères.");
+    logger.error("\n❌ Le mot de passe doit faire au moins 8 caractères.");
     process.exit(1);
   }
 
-  console.log("\n⏳ Création en cours...\n");
+  logger.info("\n⏳ Création en cours...\n");
 
   const hashedPassword = await hashPassword(password);
 
@@ -97,15 +98,15 @@ async function main() {
     },
   });
 
-  console.log("=============================================");
-  console.log("✅ SUPER_ADMIN créé avec succès !\n");
-  console.log(`🏢 Organisme  : ${organisme.name}`);
-  console.log(`🔑 Invite code: ${organisme.inviteCode}`);
-  console.log(`👤 Utilisateur: ${user.name}`);
-  console.log(`📧 Email      : ${user.email}`);
-  console.log(`🎭 Rôles      : ${(user.roles as string[]).join(", ")}`);
-  console.log("=============================================");
-  console.log("\n➡️  Connectez-vous sur http://localhost:3000/login");
+  logger.info("=============================================");
+  logger.info("✅ SUPER_ADMIN créé avec succès !\n");
+  logger.info(`🏢 Organisme  : ${organisme.name}`);
+  logger.info(`🔑 Invite code: ${organisme.inviteCode}`);
+  logger.info(`👤 Utilisateur: ${user.name}`);
+  logger.info(`📧 Email      : ${user.email}`);
+  logger.info(`🎭 Rôles      : ${(user.roles as string[]).join(", ")}`);
+  logger.info("=============================================");
+  logger.info("\n➡️  Connectez-vous sur http://localhost:3000/login");
 }
 
 main()
@@ -113,7 +114,7 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error("❌ Erreur lors du seed :", e.message);
+    logger.error("❌ Erreur lors du seed :", e.message);
     await prisma.$disconnect();
     process.exit(1);
   });

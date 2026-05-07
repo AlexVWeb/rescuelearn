@@ -48,9 +48,6 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 // --- Helpers ---
-
-import { auth } from "@/lib/auth";
-
 function mockSession(userId = "user-1") {
   const fakeUser = {
     id: userId,

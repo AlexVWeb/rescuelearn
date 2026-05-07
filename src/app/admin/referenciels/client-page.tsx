@@ -22,7 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 
 interface ClientPageProps {
-  initialReferenciels: any[];
+  initialReferenciels: Referenciel[];
 }
 
 export default function ClientPage({ initialReferenciels }: ClientPageProps) {
@@ -33,7 +33,7 @@ export default function ClientPage({ initialReferenciels }: ClientPageProps) {
   const [idToDelete, setIdToDelete] = useState<number | null>(null);
   const router = useRouter();
 
-  const referenciels = initialReferenciels as Referenciel[];
+  const referenciels = initialReferenciels;
 
   const handleEdit = (ref: Referenciel) => {
     setSelectedReferenciel(ref);

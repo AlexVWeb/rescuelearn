@@ -28,8 +28,7 @@ export async function getDashboardStats() {
 
   const totalUpcoming = upcomingSessions.length;
   const upcomingThisMonth = upcomingSessions.filter(
-    (s: any) =>
-      s.startDate && s.startDate >= monthStart && s.startDate <= monthEnd
+    (s) => s.startDate && s.startDate >= monthStart && s.startDate <= monthEnd
   ).length;
 
   // Real data for the small bar chart (last 6 months)
@@ -52,7 +51,7 @@ export async function getDashboardStats() {
     select: { startDate: true },
   });
 
-  allSessionsForChart.forEach((s: any) => {
+  allSessionsForChart.forEach((s) => {
     if (!s.startDate) return;
     const sDate = dayjs(s.startDate);
     const monthData = last6Months.find(
@@ -79,9 +78,9 @@ export async function getDashboardStats() {
   let totalTraineesFormed = 0;
   let formedThisMonth = 0;
 
-  completedSessions.forEach((session: any) => {
+  completedSessions.forEach((session) => {
     const presentInscriptions = session.inscriptions.filter(
-      (i: any) => i.status === "présent"
+      (i) => i.status === "présent"
     ).length;
     totalTraineesFormed += presentInscriptions;
 
@@ -94,8 +93,8 @@ export async function getDashboardStats() {
   let totalInscriptionsForSuccess = 0;
   let totalAcquis = 0;
 
-  completedSessions.forEach((session: any) => {
-    session.inscriptions.forEach((i: any) => {
+  completedSessions.forEach((session) => {
+    session.inscriptions.forEach((i) => {
       totalInscriptionsForSuccess++;
       if (i.attestationResult === ATTESTATION_RESULT.ACQUIS) {
         totalAcquis++;
@@ -132,7 +131,7 @@ export async function getDashboardStats() {
 
   const totalEmargements = emargements.length;
   const validatedEmargements = emargements.filter(
-    (e: any) => e.status === EMARGEMENT_STATUS.VALIDE
+    (e) => e.status === EMARGEMENT_STATUS.VALIDE
   ).length;
 
   const presenceRate =
