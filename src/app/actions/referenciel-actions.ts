@@ -6,6 +6,8 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { getUserContext } from "@/lib/context";
+import { hasRole, UserRole } from "@/lib/roles";
 
 export type Referenciel = {
   id: number;
@@ -19,6 +21,11 @@ export async function getReferencielsAction(
   limit: number = 10,
   search: string = ""
 ) {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
   const skip = (page - 1) * limit;
 
   const where = search
@@ -55,6 +62,11 @@ export async function getReferencielsAction(
 }
 
 export async function deleteReferencielAction(id: number) {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
   try {
     await prisma.referenciel.delete({
       where: { id },
@@ -102,6 +114,11 @@ async function saveFile(
 }
 
 export async function createReferencielAction(formData: FormData) {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
   try {
     const title = formData.get("title") as string;
     const yearEdition = parseInt(formData.get("yearEdition") as string);
@@ -130,6 +147,11 @@ export async function createReferencielAction(formData: FormData) {
 }
 
 export async function updateReferencielAction(id: number, formData: FormData) {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
   try {
     const title = formData.get("title") as string;
     const yearEdition = parseInt(formData.get("yearEdition") as string);

@@ -14,8 +14,16 @@ export async function GET(
     const resolvedParams = await params;
     const key = resolvedParams.path.join("/");
 
-    // 2. Vérification de l'autorisation sur le fichier
-    // Format attendu du stockage : {mode}/organisme/{organismeId}/{type}/{filename}
+    // Format attendu : {dev|prod}/organisme/{uuid}/{documents|external-trainings}/{filename}
+    const PATH_REGEX =
+      /^(dev|prod)\/organisme\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/(documents|external-trainings)\/.+$/;
+    if (!PATH_REGEX.test(key)) {
+      logger.warn(
+        `Chemin invalide rejeté pour l'utilisateur ${user.id}: ${key}`
+      );
+      return new NextResponse("Chemin invalide", { status: 400 });
+    }
+
     const keyParts = key.split("/");
     const organismeIdInKey = keyParts[2];
 

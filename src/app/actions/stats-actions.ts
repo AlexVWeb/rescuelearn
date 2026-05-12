@@ -1,14 +1,12 @@
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getUserContext } from "@/lib/context";
+import { hasRole, UserRole } from "@/lib/roles";
 
 export async function getAdminStatsAction() {
-  const session = await auth.api.getSession({ headers: await headers() });
-
-  // On pourrait vérifier les rôles ici si nécessaire
-  if (!session) {
-    return { success: false, error: "Non autorisé" };
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
   }
 
   try {

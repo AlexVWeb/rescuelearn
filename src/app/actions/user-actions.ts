@@ -2,10 +2,9 @@
 import { logger } from "@/lib/logger";
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-import { UserRole } from "@/lib/roles";
+import { UserRole, hasRole } from "@/lib/roles";
+import { getUserContext } from "@/lib/context";
 import { hashPassword } from "better-auth/crypto";
 
 // Type definitions could be moved to a types file
@@ -24,6 +23,11 @@ export async function getUsersAction(
   limit: number = 10,
   search: string = ""
 ) {
+  const caller = await getUserContext();
+  if (!hasRole(caller.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
   const skip = (page - 1) * limit;
 
   const where = search
@@ -75,9 +79,9 @@ export async function createUserAction(data: {
   role: string;
   password: string;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) {
-    return { success: false, error: "Unauthorized" };
+  const caller = await getUserContext();
+  if (!hasRole(caller.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
   }
 
   try {
@@ -107,9 +111,9 @@ export async function createUserAction(data: {
 }
 
 export async function deleteUserAction(userId: string) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) {
-    return { success: false, error: "Unauthorized" };
+  const caller = await getUserContext();
+  if (!hasRole(caller.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
   }
 
   try {
@@ -128,9 +132,9 @@ export async function updateUserAction(
   userId: string,
   data: { name?: string; roles?: UserRole[] }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) {
-    return { success: false, error: "Unauthorized" };
+  const caller = await getUserContext();
+  if (!hasRole(caller.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
   }
 
   try {

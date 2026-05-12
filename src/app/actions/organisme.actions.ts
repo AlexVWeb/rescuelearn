@@ -13,6 +13,11 @@ export async function getOrganismesAction(
   limit: number = 10,
   search: string = ""
 ) {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
   const skip = (page - 1) * limit;
 
   const where = search

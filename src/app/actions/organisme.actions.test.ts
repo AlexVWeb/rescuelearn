@@ -54,6 +54,10 @@ describe("Organisme Actions", () => {
 
   describe("getOrganismesAction", () => {
     it("returns a paginated list of organismes", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        roles: ["SUPER_ADMIN"],
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      vi.mocked(hasRole).mockReturnValue(true);
       mockPrisma.organisme.findMany.mockResolvedValue([
         { id: "o1", name: "Org 1" },
       ]);
@@ -74,8 +78,14 @@ describe("Organisme Actions", () => {
     });
 
     it("handles errors", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        roles: ["SUPER_ADMIN"],
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      vi.mocked(hasRole).mockReturnValue(true);
       mockPrisma.organisme.findMany.mockRejectedValue(new Error("DB Error"));
+
       const result = await getOrganismesAction();
+
       expect(result.success).toBe(false);
       expect(result.error).toBe("Failed to fetch organismes");
     });

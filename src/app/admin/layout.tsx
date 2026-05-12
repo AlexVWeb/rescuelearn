@@ -12,6 +12,8 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { User } from "@/app/actions/user-actions";
+import { prisma } from "@/lib/prisma";
+import { hasRole, UserRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,16 @@ export default async function AdminLayout({
   if (!session) {
     redirect("/");
   }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { roles: true },
+  });
+
+  if (!hasRole(dbUser?.roles, UserRole.SUPER_ADMIN)) {
+    redirect("/");
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar user={session.user as unknown as User} />

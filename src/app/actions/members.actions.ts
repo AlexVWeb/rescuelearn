@@ -38,6 +38,14 @@ export async function getOrganismeMembersAction() {
 
 export async function updateMemberRoleAction(userId: string, roles: string[]) {
   const user = await requireOrganisme();
+
+  if (
+    !hasRole(user.roles, UserRole.ADMIN_ORGANISME) &&
+    !hasRole(user.roles, UserRole.SUPER_ADMIN)
+  ) {
+    return { success: false, error: "Forbidden" };
+  }
+
   const tenant = withOrganisme(user.organismeId);
 
   try {
@@ -54,6 +62,14 @@ export async function updateMemberRoleAction(userId: string, roles: string[]) {
 
 export async function removeMemberFromOrganismeAction(userId: string) {
   const user = await requireOrganisme();
+
+  if (
+    !hasRole(user.roles, UserRole.ADMIN_ORGANISME) &&
+    !hasRole(user.roles, UserRole.SUPER_ADMIN)
+  ) {
+    return { success: false, error: "Forbidden" };
+  }
+
   const tenant = withOrganisme(user.organismeId);
 
   try {

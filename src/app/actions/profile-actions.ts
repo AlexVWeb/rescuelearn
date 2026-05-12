@@ -24,7 +24,6 @@ export async function updateProfileAction(data: {
         firstName: data.firstName,
         lastName: data.lastName,
         name: fullName,
-        email: data.email,
       },
     });
     revalidatePath("/admin/profile");

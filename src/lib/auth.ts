@@ -1,6 +1,10 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { createAccessControl, organization } from "better-auth/plugins";
+import {
+  createAccessControl,
+  organization,
+  haveIBeenPwned,
+} from "better-auth/plugins";
 import { randomUUID } from "crypto";
 
 import { EmailService } from "@/lib/email";
@@ -21,8 +25,48 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+
+  trustedOrigins: [
+    ...(process.env.NEXT_PUBLIC_APP_URL
+      ? [process.env.NEXT_PUBLIC_APP_URL]
+      : []),
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+    "http://localhost:3000",
+  ],
+
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+    storage: "memory",
+    customRules: {
+      "/sign-in/email": { window: 15 * 60, max: 5 }, // 5 tentatives / 15 min
+      "/sign-up/email": { window: 60 * 60, max: 3 }, // 3 inscriptions / heure
+      "/forgot-password": { window: 60 * 60, max: 3 }, // 3 demandes / heure
+      "/reset-password": { window: 60 * 60, max: 5 }, // 5 resets / heure
+    },
+  },
+
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 jours
+    updateAge: 60 * 60 * 24, // Renouvellement toutes les 24h
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // Cache cookie 5 minutes (évite DB lookup à chaque requête)
+    },
+  },
+
+  advanced: {
+    useSecureCookies: process.env.NODE_ENV === "production",
+    cookiePrefix: "rescuelearn",
+  },
+
   emailAndPassword: {
     enabled: true,
+    minPasswordLength: 8,
+    maxPasswordLength: 128,
+    resetPasswordTokenExpiresIn: 60 * 60, // Token reset valide 1 heure
+    revokeSessionsOnPasswordReset: true, // Invalide toutes les sessions après reset
     sendResetPassword: async ({ user, url }) => {
       await EmailService.sendPasswordResetEmail({
         to: user.email,
@@ -30,7 +74,12 @@ export const auth = betterAuth({
       });
     },
   },
+
   plugins: [
+    haveIBeenPwned({
+      customPasswordCompromisedMessage:
+        "Ce mot de passe a été compromis dans une fuite de données. Veuillez en choisir un autre.",
+    }),
     organization({
       ac,
       roles: {
