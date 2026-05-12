@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import { EmailService } from "@/lib/email";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { getBaseUrl } from "@/lib/utils";
 
 const ac = createAccessControl({
   organization: ["update", "delete"] as const,
@@ -16,6 +17,7 @@ const ac = createAccessControl({
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
+  baseURL: getBaseUrl(),
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
@@ -92,7 +94,7 @@ export const auth = betterAuth({
           const inv = data.invitation as typeof data.invitation & {
             token?: string;
           };
-          const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invitation/${inv.token ?? data.id}`;
+          const invitationUrl = `${getBaseUrl()}/invitation/${inv.token ?? data.id}`;
 
           await EmailService.sendInvitationEmail({
             to: data.email,
