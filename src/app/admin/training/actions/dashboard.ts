@@ -10,6 +10,7 @@ import dayjs from "dayjs";
 
 export async function getDashboardStats() {
   const tenant = await getTenantPrisma();
+  const user = await requireOrganisme();
   const now = dayjs();
   const monthStart = now.startOf("month").toDate();
   const monthEnd = now.endOf("month").toDate();
@@ -108,9 +109,6 @@ export async function getDashboardStats() {
       : 0;
 
   // 4. Presence Rate (last 30 days)
-  // On utilise prisma directement ici car le filtrage par relation complexe (emargement -> trainingSession)
-  // n'est pas géré automatiquement par notre extension simplifiée
-  const user = await requireOrganisme();
   const emargements = await tenant.emargement.findMany({
     where: {
       inscription: {
@@ -139,6 +137,78 @@ export async function getDashboardStats() {
       ? Math.round((validatedEmargements / totalEmargements) * 100)
       : 100; // Default to 100 if no data
 
+  // 5. Checklist "Premiers pas"
+  const currentUser = await tenant.user.findUnique({
+    where: { id: user.id },
+    select: { firstName: true, lastName: true, phone: true },
+  });
+
+  const sessionCount = await tenant.trainingSession.count();
+  const invitationCount = await tenant.invitation.count();
+  const membersCount = await tenant.user.count({
+    where: { organismeId: user.organismeId },
+  });
+
+  const hasAttestation = await tenant.inscription.count({
+    where: {
+      attestationResult: { not: null },
+    },
+  });
+
+  const checklist = {
+    profileCompleted: !!(currentUser?.firstName && currentUser?.lastName),
+    firstSessionCreated: sessionCount > 0,
+    trainersInvited: membersCount > 1 || invitationCount > 0,
+    attestationGenerated: hasAttestation > 0,
+  };
+
+  // 6. Trainers Team
+  const trainers = await tenant.user.findMany({
+    where: { organismeId: user.organismeId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      roles: true,
+      _count: {
+        select: { trainingSessions: true },
+      },
+    },
+    take: 5,
+  });
+
+  const trainersData = trainers.map((t) => ({
+    id: t.id,
+    name:
+      `${t.firstName ?? ""} ${t.lastName ?? ""}`.trim() || "Formateur sans nom",
+    sessionsCount: t._count.trainingSessions,
+    role:
+      Array.isArray(t.roles) && t.roles.includes("admin_organisme")
+        ? "Admin & Formateur"
+        : "Formateur",
+  }));
+
+  // 7. Calendar Slots
+  const slots = await tenant.slot.findMany({
+    where: {
+      trainingSession: {
+        status: { in: [SESSION_STATUS.PLANIFIEE, SESSION_STATUS.EN_COURS] },
+      },
+    },
+    select: {
+      date: true,
+      trainingSession: {
+        select: {
+          title: true,
+        },
+      },
+    },
+  });
+  const calendarEvents = slots.map((s) => ({
+    date: s.date.toISOString().split("T")[0],
+    title: s.trainingSession.title,
+  }));
+
   return {
     sessions: {
       total: totalUpcoming,
@@ -157,5 +227,9 @@ export async function getDashboardStats() {
       percentage: presenceRate,
       days: 30,
     },
+    userName: user.firstName ?? user.name ?? "Formateur",
+    checklist,
+    trainers: trainersData,
+    calendarEvents,
   };
 }

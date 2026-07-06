@@ -16,10 +16,13 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 const mockPrisma = vi.hoisted(() => ({
-  user: { findUnique: vi.fn() },
-  trainingSession: { findMany: vi.fn() },
+  user: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn() },
+  trainingSession: { findMany: vi.fn(), count: vi.fn() },
   emargement: { findMany: vi.fn() },
   trainee: { findMany: vi.fn() },
+  invitation: { count: vi.fn() },
+  inscription: { count: vi.fn() },
+  slot: { findMany: vi.fn() },
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -42,12 +45,21 @@ function mockAuthenticatedUser(organismeId = "org-1") {
   (
     auth.api.getSession as unknown as ReturnType<typeof vi.fn>
   ).mockResolvedValue({
-    user: { id: "user-1" },
+    user: { id: "user-1", firstName: "Nicolas", name: "Nicolas" },
   });
   mockPrisma.user.findUnique.mockResolvedValue({
     id: "user-1",
     organismeId,
+    firstName: "Nicolas",
+    lastName: "Dupont",
+    phone: "0600000000",
   });
+  mockPrisma.trainingSession.count.mockResolvedValue(1);
+  mockPrisma.invitation.count.mockResolvedValue(0);
+  mockPrisma.user.count.mockResolvedValue(1);
+  mockPrisma.inscription.count.mockResolvedValue(0);
+  mockPrisma.user.findMany.mockResolvedValue([]);
+  mockPrisma.slot.findMany.mockResolvedValue([]);
 }
 
 describe("getDashboardStats", () => {
@@ -118,6 +130,15 @@ describe("getDashboardStats", () => {
     // Validé = 2, Total = 4
     // 2/4 = 50%
     expect(stats.presence.percentage).toBe(50);
+
+    // 5. Nouveaux champs
+    expect(stats.userName).toBe("Nicolas");
+    expect(stats.checklist.profileCompleted).toBe(true);
+    expect(stats.checklist.firstSessionCreated).toBe(true);
+    expect(stats.checklist.trainersInvited).toBe(false);
+    expect(stats.checklist.attestationGenerated).toBe(false);
+    expect(stats.trainers).toEqual([]);
+    expect(stats.calendarEvents).toEqual([]);
   });
 
   it("gère le cas où il n'y a pas de données", async () => {
