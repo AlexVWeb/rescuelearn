@@ -13,6 +13,7 @@ export async function requestPasswordReset(email: string) {
         email,
         redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
       },
+      headers: await headers(),
     });
   } catch (error) {
     logger.error("Erreur lors de la demande de réinitialisation", error);
