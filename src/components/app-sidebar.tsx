@@ -26,14 +26,16 @@ import {
 } from "@/components/ui/sidebar";
 
 // Compute sidebar data dynamically based on user roles
-const getNavData = (userRoles: string[]) => {
+const getNavData = (userRoles: string[], hasOrganisme: boolean) => {
   const isSuperAdmin = userRoles.includes(UserRole.SUPER_ADMIN);
   const isFormateur =
-    userRoles.includes(UserRole.FORMATEUR) ||
-    userRoles.includes(UserRole.ADMIN_ORGANISME) ||
-    isSuperAdmin;
+    (userRoles.includes(UserRole.FORMATEUR) ||
+      userRoles.includes(UserRole.ADMIN_ORGANISME) ||
+      isSuperAdmin) &&
+    hasOrganisme;
   const isAdminOrganisme =
-    userRoles.includes(UserRole.ADMIN_ORGANISME) || isSuperAdmin;
+    (userRoles.includes(UserRole.ADMIN_ORGANISME) || isSuperAdmin) &&
+    hasOrganisme;
 
   const trainingSubItems = [
     { title: "Tableau de bord", url: "/admin/training/dashboard" },
@@ -169,7 +171,8 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user: User }) {
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
-  const data = getNavData(userRoles);
+  const hasOrganisme = !!user?.organismeId;
+  const data = getNavData(userRoles, hasOrganisme);
 
   return (
     <Sidebar collapsible="icon" {...props}>

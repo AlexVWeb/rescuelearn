@@ -32,21 +32,43 @@ export default async function AdminLayout({
 
   const dbUser = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { roles: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      roles: true,
+      createdAt: true,
+      emailVerified: true,
+      organismeId: true,
+    },
   });
 
+  if (!dbUser) {
+    redirect("/");
+  }
+
+  const userRoles = (
+    typeof dbUser.roles === "string" ? JSON.parse(dbUser.roles) : dbUser.roles
+  ) as UserRole[];
+
   const hasAnyAdminRole =
-    hasRole(dbUser?.roles, UserRole.SUPER_ADMIN) ||
-    hasRole(dbUser?.roles, UserRole.ADMIN_ORGANISME) ||
-    hasRole(dbUser?.roles, UserRole.FORMATEUR);
+    hasRole(userRoles, UserRole.SUPER_ADMIN) ||
+    hasRole(userRoles, UserRole.ADMIN_ORGANISME) ||
+    hasRole(userRoles, UserRole.FORMATEUR);
 
   if (!hasAnyAdminRole) {
     redirect("/");
   }
 
+  const userSidebarData: User = {
+    ...dbUser,
+    roles: userRoles,
+  };
+
   return (
     <SidebarProvider>
-      <AppSidebar user={session.user as unknown as User} />
+      <AppSidebar user={userSidebarData} />
       <SidebarInset className="min-w-0">
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">

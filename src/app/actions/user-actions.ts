@@ -16,6 +16,7 @@ export type User = {
   roles: UserRole[];
   createdAt: Date;
   emailVerified: boolean;
+  organismeId?: string | null;
 };
 
 export async function getUsersAction(
