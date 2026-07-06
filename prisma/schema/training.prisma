@@ -1,0 +1,140 @@
+model Organisme {
+  id                    String            @id @default(uuid())
+  name                  String
+  agreementNumber       String?
+  logo                  String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  inviteCode            String            @unique @default(cuid())
+  address               String?
+  city                  String?
+  email                 String?
+  phone                 String?
+  postalCode            String?
+  siret                 String?
+  website               String?
+  retentionYearsActive  Int               @default(5)
+  retentionYearsArchive Int               @default(10)
+  smtpFrom              String?
+  smtpHost              String?
+  smtpPassword          String?
+  smtpPort              Int?
+  smtpSecure            Boolean           @default(true)
+  smtpUser              String?
+  federationName        String?
+  isQualiopi            Boolean           @default(false)
+  legalRepFirstName     String?
+  legalRepJobTitle      String?
+  legalRepLastName      String?
+  legalStatus           String?
+  qualiopiCertifiedBy   String?
+  tvaNumber             String?
+  metadata              String?
+  slug                  String            @unique
+  invitations           Invitation[]
+  members               Member[]
+  trainees              Trainee[]
+  trainingSessions      TrainingSession[]
+  users                 User[]
+}
+
+model TrainingSession {
+  id           String        @id @default(uuid())
+  type         String
+  title        String
+  location     String
+  status       String        @default("planifiée")
+  maxTrainees  Int
+  formateurId  String
+  organismeId  String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  endDate      DateTime?     @db.Date
+  isFC         Boolean       @default(false)
+  startDate    DateTime?     @db.Date
+  inscriptions Inscription[]
+  slots        Slot[]
+  formateur    User          @relation(fields: [formateurId], references: [id])
+  organisme    Organisme     @relation(fields: [organismeId], references: [id])
+}
+
+model Slot {
+  id                String          @id @default(cuid())
+  label             String
+  date              DateTime        @db.Date
+  startTime         String
+  endTime           String
+  trainingSessionId String
+  emargements       Emargement[]
+  trainingSession   TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+}
+
+model Trainee {
+  id                String             @id @default(cuid())
+  firstName         String?
+  lastName          String?
+  email             String?
+  phone             String?
+  dateOfBirth       String?
+  organismeId       String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  address           String?
+  civility          String?
+  birthPlace        String?
+  emailHash         String?
+  ageAtFormation    Int?
+  department        String?
+  isAnonymized      Boolean            @default(false)
+  lastActivityAt    DateTime           @default(now())
+  externalTrainings ExternalTraining[]
+  inscriptions      Inscription[]
+  organisme         Organisme          @relation(fields: [organismeId], references: [id], onDelete: Cascade)
+
+  @@unique([emailHash, organismeId])
+}
+
+model ExternalTraining {
+  id                String   @id @default(cuid())
+  traineeId         String
+  organismeId       String
+  type              String
+  name              String
+  organisme         String
+  obtainedAt        DateTime @db.Date
+  isFC              Boolean  @default(false)
+  certificateNumber String?
+  fileUrl           String?
+  fileKey           String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  trainee           Trainee  @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+}
+
+model Inscription {
+  id                     String          @id @default(cuid())
+  status                 String          @default("inscrit")
+  traineeId              String
+  trainingSessionId      String
+  attestationResult      String?
+  attestationValidatedAt DateTime?
+  emargements            Emargement[]
+  trainee                Trainee         @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+  trainingSession        TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([traineeId, trainingSessionId])
+}
+
+model Emargement {
+  id             String      @id @default(cuid())
+  status         String      @default("en_attente")
+  validationCode String?
+  codeSentAt     DateTime?
+  validatedAt    DateTime?
+  inscriptionId  String
+  slotId         String
+  inscription    Inscription @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
+  slot           Slot        @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@unique([inscriptionId, slotId])
+}

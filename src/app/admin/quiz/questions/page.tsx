@@ -1,0 +1,17 @@
+import { getQuestionsAction, Question } from "@/app/actions/quiz-actions";
+import QuestionsClientPage from "./client-page";
+import { requireSuperAdmin } from "@/lib/context";
+
+export default async function QuestionsPage(props: {
+  searchParams?: Promise<{ page?: string; search?: string }>;
+}) {
+  await requireSuperAdmin();
+  const searchParams = await props.searchParams;
+  const page = Number(searchParams?.page) || 1;
+  const search = searchParams?.search || "";
+
+  const result = await getQuestionsAction(page, 100, search);
+  const questions = result.success ? result.data : [];
+
+  return <QuestionsClientPage initialQuestions={questions as Question[]} />;
+}

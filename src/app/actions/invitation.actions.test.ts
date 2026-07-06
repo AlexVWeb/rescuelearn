@@ -1,0 +1,269 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  inviteMemberAction,
+  acceptInvitationAction,
+  resendInvitationAction,
+} from "./invitation.actions";
+import { getUserContext } from "@/lib/context";
+import { EmailService } from "@/lib/email";
+import {
+  InviteMemberInput,
+  AcceptInvitationInput,
+} from "@/lib/schemas/invitation.schema";
+
+// --- Auth mock ---
+const mockAuthApi = vi.hoisted(() => ({
+  createInvitation: vi.fn(),
+}));
+
+vi.mock("@/lib/auth", () => ({
+  auth: { api: mockAuthApi },
+}));
+
+vi.mock("next/headers", () => ({
+  headers: vi.fn().mockResolvedValue(new Headers()),
+}));
+
+// --- Mocks ---
+const mockPrisma = vi.hoisted(() => ({
+  user: {
+    findUnique: vi.fn(),
+    update: vi.fn(),
+    create: vi.fn(),
+  },
+  invitation: {
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    upsert: vi.fn(),
+    delete: vi.fn(),
+  },
+  member: {
+    create: vi.fn(),
+  },
+  organisme: {
+    findUnique: vi.fn(),
+  },
+  account: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: mockPrisma,
+}));
+
+vi.mock("@/lib/context", () => ({
+  getUserContext: vi.fn(),
+}));
+
+vi.mock("@/lib/email", () => ({
+  EmailService: {
+    sendInvitationEmail: vi.fn(),
+  },
+}));
+
+vi.mock("better-auth/crypto", () => ({
+  hashPassword: vi.fn().mockResolvedValue("hashed"),
+}));
+
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
+describe("Invitation Actions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("inviteMemberAction", () => {
+    const validPayload: InviteMemberInput = {
+      email: "test@example.com",
+      role: "FORMATEUR",
+      organismeId: "550e8400-e29b-41d4-a716-446655440000", // Valid UUID
+    };
+
+    it("should fail if input is invalid", async () => {
+      const result = await inviteMemberAction({
+        ...validPayload,
+        email: "invalid",
+      } as InviteMemberInput);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Format d'email invalide");
+    });
+
+    it("should fail if user is not authorized", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["FORMATEUR"],
+        organismeId: "org-2",
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+
+      const result = await inviteMemberAction(validPayload);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("pas les droits");
+    });
+
+    it("should attach existing user if they exist", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["SUPER_ADMIN"],
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "u2",
+        email: "test@example.com",
+        roles: ["FORMATEUR"],
+        organismeId: null,
+      });
+
+      const result = await inviteMemberAction(validPayload);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("rattaché");
+      expect(mockPrisma.user.update).toHaveBeenCalled();
+    });
+
+    it("should create invitation and send email if user does not exist (SUPER_ADMIN)", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["SUPER_ADMIN"],
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.invitation.findFirst.mockResolvedValue(null);
+      mockPrisma.organisme.findUnique.mockResolvedValue({
+        id: validPayload.organismeId,
+        name: "Org 1",
+        smtpPort: 587,
+        smtpSecure: true,
+      });
+
+      const result = await inviteMemberAction(validPayload);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("envoyée");
+      expect(mockPrisma.invitation.create).toHaveBeenCalled();
+      expect(EmailService.sendInvitationEmail).toHaveBeenCalled();
+      expect(mockAuthApi.createInvitation).not.toHaveBeenCalled();
+    });
+
+    it("should use auth.api.createInvitation when caller is ADMIN_ORGANISME", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["ADMIN_ORGANISME"],
+        organismeId: validPayload.organismeId,
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.invitation.findFirst.mockResolvedValue(null);
+      mockAuthApi.createInvitation.mockResolvedValue({
+        id: "inv-1",
+        token: "tok-1",
+      });
+
+      const result = await inviteMemberAction(validPayload);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("envoyée");
+      // Le rôle système "FORMATEUR" est mappé vers "member" (rôle Better-Auth org)
+      expect(mockAuthApi.createInvitation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({
+            email: validPayload.email,
+            role: "member",
+            organizationId: validPayload.organismeId,
+          }),
+        })
+      );
+      expect(mockPrisma.invitation.create).not.toHaveBeenCalled();
+    });
+
+    it("should return error if auth.api.createInvitation throws (ADMIN_ORGANISME)", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["ADMIN_ORGANISME"],
+        organismeId: validPayload.organismeId,
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.invitation.findFirst.mockResolvedValue(null);
+      mockAuthApi.createInvitation.mockRejectedValue(
+        new Error("Permission denied")
+      );
+
+      const result = await inviteMemberAction(validPayload);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("erreur");
+    });
+  });
+
+  describe("acceptInvitationAction", () => {
+    const validAccept: AcceptInvitationInput = {
+      token: "token-1",
+      password: "Password123!",
+      confirmPassword: "Password123!",
+      firstName: "John",
+      lastName: "Doe",
+    };
+
+    it("should create user and account on success", async () => {
+      mockPrisma.invitation.findUnique.mockResolvedValue({
+        id: "inv-1",
+        email: "new@example.com",
+        role: "FORMATEUR",
+        organizationId: "org-1",
+        status: "pending",
+        expiresAt: new Date(Date.now() + 10000),
+      });
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({ id: "u-new" });
+
+      const result = await acceptInvitationAction(validAccept);
+
+      expect(result.success).toBe(true);
+      expect(mockPrisma.user.create).toHaveBeenCalled();
+      expect(mockPrisma.member.create).toHaveBeenCalled();
+      expect(mockPrisma.account.create).toHaveBeenCalled();
+      expect(mockPrisma.invitation.delete).toHaveBeenCalled();
+    });
+  });
+
+  describe("resendInvitationAction", () => {
+    it("should update token and resend email", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["SUPER_ADMIN"],
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+
+      mockPrisma.invitation.findUnique.mockResolvedValue({
+        id: "inv-1",
+        email: "test@example.com",
+        role: "FORMATEUR",
+        organizationId: "org-1",
+        organization: { id: "org-1", name: "Org 1" },
+      });
+
+      const result = await resendInvitationAction("inv-1");
+
+      expect(result.success).toBe(true);
+      expect(mockPrisma.invitation.update).toHaveBeenCalled();
+      expect(EmailService.sendInvitationEmail).toHaveBeenCalled();
+    });
+
+    it("should fail if unauthorized", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["FORMATEUR"],
+        organismeId: "org-other",
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+
+      mockPrisma.invitation.findUnique.mockResolvedValue({
+        id: "inv-1",
+        organizationId: "org-1",
+      });
+
+      const result = await resendInvitationAction("inv-1");
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Non autorisé");
+    });
+  });
+});

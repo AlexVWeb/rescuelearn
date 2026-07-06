@@ -1,0 +1,72 @@
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { getOrganismeByIdAction } from "@/app/actions/organisme.actions";
+import { getOrganismeMembersAction } from "@/app/actions/members.actions";
+import { getPendingInvitationsAction } from "@/app/actions/invitation.actions";
+import { OrganismeDetailClient } from "./organisme-detail-client";
+import { CopyButton } from "@/components/copy-button";
+import { requireSuperAdmin } from "@/lib/context";
+
+export default async function OrganismeDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  await requireSuperAdmin();
+  const { id } = await params;
+
+  const [organismeResult, membersResult, invitationsResult] = await Promise.all(
+    [
+      getOrganismeByIdAction(id),
+      getOrganismeMembersAction(),
+      getPendingInvitationsAction(id),
+    ]
+  );
+
+  if (!organismeResult.success || !organismeResult.data) {
+    notFound();
+  }
+
+  const organisme = organismeResult.data;
+  const members =
+    membersResult.success && membersResult.data ? membersResult.data : [];
+  const invitations =
+    invitationsResult.success && invitationsResult.data
+      ? invitationsResult.data.map((inv) => ({
+          ...inv,
+          role: inv.role || "FORMATEUR",
+        }))
+      : [];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/admin/organismes">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {organisme.name}
+          </h1>
+          <p className="text-muted-foreground flex items-center gap-2 text-sm">
+            Code d&apos;invitation :{" "}
+            <code className="bg-muted rounded px-1">
+              {organisme.inviteCode}
+            </code>
+            <CopyButton value={organisme.inviteCode} />
+          </p>
+        </div>
+      </div>
+
+      <OrganismeDetailClient
+        organisme={organisme}
+        members={members}
+        invitations={invitations}
+      />
+    </div>
+  );
+}

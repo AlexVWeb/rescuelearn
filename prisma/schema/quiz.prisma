@@ -1,0 +1,41 @@
+model Quiz {
+  id                Int                @id @default(autoincrement())
+  title             String
+  timePerQuestion   Int                @default(30)
+  passingScore      Int                @default(70)
+  modeRandom        Boolean            @default(false)
+  levelId           Int?
+  questions         Question[]
+  level             LevelQuestion?     @relation(fields: [levelId], references: [id])
+  categoryQuestions CategoryQuestion[] @relation("CategoryQuestionToQuiz")
+}
+
+model Question {
+  id            Int              @id @default(autoincrement())
+  text          String
+  correctAnswer String
+  explanation   String?
+  quizId        Int
+  quiz          Quiz             @relation(fields: [quizId], references: [id])
+  options       QuestionOption[]
+}
+
+model QuestionOption {
+  id         Int      @id @default(autoincrement())
+  text       String
+  optionId   String?
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model CategoryQuestion {
+  id      Int    @id @default(autoincrement())
+  name    String
+  quizzes Quiz[] @relation("CategoryQuestionToQuiz")
+}
+
+model LevelQuestion {
+  id      Int    @id @default(autoincrement())
+  name    String
+  quizzes Quiz[]
+}
