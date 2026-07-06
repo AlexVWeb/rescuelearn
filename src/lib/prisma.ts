@@ -94,11 +94,23 @@ export function decryptData<T>(data: T, fields: string[]): T {
   return res as unknown as T;
 }
 
+const dbUrl =
+  process.env.SUPABASE_DATABASE_URL ||
+  process.env.DATABASE_URL ||
+  process.env.SUPABASE_DIRECT_URL ||
+  process.env.DIRECT_URL;
+
 logger.info(
   "🔌 Initialisation Prisma avec DATABASE_URL:",
-  process.env.DATABASE_URL?.replace(/:[^:@]+@/, ":****@")
+  dbUrl?.replace(/:[^:@]+@/, ":****@")
 );
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: dbUrl,
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : undefined,
+});
 const adapter = new PrismaPg(pool);
 
 const baseClient = new PrismaClient({
