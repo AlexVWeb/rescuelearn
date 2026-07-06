@@ -4,6 +4,9 @@ import { prisma, withOrganisme } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
+import { UserRole, hasRole } from "@/lib/roles";
+import { redirect } from "next/navigation";
+
 export async function getUserContext() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -24,6 +27,15 @@ export async function getUserContext() {
   });
 
   if (!user) throw new Error("Utilisateur introuvable");
+  return user;
+}
+
+/** Throws if user is not a super admin, redirects to training dashboard otherwise. */
+export async function requireSuperAdmin() {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    redirect("/admin/training/dashboard");
+  }
   return user;
 }
 

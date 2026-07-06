@@ -35,7 +35,12 @@ export default async function AdminLayout({
     select: { roles: true },
   });
 
-  if (!hasRole(dbUser?.roles, UserRole.SUPER_ADMIN)) {
+  const hasAnyAdminRole =
+    hasRole(dbUser?.roles, UserRole.SUPER_ADMIN) ||
+    hasRole(dbUser?.roles, UserRole.ADMIN_ORGANISME) ||
+    hasRole(dbUser?.roles, UserRole.FORMATEUR);
+
+  if (!hasAnyAdminRole) {
     redirect("/");
   }
 

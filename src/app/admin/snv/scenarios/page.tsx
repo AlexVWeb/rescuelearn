@@ -1,9 +1,11 @@
 import { getScenariosAction, SNVScenario } from "@/app/actions/snv-actions";
 import ScenariosClientPage from "./client-page";
+import { requireSuperAdmin } from "@/lib/context";
 
 export default async function ScenariosPage(props: {
   searchParams?: Promise<{ page?: string; search?: string }>;
 }) {
+  await requireSuperAdmin();
   const searchParams = await props.searchParams;
   const page = Number(searchParams?.page) || 1;
   const search = searchParams?.search || "";

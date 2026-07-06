@@ -8,8 +8,10 @@ import {
 import { getAdminStatsAction } from "@/app/actions/stats-actions";
 import { Building2, Users, GraduationCap, ClipboardList } from "lucide-react";
 import Link from "next/link";
+import { requireSuperAdmin } from "@/lib/context";
 
 export default async function AdminPage() {
+  await requireSuperAdmin();
   const result = await getAdminStatsAction();
   const stats = result.success
     ? result.data

@@ -7,12 +7,14 @@ import { getOrganismeMembersAction } from "@/app/actions/members.actions";
 import { getPendingInvitationsAction } from "@/app/actions/invitation.actions";
 import { OrganismeDetailClient } from "./organisme-detail-client";
 import { CopyButton } from "@/components/copy-button";
+import { requireSuperAdmin } from "@/lib/context";
 
 export default async function OrganismeDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireSuperAdmin();
   const { id } = await params;
 
   const [organismeResult, membersResult, invitationsResult] = await Promise.all(
