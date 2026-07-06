@@ -15,6 +15,10 @@ export default defineConfig({
      * Pour Prisma 7, l'URL définie ici est utilisée par la CLI (migration, introspection).
      * On utilise DIRECT_URL (Port 5432) pour permettre les advisory locks sur Supabase.
      */
-    url: process.env.DIRECT_URL || process.env.DATABASE_URL,
+    url:
+      process.env.SUPABASE_DIRECT_URL ||
+      process.env.SUPABASE_DATABASE_URL ||
+      process.env.DIRECT_URL ||
+      process.env.DATABASE_URL,
   },
 });
