@@ -4,6 +4,65 @@ import dayjs from "dayjs";
 import { prisma } from "@/lib/prisma";
 import { EMARGEMENT_STATUS } from "../types";
 
+function normalizeString(str: string): string {
+  return str
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+export async function getSessionDetailsByPin(pin: string) {
+  const emargement = await prisma.emargement.findFirst({
+    where: { validationCode: pin },
+    include: {
+      slot: { include: { trainingSession: true } },
+    },
+  });
+
+  if (!emargement) throw new Error("Code PIN invalide");
+
+  return {
+    sessionTitle: emargement.slot.trainingSession.title,
+    slotLabel: emargement.slot.label,
+  };
+}
+
+export async function getTraineesByPinAndName(
+  pin: string,
+  lastNamePrefix: string
+) {
+  const emargements = await prisma.emargement.findMany({
+    where: { validationCode: pin },
+    include: {
+      slot: { include: { trainingSession: true } },
+      inscription: { include: { trainee: true } },
+    },
+  });
+
+  if (emargements.length === 0) throw new Error("Code PIN invalide");
+
+  const prefixNormalized = normalizeString(lastNamePrefix);
+
+  const matched = emargements.filter((e) => {
+    const lastName = e.inscription.trainee?.lastName || "";
+    return normalizeString(lastName).startsWith(prefixNormalized);
+  });
+
+  return matched.map((e) => ({
+    emargementId: e.id,
+    slotLabel: e.slot.label,
+    sessionTitle: e.slot.trainingSession.title,
+    traineeId: e.inscription.trainee.id,
+    firstName: e.inscription.trainee.firstName || "",
+    lastName: e.inscription.trainee.lastName || "",
+    status: e.status,
+    dateOfBirth: e.inscription.trainee.dateOfBirth
+      ? dayjs(e.inscription.trainee.dateOfBirth).format("YYYY-MM-DD")
+      : null,
+  }));
+}
+
 export async function getTraineesByPin(pin: string) {
   const emargements = await prisma.emargement.findMany({
     where: { validationCode: pin },

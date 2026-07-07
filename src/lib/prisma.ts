@@ -87,6 +87,10 @@ export function decryptData<T>(data: T, fields: string[]): T {
     res.inscriptions = res.inscriptions.map((i: unknown) => decryptData(i, []));
   }
 
+  if (res.inscription && typeof res.inscription === "object") {
+    res.inscription = decryptData(res.inscription, []);
+  }
+
   if (res.trainee && typeof res.trainee === "object") {
     res.trainee = decryptData(res.trainee, TRAINEE_ENCRYPTED_FIELDS);
   }
@@ -122,6 +126,26 @@ export const prisma =
   globalForPrisma.prisma ||
   baseClient.$extends({
     query: {
+      emargement: {
+        async create({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+        async update({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+        async upsert({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+        async findMany({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+        async findFirst({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+        async findUnique({ args, query }: QueryCb<unknown>) {
+          return decryptData(await query(args), []);
+        },
+      },
       trainee: {
         async create({ args, query }: QueryCb<CreateArgs>) {
           const data = args.data;

@@ -6,6 +6,7 @@ export interface TraineeEntry {
   firstName: string;
   lastName: string;
   status: string;
+  dateOfBirth?: string | null;
 }
 
 export interface SessionDetails {
@@ -16,6 +17,7 @@ export interface SessionDetails {
 export type ValidationStep =
   | "enter_pin"
   | "enter_name"
+  | "enter_dob"
   | "confirm_trainee"
   | "success";
 

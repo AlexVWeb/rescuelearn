@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { QrCode } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Slot } from "../../../../../types";
 
 interface PinDialogProps {
@@ -17,6 +18,12 @@ interface PinDialogProps {
 }
 
 export function PinDialog({ pin, slot }: PinDialogProps) {
+  const [qrUrl, setQrUrl] = useState("");
+
+  useEffect(() => {
+    setQrUrl(`${window.location.origin}/validation?pin=${pin}`);
+  }, [pin]);
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -39,16 +46,17 @@ export function PinDialog({ pin, slot }: PinDialogProps) {
             <p className="text-muted-foreground text-sm">
               Scannez le QR Code ou allez sur :
             </p>
-            <p className="font-medium">{window.location.origin}/validation</p>
+            <p className="font-medium">
+              {qrUrl ? qrUrl.replace(`?pin=${pin}`, "") : "Chargement..."}
+            </p>
           </div>
 
           <div className="border-primary/10 flex h-48 w-48 items-center justify-center rounded-xl border-8 bg-white p-2">
-            <div className="relative flex flex-col items-center gap-2">
-              <QrCode className="text-primary h-32 w-32" />
-              <span className="bg-primary absolute -bottom-2 rounded px-2 py-0.5 font-mono text-xl font-bold text-white shadow-lg">
-                {pin}
-              </span>
-            </div>
+            {qrUrl ? (
+              <QRCodeSVG value={qrUrl} size={144} level="M" />
+            ) : (
+              <div className="h-36 w-36 animate-pulse rounded bg-slate-100" />
+            )}
           </div>
 
           <div className="bg-muted w-full rounded-lg p-4 text-center">

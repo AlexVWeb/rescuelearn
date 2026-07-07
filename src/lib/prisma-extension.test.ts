@@ -52,6 +52,25 @@ describe("Prisma Extension - Recursive Decryption", () => {
     expect(decrypted.trainee.firstName).toBe("Jean");
   });
 
+  it("should decrypt nested trainee inside inscription inside emargement object", () => {
+    const encryptedLastName = encrypt("Martin");
+
+    const mockEmargement = {
+      id: "em1",
+      inscription: {
+        id: "i1",
+        trainee: {
+          id: "t1",
+          lastName: encryptedLastName,
+        },
+      },
+    };
+
+    const decrypted = decryptData(mockEmargement, []);
+
+    expect(decrypted.inscription.trainee.lastName).toBe("Martin");
+  });
+
   describe("Tenant Isolation (withOrganisme)", () => {
     it("should be defined", () => {
       const tenantPrisma = withOrganisme("org-123");

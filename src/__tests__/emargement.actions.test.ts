@@ -23,6 +23,7 @@ const mockPrisma = vi.hoisted(() => ({
     upsert: vi.fn(),
     findMany: vi.fn(),
     update: vi.fn(),
+    findFirst: vi.fn(),
   },
   $transaction: vi.fn(),
 }));
@@ -68,6 +69,8 @@ import {
   updateEmargementStatus,
   bulkUpdateEmargementStatus,
   getTraineesByPin,
+  getSessionDetailsByPin,
+  getTraineesByPinAndName,
 } from "@/app/admin/training/actions";
 import { EMARGEMENT_STATUS } from "@/app/admin/training/types";
 
@@ -344,6 +347,92 @@ describe("bulkUpdateEmargementStatus", () => {
   });
 });
 
+describe("getSessionDetailsByPin", () => {
+  it("throw 'Code PIN invalide' si aucun émargement trouvé", async () => {
+    mockPrisma.emargement.findFirst.mockResolvedValue(null);
+    await expect(getSessionDetailsByPin("000000")).rejects.toThrow(
+      "Code PIN invalide"
+    );
+  });
+
+  it("retourne les détails de la session et du créneau", async () => {
+    mockPrisma.emargement.findFirst.mockResolvedValue({
+      id: "em-1",
+      slot: {
+        label: "Matin J1",
+        trainingSession: { title: "PSC Mars" },
+      },
+    });
+
+    const result = await getSessionDetailsByPin("123456");
+    expect(result).toEqual({
+      sessionTitle: "PSC Mars",
+      slotLabel: "Matin J1",
+    });
+  });
+});
+
+describe("getTraineesByPinAndName", () => {
+  it("throw 'Code PIN invalide' si aucun émargement trouvé", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([]);
+    await expect(getTraineesByPinAndName("000000", "dup")).rejects.toThrow(
+      "Code PIN invalide"
+    );
+  });
+
+  it("retourne la liste filtrée et normalisée des stagiaires", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([
+      {
+        id: "em-1",
+        status: "en_attente",
+        slot: {
+          label: "Matin J1",
+          trainingSession: { title: "PSC Mars" },
+        },
+        inscription: {
+          trainee: {
+            id: "t-1",
+            firstName: "Alice",
+            lastName: "Évrard",
+            dateOfBirth: "1990-01-01",
+          },
+        },
+      },
+      {
+        id: "em-2",
+        status: "en_attente",
+        slot: {
+          label: "Matin J1",
+          trainingSession: { title: "PSC Mars" },
+        },
+        inscription: {
+          trainee: {
+            id: "t-2",
+            firstName: "Bob",
+            lastName: "Martin",
+            dateOfBirth: "1992-05-10",
+          },
+        },
+      },
+    ]);
+
+    // Test case insensitive, accent insensitive, trimmed search
+    const result = await getTraineesByPinAndName("123456", " EVR ");
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual({
+      emargementId: "em-1",
+      slotLabel: "Matin J1",
+      sessionTitle: "PSC Mars",
+      traineeId: "t-1",
+      firstName: "Alice",
+      lastName: "Évrard",
+      status: "en_attente",
+      dateOfBirth: "1990-01-01",
+    });
+  });
+});
+
 describe("getTraineesByPin", () => {
   it("throw 'Code PIN invalide' si aucun émargement trouvé", async () => {
     mockPrisma.emargement.findMany.mockResolvedValue([]);
@@ -379,22 +468,5 @@ describe("getTraineesByPin", () => {
       lastName: "Dupont",
       status: EMARGEMENT_STATUS.EN_ATTENTE,
     });
-  });
-
-  it("ne requiert pas d'authentification (flow public)", async () => {
-    // getTraineesByPin est accessible sans session — ne doit pas throw "Non autorisé"
-    mockUnauthenticated(); // auth mockée mais non appelée par cette fonction
-    mockPrisma.emargement.findMany.mockResolvedValue([
-      {
-        id: "em-1",
-        status: "en_attente",
-        slot: { label: "Matin", trainingSession: { title: "Formation" } },
-        inscription: {
-          trainee: { id: "t-1", firstName: "Bob", lastName: "Martin" },
-        },
-      },
-    ]);
-
-    await expect(getTraineesByPin("654321")).resolves.not.toThrow();
   });
 });

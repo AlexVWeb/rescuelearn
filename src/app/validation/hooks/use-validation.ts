@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  getTraineesByPin,
+  getSessionDetailsByPin,
+  getTraineesByPinAndName,
   validatePresencePublic,
 } from "../../admin/training/actions";
 import {
@@ -17,19 +18,22 @@ export interface UseValidationReturn {
   step: ValidationStep;
   pin: string;
   letters: string[];
+  dob: string;
   filteredTrainees: TraineeEntry[];
   sessionDetails: SessionDetails;
   loading: boolean;
   error: string;
   letterRefs: React.MutableRefObject<Array<HTMLInputElement | null>>;
   setPin: (pin: string) => void;
+  setDob: (dob: string) => void;
   handleVerifyPin: (e: React.FormEvent) => Promise<void>;
   handleLetterChange: (index: number, value: string) => void;
   handleLetterKeyDown: (
     index: number,
     e: React.KeyboardEvent<HTMLInputElement>
   ) => void;
-  filterTrainees: (currentLetters: string[]) => void;
+  filterTrainees: (currentLetters: string[]) => Promise<void>;
+  handleConfirmDob: (e: React.FormEvent) => void;
   resetLetters: () => void;
   handleValidatePresence: (emargementId: string) => Promise<void>;
   goBack: () => void;
@@ -46,6 +50,7 @@ export function useValidation(): UseValidationReturn {
   const [step, setStep] = useState<ValidationStep>("enter_pin");
   const [pin, setPin] = useState(searchParams.get("pin") || "");
   const [letters, setLetters] = useState<string[]>(emptyLetters);
+  const [dob, setDob] = useState("");
   const [trainees, setTrainees] = useState<TraineeEntry[]>([]);
   const [filteredTrainees, setFilteredTrainees] = useState<TraineeEntry[]>([]);
   const [sessionDetails, setSessionDetails] = useState<SessionDetails>({
@@ -77,14 +82,11 @@ export function useValidation(): UseValidationReturn {
     setLoading(true);
     setError("");
     try {
-      const data = await getTraineesByPin(pinToVerify);
-      if (data.length > 0) {
-        setSessionDetails({
-          title: data[0].sessionTitle,
-          slot: data[0].slotLabel,
-        });
-      }
-      setTrainees(data);
+      const data = await getSessionDetailsByPin(pinToVerify);
+      setSessionDetails({
+        title: data.sessionTitle,
+        slot: data.slotLabel,
+      });
       setStep("enter_name");
     } catch (err: unknown) {
       setError(
@@ -141,18 +143,48 @@ export function useValidation(): UseValidationReturn {
     }
   }
 
-  function filterTrainees(currentLetters: string[]) {
-    const query = currentLetters.join("").toLowerCase();
-    const matches = trainees.filter((t) =>
-      t.lastName.toLowerCase().startsWith(query)
-    );
+  async function filterTrainees(currentLetters: string[]) {
+    const query = currentLetters.join("");
+    setLoading(true);
+    setError("");
+    try {
+      const data = await getTraineesByPinAndName(pin, query);
+      if (data.length === 0) {
+        setError("Aucun stagiaire trouvé. Vérifiez les lettres saisies.");
+        return;
+      }
+      setTrainees(data);
+      if (data.length === 1) {
+        setFilteredTrainees(data);
+        setStep("confirm_trainee");
+      } else {
+        setDob("");
+        setStep("enter_dob");
+      }
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erreur lors de la recherche. Veuillez réessayer."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    if (matches.length === 0) {
-      setError("Aucun stagiaire trouvé. Vérifiez les lettres saisies.");
+  function handleConfirmDob(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (!dob) return;
+
+    // Find trainee with matching DOB
+    const match = trainees.find((t) => t.dateOfBirth === dob);
+    if (!match) {
+      setError("Date de naissance incorrecte.");
       return;
     }
 
-    setFilteredTrainees(matches);
+    setFilteredTrainees([match]);
     setStep("confirm_trainee");
   }
 
@@ -178,15 +210,23 @@ export function useValidation(): UseValidationReturn {
   function goBack() {
     setError("");
     if (step === "enter_name") setStep("enter_pin");
-    if (step === "confirm_trainee") {
+    else if (step === "enter_dob") {
       resetLetters();
       setStep("enter_name");
+    } else if (step === "confirm_trainee") {
+      if (trainees.length > 1) {
+        setStep("enter_dob");
+      } else {
+        resetLetters();
+        setStep("enter_name");
+      }
     }
   }
 
   function restart() {
     setPin("");
     setLetters(emptyLetters());
+    setDob("");
     setTrainees([]);
     setFilteredTrainees([]);
     setError("");
@@ -197,16 +237,19 @@ export function useValidation(): UseValidationReturn {
     step,
     pin,
     letters,
+    dob,
     filteredTrainees,
     sessionDetails,
     loading,
     error,
     letterRefs,
     setPin,
+    setDob,
     handleVerifyPin,
     handleLetterChange,
     handleLetterKeyDown,
     filterTrainees,
+    handleConfirmDob,
     resetLetters,
     handleValidatePresence,
     goBack,

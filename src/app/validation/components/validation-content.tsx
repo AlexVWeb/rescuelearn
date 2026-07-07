@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { useValidation } from "../hooks/use-validation";
 import { PinStep } from "./pin-step";
 import { NameStep } from "./name-step";
+import { DobStep } from "./dob-step";
 import { ConfirmStep } from "./confirm-step";
 import { SuccessStep } from "./success-step";
 
@@ -12,16 +13,19 @@ export function ValidationContent() {
     step,
     pin,
     letters,
+    dob,
     filteredTrainees,
     sessionDetails,
     loading,
     error,
     letterRefs,
     setPin,
+    setDob,
     handleVerifyPin,
     handleLetterChange,
     handleLetterKeyDown,
     filterTrainees,
+    handleConfirmDob,
     resetLetters,
     handleValidatePresence,
     goBack,
@@ -51,6 +55,18 @@ export function ValidationContent() {
           onLetterKeyDown={handleLetterKeyDown}
           onSearch={filterTrainees}
           onRetry={resetLetters}
+          onBack={goBack}
+        />
+      )}
+
+      {step === "enter_dob" && (
+        <DobStep
+          dob={dob}
+          loading={loading}
+          error={error}
+          sessionDetails={sessionDetails}
+          onDobChange={setDob}
+          onSubmit={handleConfirmDob}
           onBack={goBack}
         />
       )}
