@@ -11,8 +11,13 @@ import { withOrganisme } from "@/lib/prisma";
 import { requireOrganisme, getUserContext } from "@/lib/context";
 import { hasRole } from "@/lib/roles";
 import { revalidatePath } from "next/cache";
+import { inviteMemberAction } from "./invitation.actions";
 
 // --- Mocks ---
+
+vi.mock("./invitation.actions", () => ({
+  inviteMemberAction: vi.fn(),
+}));
 
 const mockPrisma = vi.hoisted(() => ({
   organisme: {
@@ -180,6 +185,58 @@ describe("Organisme Actions", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("Failed to create organisme");
+    });
+
+    it("invites an admin on creation if createAdmin is true", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        roles: ["SUPER_ADMIN"],
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      vi.mocked(hasRole).mockReturnValue(true);
+      mockPrisma.organisme.create.mockResolvedValue({ id: "new-o" });
+      vi.mocked(inviteMemberAction).mockResolvedValue({
+        success: true,
+        message: "Invitation envoyée avec succès.",
+      });
+
+      const result = await createOrganismeAction({
+        name: "New",
+        createAdmin: true,
+        useContactEmailAsAdmin: false,
+        adminEmail: "admin@test.com",
+      } as unknown as Parameters<typeof createOrganismeAction>[0]);
+
+      expect(result.success).toBe(true);
+      expect(inviteMemberAction).toHaveBeenCalledWith({
+        email: "admin@test.com",
+        role: "ADMIN_ORGANISME",
+        organismeId: "new-o",
+      });
+    });
+
+    it("invites contact email on creation if createAdmin and useContactEmailAsAdmin are true", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        roles: ["SUPER_ADMIN"],
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      vi.mocked(hasRole).mockReturnValue(true);
+      mockPrisma.organisme.create.mockResolvedValue({ id: "new-o" });
+      vi.mocked(inviteMemberAction).mockResolvedValue({
+        success: true,
+        message: "Invitation envoyée avec succès.",
+      });
+
+      const result = await createOrganismeAction({
+        name: "New",
+        email: "contact@test.com",
+        createAdmin: true,
+        useContactEmailAsAdmin: true,
+      } as unknown as Parameters<typeof createOrganismeAction>[0]);
+
+      expect(result.success).toBe(true);
+      expect(inviteMemberAction).toHaveBeenCalledWith({
+        email: "contact@test.com",
+        role: "ADMIN_ORGANISME",
+        organismeId: "new-o",
+      });
     });
   });
 

@@ -167,6 +167,9 @@ describe("updateOrganismeAction - ownership check", () => {
     federationName: "",
     isQualiopi: true,
     qualiopiCertifiedBy: "Jean Dupont",
+    createAdmin: false,
+    useContactEmailAsAdmin: true,
+    adminEmail: "",
   };
 
   it("returns Forbidden when non-super-admin tries to update another organisme", async () => {

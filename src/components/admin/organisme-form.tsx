@@ -16,6 +16,7 @@ import { ContactSection } from "./organisme-form/sections/contact-section";
 import { AddressSection } from "./organisme-form/sections/address-section";
 import { RetentionSection } from "./organisme-form/sections/retention-section";
 import { SMTPSection } from "./organisme-form/sections/smtp-section";
+import { AdminMemberSection } from "./organisme-form/sections/admin-member-section";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
@@ -25,6 +26,7 @@ interface OrganismeFormProps {
   loading?: boolean;
   submitLabel?: string;
   showOnly?: "profil" | "config";
+  isEdit?: boolean;
 }
 
 export function OrganismeForm({
@@ -33,6 +35,7 @@ export function OrganismeForm({
   loading,
   submitLabel = "Enregistrer",
   showOnly,
+  isEdit = false,
 }: OrganismeFormProps) {
   // Nettoyage des valeurs null venant de la DB pour éviter les warnings React (controlled/uncontrolled)
   const sanitizedDefaultValues = defaultValues
@@ -69,6 +72,9 @@ export function OrganismeForm({
       smtpPassword: "",
       smtpFrom: "",
       smtpSecure: true,
+      createAdmin: false,
+      useContactEmailAsAdmin: true,
+      adminEmail: "",
       ...sanitizedDefaultValues,
     },
   });
@@ -97,6 +103,7 @@ export function OrganismeForm({
         {isProfil && (
           <>
             <IdentificationSection form={form} />
+            {!isEdit && <AdminMemberSection form={form} />}
             <LegalRepSection form={form} />
             <AdminInfoSection form={form} />
             <QualiopiSection form={form} />

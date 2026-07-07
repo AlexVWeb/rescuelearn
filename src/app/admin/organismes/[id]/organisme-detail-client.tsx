@@ -81,6 +81,7 @@ export function OrganismeDetailClient({
           loading={loading}
           submitLabel="Mettre à jour le profil"
           showOnly="profil"
+          isEdit={true}
         />
       </TabsContent>
 
@@ -115,6 +116,7 @@ export function OrganismeDetailClient({
           loading={loading}
           submitLabel="Mettre à jour la configuration"
           showOnly="config"
+          isEdit={true}
         />
       </TabsContent>
 

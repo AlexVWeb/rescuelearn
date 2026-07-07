@@ -59,4 +59,65 @@ describe("organismeSchema", () => {
     const result = organismeSchema.safeParse(data);
     expect(result.success).toBe(true);
   });
+
+  describe("createAdmin validation", () => {
+    it("fails if createAdmin is true and useContactEmailAsAdmin is false but adminEmail is missing or invalid", () => {
+      const dataWithoutEmail = {
+        ...validBaseData,
+        createAdmin: true,
+        useContactEmailAsAdmin: false,
+      };
+      expect(organismeSchema.safeParse(dataWithoutEmail).success).toBe(false);
+
+      const dataWithInvalidEmail = {
+        ...validBaseData,
+        createAdmin: true,
+        useContactEmailAsAdmin: false,
+        adminEmail: "invalid-email",
+      };
+      expect(organismeSchema.safeParse(dataWithInvalidEmail).success).toBe(
+        false
+      );
+    });
+
+    it("succeeds if createAdmin is true and useContactEmailAsAdmin is false and adminEmail is valid", () => {
+      const data = {
+        ...validBaseData,
+        createAdmin: true,
+        useContactEmailAsAdmin: false,
+        adminEmail: "admin@test.com",
+      };
+      expect(organismeSchema.safeParse(data).success).toBe(true);
+    });
+
+    it("fails if createAdmin is true and useContactEmailAsAdmin is true but contact email is missing or invalid", () => {
+      const dataWithoutContact = {
+        ...validBaseData,
+        email: "",
+        createAdmin: true,
+        useContactEmailAsAdmin: true,
+      };
+      expect(organismeSchema.safeParse(dataWithoutContact).success).toBe(false);
+
+      const dataWithInvalidContact = {
+        ...validBaseData,
+        email: "invalid-email",
+        createAdmin: true,
+        useContactEmailAsAdmin: true,
+      };
+      expect(organismeSchema.safeParse(dataWithInvalidContact).success).toBe(
+        false
+      );
+    });
+
+    it("succeeds if createAdmin is true and useContactEmailAsAdmin is true and contact email is valid", () => {
+      const data = {
+        ...validBaseData,
+        email: "contact@test.com",
+        createAdmin: true,
+        useContactEmailAsAdmin: true,
+      };
+      expect(organismeSchema.safeParse(data).success).toBe(true);
+    });
+  });
 });

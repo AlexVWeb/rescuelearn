@@ -74,6 +74,8 @@ export async function getOrganismeByIdAction(id: string) {
   }
 }
 
+import { inviteMemberAction } from "./invitation.actions";
+
 export async function createOrganismeAction(data: OrganismeFormValues) {
   const user = await getUserContext();
   if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
@@ -117,6 +119,32 @@ export async function createOrganismeAction(data: OrganismeFormValues) {
         smtpSecure: data.smtpSecure,
       },
     });
+
+    if (data.createAdmin) {
+      const adminEmail = data.useContactEmailAsAdmin
+        ? data.email
+        : data.adminEmail;
+      if (adminEmail) {
+        const inviteResult = await inviteMemberAction({
+          email: adminEmail,
+          role: UserRole.ADMIN_ORGANISME,
+          organismeId: organisme.id,
+        });
+
+        if (!inviteResult.success) {
+          logger.error(
+            "Failed to invite initial admin for organisme:",
+            inviteResult.error
+          );
+          return {
+            success: true,
+            data: organisme as Organisme,
+            warning: `L'organisme a été créé, mais l'invitation de l'administrateur (${adminEmail}) a échoué : ${inviteResult.error}`,
+          };
+        }
+      }
+    }
+
     revalidatePath("/admin/organismes");
     return { success: true, data: organisme as Organisme };
   } catch (error) {

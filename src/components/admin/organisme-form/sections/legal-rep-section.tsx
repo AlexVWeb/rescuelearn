@@ -12,11 +12,52 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
 
+import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 interface LegalRepSectionProps {
   form: UseFormReturn<OrganismeFormValues>;
 }
 
+const PREDEFINED_ROLES = [
+  "Président",
+  "Vice-Président",
+  "Secrétaire Général",
+  "Trésorier",
+  "Gérant",
+  "Directeur / Directrice",
+  "Responsable Formation",
+];
+
 export function LegalRepSection({ form }: LegalRepSectionProps) {
+  const currentJobTitle = form.watch("legalRepJobTitle") || "";
+  const isPredefined =
+    PREDEFINED_ROLES.includes(currentJobTitle) || currentJobTitle === "";
+  const [showCustom, setShowCustom] = useState(!isPredefined);
+
+  const handleSelectChange = (value: string) => {
+    if (value === "Autre") {
+      setShowCustom(true);
+      form.setValue("legalRepJobTitle", "");
+    } else {
+      setShowCustom(false);
+      form.setValue("legalRepJobTitle", value);
+    }
+  };
+
+  const selectValue =
+    isPredefined && currentJobTitle !== ""
+      ? currentJobTitle
+      : currentJobTitle === "" && !showCustom
+        ? ""
+        : "Autre";
+
   return (
     <Card>
       <CardHeader>
@@ -49,22 +90,52 @@ export function LegalRepSection({ form }: LegalRepSectionProps) {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="legalRepJobTitle"
-          render={({ field }) => (
-            <FormItem className="sm:col-span-2">
-              <FormLabel>Fonction</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Ex: Président, Gérant, Responsable Formation"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+        <div className="space-y-4 sm:col-span-2">
+          <FormField
+            control={form.control}
+            name="legalRepJobTitle"
+            render={() => (
+              <FormItem>
+                <FormLabel>Fonction</FormLabel>
+                <Select onValueChange={handleSelectChange} value={selectValue}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez une fonction" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {PREDEFINED_ROLES.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="Autre">Autre (préciser...)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {showCustom && (
+            <FormField
+              control={form.control}
+              name="legalRepJobTitle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Précisez votre fonction</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Ex: Responsable RH, Délégué, Secrétaire"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           )}
-        />
+        </div>
       </CardContent>
     </Card>
   );

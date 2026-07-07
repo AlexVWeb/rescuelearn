@@ -31,15 +31,18 @@ export const EmailService = {
     html?: string;
     smtp?: SMTPConfig;
   }) {
-    // Priorité 1 : SMTP de l'organisme (si configuré)
+    // Priorité 1 : SMTP de l'organisme (si configuré avec un hôte)
     // Priorité 2 : SMTP global (via env vars)
-    const host = organismeSmtp?.host || process.env.SMTP_HOST;
-    const port = Number(organismeSmtp?.port || process.env.SMTP_PORT || 587);
-    const user = organismeSmtp?.user || process.env.SMTP_USER;
-    const pass = organismeSmtp?.pass || process.env.SMTP_PASS;
+    const hasOrganismeSmtp = !!organismeSmtp?.host;
+    const smtpConfig = hasOrganismeSmtp ? organismeSmtp : undefined;
+
+    const host = smtpConfig?.host || process.env.SMTP_HOST;
+    const port = Number(smtpConfig?.port || process.env.SMTP_PORT || 587);
+    const user = smtpConfig?.user || process.env.SMTP_USER;
+    const pass = smtpConfig?.pass || process.env.SMTP_PASS;
     const from =
-      organismeSmtp?.from || process.env.SMTP_FROM || "noreply@rescuelearn.fr";
-    const secure = organismeSmtp?.secure ?? process.env.SMTP_SECURE === "true";
+      smtpConfig?.from || process.env.SMTP_FROM || "noreply@rescuelearn.fr";
+    const secure = smtpConfig?.secure ?? process.env.SMTP_SECURE === "true";
 
     if (host) {
       try {
@@ -106,18 +109,49 @@ export const EmailService = {
     const text = `Bonjour,\n\nVous avez été invité à rejoindre l'organisme ${organismeName} sur RescueLearn en tant que membre.\n\nPour accepter cette invitation et créer votre compte, veuillez cliquer sur le lien suivant :\n${invitationUrl}\n\nCe lien expirera dans 7 jours.\n\nSi vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.\n\nL'équipe RescueLearn`;
 
     const html = `
-      <div style="font-family: sans-serif; line-height: 1.5; color: #333;">
-        <h2>Invitation à rejoindre ${organismeName}</h2>
-        <p>Bonjour,</p>
-        <p>Vous avez été invité à rejoindre l'organisme <strong>${organismeName}</strong> sur RescueLearn en tant que membre.</p>
-        <p>Pour accepter cette invitation et créer votre compte, veuillez cliquer sur le bouton ci-dessous :</p>
-        <div style="margin: 20px 0;">
-          <a href="${invitationUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Accepter l'invitation</a>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 580px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);">
+        <div style="background-color: #2563eb; padding: 32px 24px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em;">RescueLearn</h1>
+          <p style="color: #bfdbfe; margin: 4px 0 0 0; font-size: 14px; font-weight: 500;">La plateforme des formateurs en secourisme</p>
         </div>
-        <p>Ce lien expirera dans 7 jours.</p>
-        <p style="color: #666; font-size: 0.9em;">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.</p>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-        <p>L'équipe RescueLearn</p>
+        <div style="padding: 40px 32px; background-color: #ffffff;">
+          <h2 style="margin-top: 0; color: #111827; font-size: 20px; font-weight: 700; line-height: 1.3;">Rejoignez votre organisme</h2>
+          <p style="font-size: 15px; color: #4b5563;">Bonjour,</p>
+          <p style="font-size: 15px; color: #4b5563; margin-bottom: 24px;">
+            Vous avez été invité à collaborer avec l'organisme :
+          </p>
+          
+          <div style="background-color: #f3f4f6; border-left: 4px solid #2563eb; padding: 16px 20px; border-radius: 4px 12px 12px 4px; margin-bottom: 28px;">
+            <span style="font-size: 16px; font-weight: 700; color: #1f2937; display: block; word-break: break-word;">${organismeName}</span>
+          </div>
+
+          <p style="font-size: 15px; color: #4b5563; margin-bottom: 32px;">
+            Pour accepter cette invitation et créer votre compte afin d'accéder à la plateforme, cliquez sur le bouton ci-dessous :
+          </p>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${invitationUrl}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 15px; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);">
+              Accepter l'invitation
+            </a>
+          </div>
+
+          <div style="background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin: 32px 0 24px 0;">
+            <p style="margin: 0; font-size: 13px; color: #92400e; font-weight: 500;">
+              ⚠️ Ce lien d'invitation est personnel et expirera dans <strong>7 jours</strong>.
+            </p>
+          </div>
+
+          <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #f3f4f6; text-align: left;">
+            <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.5;">
+              Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email en toute sécurité.
+            </p>
+          </div>
+        </div>
+        <div style="background-color: #f9fafb; padding: 24px 32px; text-align: center; border-top: 1px solid #f3f4f6;">
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+            &copy; ${new Date().getFullYear()} RescueLearn. Tous droits réservés.
+          </p>
+        </div>
       </div>
     `;
 
