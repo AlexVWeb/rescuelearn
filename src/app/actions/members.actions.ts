@@ -5,13 +5,24 @@ import { UserRole, hasRole } from "@/lib/roles";
 import { requireOrganisme, getUserContext } from "@/lib/context";
 import { logger } from "@/lib/logger";
 
-export async function getOrganismeMembersAction() {
-  const user = await requireOrganisme();
-  const tenant = withOrganisme(user.organismeId);
-
+export async function getOrganismeMembersAction(organismeId?: string) {
   try {
+    const user = await getUserContext();
+    const targetOrganismeId = organismeId || user.organismeId;
+
+    if (!targetOrganismeId) {
+      return { success: false, error: "Aucun organisme associé" };
+    }
+
+    const isSuperAdmin = hasRole(user.roles, UserRole.SUPER_ADMIN);
+    if (!isSuperAdmin && user.organismeId !== targetOrganismeId) {
+      return { success: false, error: "Forbidden" };
+    }
+
+    const tenant = withOrganisme(targetOrganismeId);
+
     const members = await tenant.user.findMany({
-      where: { organismeId: user.organismeId },
+      where: { organismeId: targetOrganismeId },
       select: {
         id: true,
         name: true,

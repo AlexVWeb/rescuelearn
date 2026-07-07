@@ -20,7 +20,7 @@ export default async function OrganismeDetailPage({
   const [organismeResult, membersResult, invitationsResult] = await Promise.all(
     [
       getOrganismeByIdAction(id),
-      getOrganismeMembersAction(),
+      getOrganismeMembersAction(id),
       getPendingInvitationsAction(id),
     ]
   );
