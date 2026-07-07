@@ -48,6 +48,7 @@ export function NavUser({
   const [currentOrganizationId, setCurrentOrganizationId] = useState<
     string | null
   >(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
 
   useEffect(() => {
@@ -59,7 +60,8 @@ export function NavUser({
       const result = await getAvailableOrganizations();
       if (result.success && result.data) {
         setOrganizations(result.data);
-        setCurrentOrganizationId(result.currentOrganizationId);
+        setCurrentOrganizationId(result.currentOrganizationId ?? null);
+        setIsSuperAdmin(!!result.isSuperAdmin);
       }
     } catch {
       // Silent error handling client-side (errors logged server-side)
@@ -68,11 +70,16 @@ export function NavUser({
     }
   };
 
-  const handleSwitchOrganization = async (organizationId: string) => {
+  const handleSwitchOrganization = async (organizationId: string | null) => {
     try {
       const result = await switchOrganization(organizationId);
       if (result.success) {
         setCurrentOrganizationId(organizationId);
+        if (organizationId === null) {
+          router.push("/admin");
+        } else {
+          router.push("/admin/training/dashboard");
+        }
         router.refresh();
       }
     } catch {
@@ -134,11 +141,25 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {!isLoadingOrgs && organizations.length > 1 && (
+            {!isLoadingOrgs && (isSuperAdmin || organizations.length > 1) && (
               <>
                 <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
                   Organisations
                 </DropdownMenuLabel>
+                {isSuperAdmin && (
+                  <DropdownMenuItem
+                    onClick={() => handleSwitchOrganization(null)}
+                    className="cursor-pointer"
+                  >
+                    <Building2 className="mr-2 h-4 w-4" />
+                    <span className="flex-1">Administration globale</span>
+                    {currentOrganizationId === null && (
+                      <span className="text-muted-foreground ml-2 text-xs">
+                        ✓
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                )}
                 {organizations.map((org) => (
                   <DropdownMenuItem
                     key={org.id}

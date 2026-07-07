@@ -82,6 +82,78 @@ describe("Organization Switch Actions", () => {
       expect(result.currentOrganizationId).toBe("org-1");
     });
 
+    it("should automatically select organization if user has exactly one organization and currentOrganizationId is null", async () => {
+      const userId = "u1";
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: userId,
+        roles: ["FORMATEUR"],
+        organismeId: null,
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+
+      mockPrisma.member.findMany.mockResolvedValue([
+        {
+          id: "m1",
+          userId,
+          organizationId: "org-1",
+          role: "admin",
+          createdAt: new Date(),
+          organization: {
+            id: "org-1",
+            name: "Organisation 1",
+            logo: null,
+          },
+        },
+      ]);
+      mockPrisma.user.update.mockResolvedValue({
+        id: userId,
+        organismeId: "org-1",
+      });
+
+      const result = await getAvailableOrganizations();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(1);
+      expect(result.currentOrganizationId).toBe("org-1");
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: {
+          organismeId: "org-1",
+          roles: ["ADMIN_ORGANISME"],
+        },
+      });
+    });
+
+    it("should not automatically select organization if user is SUPER_ADMIN", async () => {
+      const userId = "u1";
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: userId,
+        roles: ["SUPER_ADMIN"],
+        organismeId: null,
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+
+      mockPrisma.member.findMany.mockResolvedValue([
+        {
+          id: "m1",
+          userId,
+          organizationId: "org-1",
+          role: "admin",
+          createdAt: new Date(),
+          organization: {
+            id: "org-1",
+            name: "Organisation 1",
+            logo: null,
+          },
+        },
+      ]);
+
+      const result = await getAvailableOrganizations();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(1);
+      expect(result.currentOrganizationId).toBeNull();
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
     it("should return empty array when user has no organizations", async () => {
       const userId = "u1";
       vi.mocked(getUserContext).mockResolvedValue({
@@ -136,10 +208,43 @@ describe("Organization Switch Actions", () => {
       expect(result.success).toBe(true);
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: userId },
-        data: { organismeId: orgId },
+        data: {
+          organismeId: orgId,
+          roles: ["FORMATEUR"],
+        },
       });
       expect(revalidatePath).toHaveBeenCalledWith("/");
       expect(revalidatePath).toHaveBeenCalledWith("/admin");
+    });
+
+    it("should preserve SUPER_ADMIN role when switching organization", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: userId,
+        roles: ["SUPER_ADMIN"],
+        organismeId: "org-1",
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+
+      mockPrisma.member.findFirst.mockResolvedValue({
+        id: "m1",
+        userId,
+        organizationId: orgId,
+        role: "admin",
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: userId,
+        organismeId: orgId,
+      });
+
+      const result = await switchOrganization(orgId);
+
+      expect(result.success).toBe(true);
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: {
+          organismeId: orgId,
+          roles: ["ADMIN_ORGANISME", "SUPER_ADMIN"],
+        },
+      });
     });
 
     it("should fail if user is not member of organization", async () => {
@@ -149,6 +254,44 @@ describe("Organization Switch Actions", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("pas membre");
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it("should allow switching to null organization for super admin", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: userId,
+        roles: ["SUPER_ADMIN"],
+        organismeId: "org-1",
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+
+      mockPrisma.user.update.mockResolvedValue({
+        id: userId,
+        organismeId: null,
+      });
+
+      const result = await switchOrganization(null);
+
+      expect(result.success).toBe(true);
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: userId },
+        data: {
+          organismeId: null,
+          roles: ["SUPER_ADMIN"],
+        },
+      });
+    });
+
+    it("should deny switching to null organization for non-super admin", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: userId,
+        roles: ["FORMATEUR"],
+        organismeId: "org-1",
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+
+      const result = await switchOrganization(null);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("non autorisée");
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
-import { UserRole } from "@/lib/roles";
+import { UserRole, hasRole } from "@/lib/roles";
 import { NavUser } from "@/components/nav-user";
 import { User } from "@/app/actions/user-actions";
 import {
@@ -26,16 +26,15 @@ import {
 } from "@/components/ui/sidebar";
 
 // Compute sidebar data dynamically based on user roles
-const getNavData = (userRoles: string[], hasOrganisme: boolean) => {
-  const isSuperAdmin = userRoles.includes(UserRole.SUPER_ADMIN);
+const getNavData = (roles: unknown, hasOrganisme: boolean) => {
+  const isSuperAdmin = hasRole(roles, UserRole.SUPER_ADMIN);
   const isFormateur =
-    (userRoles.includes(UserRole.FORMATEUR) ||
-      userRoles.includes(UserRole.ADMIN_ORGANISME) ||
+    (hasRole(roles, UserRole.FORMATEUR) ||
+      hasRole(roles, UserRole.ADMIN_ORGANISME) ||
       isSuperAdmin) &&
     hasOrganisme;
   const isAdminOrganisme =
-    (userRoles.includes(UserRole.ADMIN_ORGANISME) || isSuperAdmin) &&
-    hasOrganisme;
+    hasRole(roles, UserRole.ADMIN_ORGANISME) && hasOrganisme;
 
   const trainingSubItems = [
     { title: "Tableau de bord", url: "/admin/training/dashboard" },
@@ -58,108 +57,109 @@ const getNavData = (userRoles: string[], hasOrganisme: boolean) => {
       ]
     : [];
 
-  const superAdminItems = isSuperAdmin
-    ? [
-        {
-          title: "Tableau de bord",
-          url: "/admin",
-          icon: SquareTerminal,
-          isActive: !isFormateur,
-          items: [
-            {
-              title: "Overview",
-              url: "/admin",
-            },
-          ],
-        },
-        {
-          title: "Organismes",
-          url: "/admin/organismes",
-          icon: Building,
-          items: [
-            {
-              title: "Gérer les organismes",
-              url: "/admin/organismes",
-            },
-          ],
-        },
-        {
-          title: "Utilisateurs",
-          url: "/admin/users",
-          icon: Users,
-          items: [
-            {
-              title: "Gérer les utilisateurs",
-              url: "/admin/users",
-            },
-          ],
-        },
-        {
-          title: "Quiz",
-          url: "#",
-          icon: BookOpen,
-          items: [
-            {
-              title: "Quiz",
-              url: "/admin/quiz/quizzes",
-            },
-            {
-              title: "Questions",
-              url: "/admin/quiz/questions",
-            },
-            {
-              title: "Options",
-              url: "/admin/quiz/options",
-            },
-            {
-              title: "Catégories",
-              url: "/admin/quiz/categories",
-            },
-            {
-              title: "Niveaux",
-              url: "/admin/quiz/levels",
-            },
-          ],
-        },
-        {
-          title: "SNV",
-          url: "#",
-          icon: Activity,
-          items: [
-            {
-              title: "Scénarios",
-              url: "/admin/snv/scenarios",
-            },
-            {
-              title: "Victimes",
-              url: "/admin/snv/victims",
-            },
-          ],
-        },
-        {
-          title: "Cartes d'apprentissage",
-          url: "#",
-          icon: GraduationCap,
-          items: [
-            {
-              title: "Cartes",
-              url: "/admin/cards",
-            },
-          ],
-        },
-        {
-          title: "Référentiels",
-          url: "#",
-          icon: FileText,
-          items: [
-            {
-              title: "Référentiels",
-              url: "/admin/referenciels",
-            },
-          ],
-        },
-      ]
-    : [];
+  const superAdminItems =
+    isSuperAdmin && !hasOrganisme
+      ? [
+          {
+            title: "Tableau de bord",
+            url: "/admin",
+            icon: SquareTerminal,
+            isActive: !isFormateur,
+            items: [
+              {
+                title: "Overview",
+                url: "/admin",
+              },
+            ],
+          },
+          {
+            title: "Organismes",
+            url: "/admin/organismes",
+            icon: Building,
+            items: [
+              {
+                title: "Gérer les organismes",
+                url: "/admin/organismes",
+              },
+            ],
+          },
+          {
+            title: "Utilisateurs",
+            url: "/admin/users",
+            icon: Users,
+            items: [
+              {
+                title: "Gérer les utilisateurs",
+                url: "/admin/users",
+              },
+            ],
+          },
+          {
+            title: "Quiz",
+            url: "#",
+            icon: BookOpen,
+            items: [
+              {
+                title: "Quiz",
+                url: "/admin/quiz/quizzes",
+              },
+              {
+                title: "Questions",
+                url: "/admin/quiz/questions",
+              },
+              {
+                title: "Options",
+                url: "/admin/quiz/options",
+              },
+              {
+                title: "Catégories",
+                url: "/admin/quiz/categories",
+              },
+              {
+                title: "Niveaux",
+                url: "/admin/quiz/levels",
+              },
+            ],
+          },
+          {
+            title: "SNV",
+            url: "#",
+            icon: Activity,
+            items: [
+              {
+                title: "Scénarios",
+                url: "/admin/snv/scenarios",
+              },
+              {
+                title: "Victimes",
+                url: "/admin/snv/victims",
+              },
+            ],
+          },
+          {
+            title: "Cartes d'apprentissage",
+            url: "#",
+            icon: GraduationCap,
+            items: [
+              {
+                title: "Cartes",
+                url: "/admin/cards",
+              },
+            ],
+          },
+          {
+            title: "Référentiels",
+            url: "#",
+            icon: FileText,
+            items: [
+              {
+                title: "Référentiels",
+                url: "/admin/referenciels",
+              },
+            ],
+          },
+        ]
+      : [];
 
   return {
     navMain: [...superAdminItems, ...trainingItems],
@@ -170,9 +170,8 @@ export function AppSidebar({
   user,
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user: User }) {
-  const userRoles = Array.isArray(user?.roles) ? user.roles : [];
   const hasOrganisme = !!user?.organismeId;
-  const data = getNavData(userRoles, hasOrganisme);
+  const data = getNavData(user?.roles, hasOrganisme);
 
   return (
     <Sidebar collapsible="icon" {...props}>

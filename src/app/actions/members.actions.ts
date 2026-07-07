@@ -19,26 +19,37 @@ export async function getOrganismeMembersAction(organismeId?: string) {
       return { success: false, error: "Forbidden" };
     }
 
-    const tenant = withOrganisme(targetOrganismeId);
-
-    const members = await tenant.user.findMany({
-      where: { organismeId: targetOrganismeId },
-      select: {
-        id: true,
-        name: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        roles: true,
-        createdAt: true,
+    const memberships = await prisma.member.findMany({
+      where: { organizationId: targetOrganismeId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            roles: true,
+            createdAt: true,
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
     });
 
-    const typedMembers = members.map((m) => ({
-      ...m,
-      roles: (Array.isArray(m.roles) ? m.roles : []) as UserRole[],
-    }));
+    const typedMembers = memberships
+      .filter((m) => m.user !== null)
+      .map((m) => ({
+        id: m.user!.id,
+        name: m.user!.name,
+        firstName: m.user!.firstName,
+        lastName: m.user!.lastName,
+        email: m.user!.email,
+        roles: (Array.isArray(m.user!.roles)
+          ? m.user!.roles
+          : []) as UserRole[],
+        createdAt: m.createdAt,
+      }));
 
     return { success: true, data: typedMembers };
   } catch (error) {
@@ -47,23 +58,61 @@ export async function getOrganismeMembersAction(organismeId?: string) {
   }
 }
 
-export async function updateMemberRoleAction(userId: string, roles: string[]) {
-  const user = await requireOrganisme();
-
-  if (
-    !hasRole(user.roles, UserRole.ADMIN_ORGANISME) &&
-    !hasRole(user.roles, UserRole.SUPER_ADMIN)
-  ) {
-    return { success: false, error: "Forbidden" };
-  }
-
-  const tenant = withOrganisme(user.organismeId);
-
+export async function updateMemberRoleAction(
+  userId: string,
+  roles: string[],
+  organismeId?: string
+) {
   try {
-    await tenant.user.update({
+    const user = await getUserContext();
+    const targetOrganismeId = organismeId || user.organismeId;
+
+    if (!targetOrganismeId) {
+      return { success: false, error: "Aucun organisme associé" };
+    }
+
+    const isSuperAdmin = hasRole(user.roles, UserRole.SUPER_ADMIN);
+    const isOrgAdmin =
+      hasRole(user.roles, UserRole.ADMIN_ORGANISME) &&
+      user.organismeId === targetOrganismeId;
+
+    if (!isSuperAdmin && !isOrgAdmin) {
+      return { success: false, error: "Forbidden" };
+    }
+
+    const targetUser = await prisma.user.findUnique({
       where: { id: userId },
-      data: { roles },
+      select: { roles: true },
     });
+
+    let newRoles = [...roles];
+    if (targetUser && hasRole(targetUser.roles, UserRole.SUPER_ADMIN)) {
+      if (!newRoles.includes(UserRole.SUPER_ADMIN)) {
+        newRoles.push(UserRole.SUPER_ADMIN);
+      }
+    }
+
+    const client = isSuperAdmin ? prisma : withOrganisme(targetOrganismeId);
+
+    await client.user.update({
+      where: { id: userId },
+      data: { roles: newRoles },
+    });
+
+    const memberRole = roles.includes(UserRole.ADMIN_ORGANISME)
+      ? "admin"
+      : "member";
+
+    await prisma.member.updateMany({
+      where: {
+        userId,
+        organizationId: targetOrganismeId,
+      },
+      data: {
+        role: memberRole,
+      },
+    });
+
     return { success: true };
   } catch (error) {
     logger.error("Failed to update member role:", error);
@@ -71,23 +120,47 @@ export async function updateMemberRoleAction(userId: string, roles: string[]) {
   }
 }
 
-export async function removeMemberFromOrganismeAction(userId: string) {
-  const user = await requireOrganisme();
-
-  if (
-    !hasRole(user.roles, UserRole.ADMIN_ORGANISME) &&
-    !hasRole(user.roles, UserRole.SUPER_ADMIN)
-  ) {
-    return { success: false, error: "Forbidden" };
-  }
-
-  const tenant = withOrganisme(user.organismeId);
-
+export async function removeMemberFromOrganismeAction(
+  userId: string,
+  organismeId?: string
+) {
   try {
-    await tenant.user.update({
-      where: { id: userId },
-      data: { organismeId: null },
+    const user = await getUserContext();
+    const targetOrganismeId = organismeId || user.organismeId;
+
+    if (!targetOrganismeId) {
+      return { success: false, error: "Aucun organisme associé" };
+    }
+
+    const isSuperAdmin = hasRole(user.roles, UserRole.SUPER_ADMIN);
+    const isOrgAdmin =
+      hasRole(user.roles, UserRole.ADMIN_ORGANISME) &&
+      user.organismeId === targetOrganismeId;
+
+    if (!isSuperAdmin && !isOrgAdmin) {
+      return { success: false, error: "Forbidden" };
+    }
+
+    await prisma.member.deleteMany({
+      where: {
+        userId,
+        organizationId: targetOrganismeId,
+      },
     });
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { organismeId: true },
+    });
+
+    if (targetUser && targetUser.organismeId === targetOrganismeId) {
+      const client = isSuperAdmin ? prisma : withOrganisme(targetOrganismeId);
+      await client.user.update({
+        where: { id: userId },
+        data: { organismeId: null },
+      });
+    }
+
     return { success: true };
   } catch (error) {
     logger.error("Failed to remove member:", error);

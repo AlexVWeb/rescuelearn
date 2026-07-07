@@ -41,6 +41,8 @@ const mockPrisma = vi.hoisted(() => ({
   },
   member: {
     create: vi.fn(),
+    findFirst: vi.fn(),
+    update: vi.fn(),
   },
   organisme: {
     findUnique: vi.fn(),
@@ -122,6 +124,37 @@ describe("Invitation Actions", () => {
       expect(result.success).toBe(true);
       expect(result.message).toContain("rattaché");
       expect(mockPrisma.user.update).toHaveBeenCalled();
+    });
+
+    it("should preserve SUPER_ADMIN when attaching an existing user who is a SUPER_ADMIN", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["SUPER_ADMIN"],
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "u2",
+        email: "test@example.com",
+        roles: ["SUPER_ADMIN", "FORMATEUR"],
+        organismeId: null,
+      });
+
+      const result = await inviteMemberAction(validPayload);
+
+      expect(result.success).toBe(true);
+      expect(mockPrisma.member.create).toHaveBeenCalledWith({
+        data: {
+          userId: "u2",
+          organizationId: validPayload.organismeId,
+          role: "member",
+        },
+      });
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: "u2" },
+        data: {
+          organismeId: validPayload.organismeId,
+          roles: ["FORMATEUR", "SUPER_ADMIN"],
+        },
+      });
     });
 
     it("should create invitation and send email if user does not exist (SUPER_ADMIN)", async () => {

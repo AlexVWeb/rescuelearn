@@ -61,8 +61,34 @@ export async function inviteMemberAction(input: InviteMemberInput) {
       }
 
       // On rattache l'utilisateur existant
+      const memberRole = role === UserRole.ADMIN_ORGANISME ? "admin" : "member";
+      const existingMember = await prisma.member.findFirst({
+        where: {
+          userId: existingUser.id,
+          organizationId: organismeId,
+        },
+      });
+
+      if (!existingMember) {
+        await prisma.member.create({
+          data: {
+            userId: existingUser.id,
+            organizationId: organismeId,
+            role: memberRole,
+          },
+        });
+      } else if (existingMember.role !== memberRole) {
+        await prisma.member.update({
+          where: { id: existingMember.id },
+          data: { role: memberRole },
+        });
+      }
+
       const currentRoles = (existingUser.roles as string[]) || [];
-      const newRoles = Array.from(new Set([...currentRoles, role]));
+      const newRoles: string[] = [role];
+      if (hasRole(currentRoles, UserRole.SUPER_ADMIN)) {
+        newRoles.push(UserRole.SUPER_ADMIN);
+      }
 
       await prisma.user.update({
         where: { id: existingUser.id },
@@ -244,11 +270,17 @@ export async function acceptInvitationAction(input: AcceptInvitationInput) {
     });
 
     // Création du membre de l'organisation
+    const finalMemberRole =
+      invitation.role === UserRole.ADMIN_ORGANISME ||
+      invitation.role === "admin"
+        ? "admin"
+        : "member";
+
     await prisma.member.create({
       data: {
         organizationId: invitation.organizationId,
         userId: user.id,
-        role: "admin", // Par défaut admin si invité via ce flux pour l'instant, ou mapper invitation.role
+        role: finalMemberRole,
       },
     });
 

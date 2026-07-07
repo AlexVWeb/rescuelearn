@@ -83,7 +83,7 @@ export function MembresTab({
   };
 
   const handleRoleChange = async (userId: string, role: string) => {
-    const result = await updateMemberRoleAction(userId, [role]);
+    const result = await updateMemberRoleAction(userId, [role], organismeId);
     if (result.success) {
       toast.success("Rôle mis à jour");
       router.refresh();
@@ -94,7 +94,10 @@ export function MembresTab({
 
   const handleRemove = async () => {
     if (!memberToRemove) return;
-    const result = await removeMemberFromOrganismeAction(memberToRemove);
+    const result = await removeMemberFromOrganismeAction(
+      memberToRemove,
+      organismeId
+    );
     if (result.success) {
       toast.success("Membre retiré");
       setMembers((prev) => prev.filter((m) => m.id !== memberToRemove));
