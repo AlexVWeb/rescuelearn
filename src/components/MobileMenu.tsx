@@ -56,6 +56,13 @@ export function MobileMenu() {
               Cartes d&apos;apprentissage
             </Link>
             <Link
+              href="/formations"
+              className="px-4 py-2 font-medium text-blue-600 hover:text-blue-700"
+              onClick={() => setIsOpen(false)}
+            >
+              Organismes de formation
+            </Link>
+            <Link
               href="/login"
               className="mx-4 rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
               onClick={() => setIsOpen(false)}

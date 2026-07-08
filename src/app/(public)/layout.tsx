@@ -56,6 +56,12 @@ export default function PublicLayout({
                 Cartes d&apos;apprentissage
               </Link>
               <Link
+                href="/formations"
+                className="font-medium text-blue-600! text-gray-700 transition-colors hover:text-blue-600"
+              >
+                Organismes de formation
+              </Link>
+              <Link
                 href="/login"
                 className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
@@ -132,6 +138,14 @@ export default function PublicLayout({
                     className="text-sm text-gray-500 hover:text-blue-600"
                   >
                     Cartes d&apos;apprentissage
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/formations"
+                    className="text-sm font-semibold text-gray-500 hover:text-blue-600"
+                  >
+                    Espace Organismes (Formations)
                   </Link>
                 </li>
                 <li>
