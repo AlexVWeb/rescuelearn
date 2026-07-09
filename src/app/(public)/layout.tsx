@@ -35,12 +35,6 @@ export default function PublicLayout({
             {/* Menu desktop */}
             <div className="hidden items-center space-x-8 md:flex">
               <Link
-                href="/"
-                className="text-gray-700 transition-colors hover:text-blue-600"
-              >
-                Accueil
-              </Link>
-              <Link
                 href="/quiz"
                 className="text-gray-700 transition-colors hover:text-blue-600"
               >

@@ -303,9 +303,9 @@ export function HomeClient() {
                 <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
                     <Heart className="h-5 w-5 animate-pulse text-red-600" />
-                    <span className="text-sm font-bold text-slate-800">
+                    <h2 className="text-sm font-bold text-slate-800">
                       Quiz : Démo Interactive
-                    </span>
+                    </h2>
                   </div>
                   <div className="text-xs font-semibold text-slate-500">
                     Question active
@@ -566,10 +566,14 @@ export function HomeClient() {
               <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="mb-4 grid grid-cols-3 gap-3">
                   <div>
-                    <label className="mb-1 block text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+                    <label
+                      htmlFor="glasgow-eye"
+                      className="mb-1 block text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+                    >
                       Yeux (Y)
                     </label>
                     <select
+                      id="glasgow-eye"
                       value={glasgowEye}
                       onChange={(e) => setGlasgowEye(Number(e.target.value))}
                       className="w-full rounded border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:ring-1 focus:ring-blue-500 focus:outline-none"
@@ -581,10 +585,14 @@ export function HomeClient() {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+                    <label
+                      htmlFor="glasgow-verbal"
+                      className="mb-1 block text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+                    >
                       Verbal (V)
                     </label>
                     <select
+                      id="glasgow-verbal"
                       value={glasgowVerbal}
                       onChange={(e) => setGlasgowVerbal(Number(e.target.value))}
                       className="w-full rounded border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:ring-1 focus:ring-blue-500 focus:outline-none"
@@ -597,10 +605,14 @@ export function HomeClient() {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+                    <label
+                      htmlFor="glasgow-motor"
+                      className="mb-1 block text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+                    >
                       Moteur (M)
                     </label>
                     <select
+                      id="glasgow-motor"
                       value={glasgowMotor}
                       onChange={(e) => setGlasgowMotor(Number(e.target.value))}
                       className="w-full rounded border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:ring-1 focus:ring-blue-500 focus:outline-none"
@@ -767,9 +779,9 @@ export function HomeClient() {
                 100% Réglementaire
               </div>
 
-              <h4 className="mb-4 text-lg font-bold text-slate-900">
+              <h3 className="mb-4 text-lg font-bold text-slate-900">
                 Garantie de conformité technique
-              </h4>
+              </h3>
               <p className="mb-6 text-sm leading-relaxed text-slate-600">
                 Le contenu pédagogique proposé sur RescueLearn est entièrement
                 basé sur les référentiels nationaux de recommandations de
@@ -781,9 +793,9 @@ export function HomeClient() {
                   <ShieldCheck className="h-6 w-6 text-emerald-600" />
                 </div>
                 <div>
-                  <h5 className="animate-pulse text-sm font-semibold text-slate-800">
+                  <h4 className="animate-pulse text-sm font-semibold text-slate-800">
                     Sécurité & Accessibilité
-                  </h5>
+                  </h4>
                   <p className="text-xs text-slate-500">
                     Navigation accessible (WCAG / RGAA) et protection de la
                     confidentialité.
