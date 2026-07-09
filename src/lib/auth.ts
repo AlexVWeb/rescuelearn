@@ -63,6 +63,7 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
     resetPasswordTokenExpiresIn: 60 * 60, // Token reset valide 1 heure
@@ -71,6 +72,22 @@ export const auth = betterAuth({
       await EmailService.sendPasswordResetEmail({
         to: user.email,
         resetUrl: url,
+      });
+    },
+  },
+
+  emailVerification: {
+    sendOnSignUp: true,
+    sendVerificationEmail: async ({
+      user,
+      url,
+    }: {
+      user: { email: string };
+      url: string;
+    }) => {
+      await EmailService.sendVerificationEmail({
+        to: user.email,
+        verificationUrl: url,
       });
     },
   },

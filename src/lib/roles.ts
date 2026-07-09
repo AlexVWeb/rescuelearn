@@ -4,6 +4,7 @@ export const UserRole = {
   SUPER_ADMIN: "SUPER_ADMIN",
   ADMIN_ORGANISME: "ADMIN_ORGANISME",
   FORMATEUR: "FORMATEUR",
+  PLAYER: "PLAYER",
 } as const;
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
@@ -12,6 +13,7 @@ export const userRoleSchema = z.enum([
   UserRole.SUPER_ADMIN,
   UserRole.ADMIN_ORGANISME,
   UserRole.FORMATEUR,
+  UserRole.PLAYER,
 ]);
 
 export function hasRole(roles: unknown, role: UserRole): boolean {

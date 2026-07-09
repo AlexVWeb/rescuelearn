@@ -2,10 +2,11 @@ import { describe, it, expect } from "vitest";
 import { UserRole, userRoleSchema, hasRole } from "@/lib/roles";
 
 describe("UserRole", () => {
-  it("contains the three expected roles", () => {
+  it("contains the four expected roles", () => {
     expect(UserRole.SUPER_ADMIN).toBe("SUPER_ADMIN");
     expect(UserRole.ADMIN_ORGANISME).toBe("ADMIN_ORGANISME");
     expect(UserRole.FORMATEUR).toBe("FORMATEUR");
+    expect(UserRole.PLAYER).toBe("PLAYER");
   });
 });
 

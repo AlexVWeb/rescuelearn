@@ -196,4 +196,53 @@ export const EmailService = {
 
     return this.send({ to, subject, text, html });
   },
+
+  /**
+   * Envoie un email de vérification de compte.
+   */
+  async sendVerificationEmail({
+    to,
+    verificationUrl,
+  }: {
+    to: string;
+    verificationUrl: string;
+  }) {
+    const subject = "Vérification de votre compte - RescueLearn";
+    const text = `Bonjour,\n\nMerci de vous être inscrit sur RescueLearn.\n\nPour valider votre compte, veuillez cliquer sur le lien suivant :\n${verificationUrl}\n\nL'équipe RescueLearn`;
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 580px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);">
+        <div style="background-color: #2563eb; padding: 32px 24px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em;">RescueLearn</h1>
+          <p style="color: #bfdbfe; margin: 4px 0 0 0; font-size: 14px; font-weight: 500;">La plateforme des formateurs en secourisme</p>
+        </div>
+        <div style="padding: 40px 32px; background-color: #ffffff;">
+          <h2 style="margin-top: 0; color: #111827; font-size: 20px; font-weight: 700; line-height: 1.3;">Activez votre compte</h2>
+          <p style="font-size: 15px; color: #4b5563;">Bonjour,</p>
+          <p style="font-size: 15px; color: #4b5563; margin-bottom: 24px;">
+            Merci de vous être inscrit sur RescueLearn. Pour valider votre adresse email et finaliser la création de votre compte, veuillez cliquer sur le bouton ci-dessous :
+          </p>
+
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${verificationUrl}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 15px; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);">
+              Vérifier mon compte
+            </a>
+          </div>
+
+          <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #f3f4f6; text-align: left;">
+            <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.5;">
+              Si vous n'avez pas créé de compte sur notre plateforme, vous pouvez ignorer cet email en toute sécurité.
+            </p>
+          </div>
+        </div>
+        <div style="background-color: #f9fafb; padding: 24px 32px; text-align: center; border-top: 1px solid #f3f4f6;">
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+            &copy; ${new Date().getFullYear()} RescueLearn. Tous droits réservés.
+          </p>
+        </div>
+      </div>
+    `;
+
+    return this.send({ to, subject, text, html });
+  },
 };

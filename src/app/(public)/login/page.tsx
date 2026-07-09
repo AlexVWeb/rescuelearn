@@ -14,9 +14,13 @@ import {
   CheckCircle,
   ArrowLeft,
   Mail,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import { authClient } from "@/lib/auth-client";
+import { registerPlayerAction } from "@/app/actions/player-actions";
 import {
   validateInviteCode,
   linkUserToOrganisme,
@@ -40,6 +44,7 @@ const loginSchema = z.object({
   password: z.string().min(8, {
     message: "Le mot de passe doit contenir au moins 8 caractères.",
   }),
+  confirmPassword: z.string().optional(),
   inviteCode: z.string().optional(),
 });
 
@@ -59,15 +64,77 @@ const LEFT_PANEL_FEATURES = [
 ];
 
 export default function LoginPage() {
+  "use no memo";
   const router = useRouter();
   const [view, setView] = useState<View>("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userType, setUserType] = useState<"player" | "trainer">("trainer");
 
   const mainForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { name: "", email: "", password: "", inviteCode: "" },
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      inviteCode: "",
+    },
   });
+
+  const watchPassword = mainForm.watch("password");
+
+  const getStrength = (pass: string) => {
+    if (!pass) return { score: 0, label: "", color: "bg-slate-200" };
+
+    const hasUpper = /[A-Z]/.test(pass);
+    const hasLower = /[a-z]/.test(pass);
+    const hasDigit = /\d/.test(pass);
+    const hasSpecial = /[^a-zA-Z\d]/.test(pass);
+    const hasUnderscore = /_/.test(pass);
+    const length = pass.length;
+
+    const isPassphrase = length >= 16 && hasUnderscore;
+    const classicCriteria = [hasUpper, hasLower, hasDigit, hasSpecial].filter(
+      Boolean
+    ).length;
+
+    if (isPassphrase) {
+      return {
+        score: 100,
+        label: "Phrase de passe sécurisée",
+        color: "bg-emerald-500",
+        mode: "passphrase",
+      };
+    }
+
+    if (length >= 12 && classicCriteria === 4) {
+      return {
+        score: 100,
+        label: "Mot de passe très fort",
+        color: "bg-emerald-500",
+        mode: "classic",
+      };
+    }
+
+    if (length >= 8 && classicCriteria >= 3) {
+      return {
+        score: 60,
+        label: "Moyen",
+        color: "bg-amber-500",
+        mode: "classic",
+      };
+    }
+
+    return {
+      score: 30,
+      label: "Faible",
+      color: "bg-rose-500",
+      mode: "classic",
+    };
+  };
+
+  const strength = getStrength(watchPassword);
 
   const forgotForm = useForm<z.infer<typeof forgotSchema>>({
     resolver: zodResolver(forgotSchema),
@@ -86,46 +153,87 @@ export default function LoginPage() {
     setError(null);
 
     if (view === "signup") {
-      if (!values.inviteCode) {
-        setError("Veuillez entrer un code d'invitation.");
+      if (values.password !== values.confirmPassword) {
+        setError("Les mots de passe ne correspondent pas.");
         setLoading(false);
         return;
       }
 
-      const validation = await validateInviteCode(values.inviteCode);
-      if (!validation.success) {
-        setError(validation.error!);
-        setLoading(false);
-        return;
-      }
+      if (userType === "trainer") {
+        if (!values.inviteCode) {
+          setError("Veuillez entrer un code d'invitation.");
+          setLoading(false);
+          return;
+        }
 
-      await authClient.signUp.email(
-        {
+        const validation = await validateInviteCode(values.inviteCode);
+        if (!validation.success) {
+          setError(validation.error!);
+          setLoading(false);
+          return;
+        }
+
+        await authClient.signUp.email(
+          {
+            email: values.email,
+            password: values.password,
+            name: values.name || "",
+          },
+          {
+            onSuccess: async () => {
+              const link = await linkUserToOrganisme(values.inviteCode!);
+              if (link.success) {
+                router.push("/admin");
+              } else {
+                setError(link.error!);
+                setLoading(false);
+              }
+            },
+            onError: (ctx) => {
+              setError(ctx.error.message);
+              setLoading(false);
+            },
+          }
+        );
+      } else {
+        // Inscription joueur
+        const res = await registerPlayerAction({
+          name: values.name || "",
           email: values.email,
           password: values.password,
-          name: values.name || "",
-        },
-        {
-          onSuccess: async () => {
-            const link = await linkUserToOrganisme(values.inviteCode!);
-            if (link.success) {
-              router.push("/admin");
-            } else {
-              setError(link.error!);
-              setLoading(false);
-            }
-          },
-          onError: (ctx) => {
-            setError(ctx.error.message);
-            setLoading(false);
-          },
+        });
+
+        if (res.success) {
+          router.push(
+            `/verify-email?email=${encodeURIComponent(values.email)}`
+          );
+        } else {
+          setError(res.error || "Une erreur est survenue.");
+          setLoading(false);
         }
-      );
+      }
     } else {
       await authClient.signIn.email(
         { email: values.email, password: values.password },
         {
-          onSuccess: () => router.push("/admin"),
+          onSuccess: (ctx) => {
+            const rolesRaw = ctx.data.user.roles;
+            let roles: string[] = [];
+            if (Array.isArray(rolesRaw)) {
+              roles = rolesRaw;
+            } else if (typeof rolesRaw === "string") {
+              try {
+                roles = JSON.parse(rolesRaw);
+              } catch {
+                roles = [rolesRaw];
+              }
+            }
+            if (roles.includes("PLAYER")) {
+              router.push("/player");
+            } else {
+              router.push("/admin");
+            }
+          },
           onError: (ctx) => {
             setError(ctx.error.message);
             setLoading(false);
@@ -194,9 +302,47 @@ export default function LoginPage() {
                 </h1>
                 <p className="mt-2 text-sm text-gray-500">
                   {view === "signup"
-                    ? "Rejoignez RescueLearn avec votre code d'invitation"
-                    : "Accédez à votre espace formateur"}
+                    ? userType === "trainer"
+                      ? "Rejoignez RescueLearn avec votre code d'invitation"
+                      : "Créez votre compte joueur pour suivre vos résultats"
+                    : userType === "trainer"
+                      ? "Accédez à votre espace formateur"
+                      : "Accédez à votre espace joueur"}
                 </p>
+              </div>
+
+              {/* Sélecteur de rôle/type d'utilisateur */}
+              <div
+                className="mb-6 flex rounded-lg bg-gray-100 p-1"
+                role="tablist"
+                aria-label="Type de compte"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={userType === "trainer"}
+                  onClick={() => setUserType("trainer")}
+                  className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${
+                    userType === "trainer"
+                      ? "bg-white text-blue-600 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Formateur / Organisme
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={userType === "player"}
+                  onClick={() => setUserType("player")}
+                  className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${
+                    userType === "player"
+                      ? "bg-white text-blue-600 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Élève / Joueur
+                </button>
               </div>
 
               <Form {...mainForm}>
@@ -231,25 +377,27 @@ export default function LoginPage() {
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={mainForm.control}
-                        name="inviteCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-700">
-                              Code d&apos;invitation
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Code à 6 caractères"
-                                className="border-gray-300 focus-visible:ring-blue-500"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {userType === "trainer" && (
+                        <FormField
+                          control={mainForm.control}
+                          name="inviteCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">
+                                Code d&apos;invitation
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Code à 6 caractères"
+                                  className="border-gray-300 focus-visible:ring-blue-500"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                     </>
                   )}
 
@@ -301,6 +449,89 @@ export default function LoginPage() {
                       </FormItem>
                     )}
                   />
+
+                  {view === "signup" && watchPassword && (
+                    <div className="space-y-2 overflow-hidden rounded-lg border border-slate-100 bg-slate-50 p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium tracking-wider text-slate-500 uppercase">
+                          Force du mot de passe
+                        </span>
+                        <span
+                          className={cn(
+                            "text-xs font-bold",
+                            strength.score === 100
+                              ? "text-emerald-600"
+                              : strength.score >= 60
+                                ? "text-amber-600"
+                                : "text-rose-600"
+                          )}
+                        >
+                          {strength.label}
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          style={{ width: `${strength.score}%` }}
+                          className={cn(
+                            "h-full transition-all duration-300",
+                            strength.color
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-1.5 pt-1">
+                        <div className="flex items-center gap-2 text-[11px]">
+                          {strength.mode === "passphrase" ? (
+                            <>
+                              <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                              <span className="font-medium text-emerald-700">
+                                Mode Phrase de passe activé : longueur optimale
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              {strength.score === 100 ? (
+                                <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                              ) : (
+                                <ShieldAlert className="h-3 w-3 text-rose-500" />
+                              )}
+                              <span
+                                className={cn(
+                                  strength.score === 100
+                                    ? "text-emerald-700"
+                                    : "text-slate-600"
+                                )}
+                              >
+                                12+ caractères, majuscule, chiffre, spécial
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {view === "signup" && (
+                    <FormField
+                      control={mainForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Confirmer le mot de passe
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              className="border-gray-300 focus-visible:ring-blue-500"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   <button
                     type="submit"
