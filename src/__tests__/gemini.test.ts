@@ -44,7 +44,11 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
-import { buildPrompt, generateQuizFromPdf } from "@/lib/gemini";
+import {
+  buildPrompt,
+  generateQuizFromPdf,
+  retryWithBackoff,
+} from "@/lib/gemini";
 
 describe("gemini business logic", () => {
   const originalEnv = process.env;
@@ -78,6 +82,39 @@ describe("gemini business logic", () => {
       expect(prompt).toContain('Le niveau ciblé est "PSE2"');
       expect(prompt).toContain("Question existante 1 ?");
       expect(prompt).toContain("Neurologie");
+    });
+  });
+
+  describe("retryWithBackoff", () => {
+    it("should retry on 503 transient error and succeed", async () => {
+      const mockFn = vi
+        .fn()
+        .mockRejectedValueOnce({ status: 503, message: "Service Unavailable" })
+        .mockResolvedValueOnce("success");
+
+      const result = await retryWithBackoff(mockFn, 2, 1);
+      expect(result).toBe("success");
+      expect(mockFn).toHaveBeenCalledTimes(2);
+    });
+
+    it("should fail after maximum retries on persistent transient error", async () => {
+      const mockFn = vi
+        .fn()
+        .mockRejectedValue({ status: 503, message: "Service Unavailable" });
+
+      await expect(retryWithBackoff(mockFn, 2, 1)).rejects.toThrow(
+        "Service Unavailable"
+      );
+      expect(mockFn).toHaveBeenCalledTimes(3); // Initial + 2 retries
+    });
+
+    it("should not retry on non-transient errors", async () => {
+      const mockFn = vi.fn().mockRejectedValue(new Error("Fatal Error"));
+
+      await expect(retryWithBackoff(mockFn, 2, 1)).rejects.toThrow(
+        "Fatal Error"
+      );
+      expect(mockFn).toHaveBeenCalledTimes(1);
     });
   });
 
