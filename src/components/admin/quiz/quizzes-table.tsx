@@ -101,6 +101,26 @@ export const columns = (
     },
   },
   {
+    accessorKey: "status",
+    header: "Statut",
+    cell: ({ row }) => {
+      const status = row.getValue("status") as string;
+      return (
+        <div className="flex justify-center">
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
+              status === "PUBLISHED"
+                ? "bg-green-50 text-green-700 ring-1 ring-green-600/20 ring-inset"
+                : "bg-yellow-50 text-yellow-800 ring-1 ring-yellow-600/20 ring-inset"
+            }`}
+          >
+            {status === "PUBLISHED" ? "Publié" : "Brouillon"}
+          </span>
+        </div>
+      );
+    },
+  },
+  {
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {

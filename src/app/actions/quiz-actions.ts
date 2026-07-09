@@ -6,6 +6,8 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { getUserContext } from "@/lib/context";
+import { hasRole, UserRole } from "@/lib/roles";
 
 // --- Types ---
 
@@ -16,6 +18,9 @@ export type Quiz = {
   passingScore: number;
   modeRandom: boolean;
   _count?: { questions: number };
+  status: "DRAFT" | "PUBLISHED";
+  generatedByAi: boolean;
+  referencielId: number | null;
 };
 
 export type QuestionOption = {
@@ -31,6 +36,7 @@ export type Question = {
   quizId: number;
   quiz?: { title: string };
   options: QuestionOption[];
+  tags: string[];
 };
 
 // --- Quiz Actions ---
@@ -68,7 +74,7 @@ export async function getQuizzesAction(
 
     return {
       success: true,
-      data: quizzes,
+      data: quizzes as unknown as Quiz[],
       meta: {
         total,
         page,
@@ -87,6 +93,7 @@ export async function createQuizAction(data: {
   timePerQuestion: number;
   passingScore: number;
   modeRandom: boolean;
+  status?: "DRAFT" | "PUBLISHED";
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return { success: false, error: "Unauthorized" };
@@ -98,6 +105,7 @@ export async function createQuizAction(data: {
         timePerQuestion: data.timePerQuestion,
         passingScore: data.passingScore,
         modeRandom: data.modeRandom,
+        status: data.status || "PUBLISHED",
       },
     });
     revalidatePath("/admin/quiz/quizzes");
@@ -115,6 +123,7 @@ export async function updateQuizAction(
     timePerQuestion: number;
     passingScore: number;
     modeRandom: boolean;
+    status?: "DRAFT" | "PUBLISHED";
   }
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -128,6 +137,7 @@ export async function updateQuizAction(
         timePerQuestion: data.timePerQuestion,
         passingScore: data.passingScore,
         modeRandom: data.modeRandom,
+        ...(data.status ? { status: data.status } : {}),
       },
     });
     revalidatePath("/admin/quiz/quizzes");
@@ -169,9 +179,15 @@ const importSchema = z.object({
         options: z.array(z.string()).min(2),
         correctAnswer: z.number(), // Index
         explanation: z.string().optional(),
+        tags: z.array(z.string()).optional().default([]),
       })
     )
     .min(1),
+  referencielId: z.number().optional().nullable(),
+  generatedByAi: z.boolean().optional().default(false),
+  status: z.enum(["DRAFT", "PUBLISHED"]).optional().default("PUBLISHED"),
+  aiModel: z.string().optional().nullable(),
+  aiPrompt: z.string().optional().nullable(),
 });
 
 export async function importQuizAction(jsonData: unknown) {
@@ -180,6 +196,7 @@ export async function importQuizAction(jsonData: unknown) {
 
   const parsed = importSchema.safeParse(jsonData);
   if (!parsed.success) {
+    logger.error("JSON validation failed for import:", parsed.error);
     return { success: false, error: "Invalid JSON structure" };
   }
 
@@ -211,6 +228,11 @@ export async function importQuizAction(jsonData: unknown) {
           passingScore: data.passingScore,
           modeRandom: data.modeRandom,
           levelId: levelId,
+          status: data.status,
+          referencielId: data.referencielId,
+          generatedByAi: data.generatedByAi,
+          aiModel: data.aiModel,
+          aiPrompt: data.aiPrompt,
         },
       });
 
@@ -226,6 +248,7 @@ export async function importQuizAction(jsonData: unknown) {
             explanation: q.explanation,
             correctAnswer: correctLetter,
             quizId: quiz.id,
+            tags: q.tags,
             options: {
               create: q.options.map((opt) => ({ text: opt })),
             },
@@ -399,6 +422,23 @@ export async function getAllQuizzesSimpleAction() {
     });
   } catch (error) {
     logger.error("Failed to fetch all quizzes:", error);
+    return [];
+  }
+}
+
+export async function getAllReferencielsSimpleAction() {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return [];
+  }
+
+  try {
+    return await prisma.referenciel.findMany({
+      select: { id: true, title: true },
+      orderBy: { title: "asc" },
+    });
+  } catch (error) {
+    logger.error("Failed to fetch all referenciels:", error);
     return [];
   }
 }

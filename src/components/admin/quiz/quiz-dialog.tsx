@@ -25,6 +25,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   createQuizAction,
   updateQuizAction,
   Quiz,
@@ -37,6 +44,7 @@ const quizSchema = z.object({
   timePerQuestion: z.coerce.number().min(5, "Minimum 5 secondes"),
   passingScore: z.coerce.number().min(0).max(100),
   modeRandom: z.boolean(),
+  status: z.enum(["DRAFT", "PUBLISHED"]),
 });
 
 interface QuizDialogProps {
@@ -56,6 +64,7 @@ export function QuizDialog({ open, onOpenChange, quiz }: QuizDialogProps) {
       timePerQuestion: 30,
       passingScore: 70,
       modeRandom: false,
+      status: "PUBLISHED",
     },
   });
 
@@ -66,6 +75,7 @@ export function QuizDialog({ open, onOpenChange, quiz }: QuizDialogProps) {
         timePerQuestion: quiz.timePerQuestion,
         passingScore: quiz.passingScore,
         modeRandom: quiz.modeRandom,
+        status: quiz.status,
       });
     } else {
       form.reset({
@@ -73,6 +83,7 @@ export function QuizDialog({ open, onOpenChange, quiz }: QuizDialogProps) {
         timePerQuestion: 30,
         passingScore: 70,
         modeRandom: false,
+        status: "PUBLISHED",
       });
     }
   }, [quiz, form, open]);
@@ -148,6 +159,34 @@ export function QuizDialog({ open, onOpenChange, quiz }: QuizDialogProps) {
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Statut</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un statut" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="DRAFT">Brouillon (Draft)</SelectItem>
+                      <SelectItem value="PUBLISHED">
+                        Publié (Published)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

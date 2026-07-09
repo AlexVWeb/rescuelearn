@@ -107,18 +107,6 @@ const getNavData = (roles: unknown, hasOrganisme: boolean) => {
                 title: "Questions",
                 url: "/admin/quiz/questions",
               },
-              {
-                title: "Options",
-                url: "/admin/quiz/options",
-              },
-              {
-                title: "Catégories",
-                url: "/admin/quiz/categories",
-              },
-              {
-                title: "Niveaux",
-                url: "/admin/quiz/levels",
-              },
             ],
           },
           {

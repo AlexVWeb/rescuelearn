@@ -8,6 +8,12 @@ model Quiz {
   questions         Question[]
   level             LevelQuestion?     @relation(fields: [levelId], references: [id])
   categoryQuestions CategoryQuestion[] @relation("CategoryQuestionToQuiz")
+  status            QuizStatus         @default(PUBLISHED)
+  referencielId     Int?
+  referenciel       Referenciel?       @relation(fields: [referencielId], references: [id])
+  generatedByAi     Boolean            @default(false)
+  aiModel           String?
+  aiPrompt          String?            @db.Text
 }
 
 model Question {
@@ -16,8 +22,9 @@ model Question {
   correctAnswer String
   explanation   String?
   quizId        Int
-  quiz          Quiz             @relation(fields: [quizId], references: [id])
+  quiz          Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
   options       QuestionOption[]
+  tags          String[]         @default([])
 }
 
 model QuestionOption {
@@ -38,4 +45,9 @@ model LevelQuestion {
   id      Int    @id @default(autoincrement())
   name    String
   quizzes Quiz[]
+}
+
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
 }

@@ -4,8 +4,7 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { uploadFile, deleteFile } from "@/lib/r2";
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
 
@@ -45,9 +44,24 @@ export async function getReferencielsAction(
       prisma.referenciel.count({ where }),
     ]);
 
+    const { getPresignedUrl } = await import("@/lib/r2");
+    const referencielsWithUrls = await Promise.all(
+      referenciels.map(async (ref) => {
+        let url = ref.pdfUrl;
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+          const key = url.replace(`${process.env.R2_PUBLIC_URL}/`, "");
+          url = await getPresignedUrl(key);
+        }
+        return {
+          ...ref,
+          pdfUrl: url,
+        };
+      })
+    );
+
     return {
       success: true,
-      data: referenciels,
+      data: referencielsWithUrls,
       meta: {
         total,
         page,
@@ -61,6 +75,18 @@ export async function getReferencielsAction(
   }
 }
 
+export async function getPresignedUrlAction(url: string): Promise<string> {
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    const r2PublicUrl = process.env.R2_PUBLIC_URL;
+    if (r2PublicUrl && url.startsWith(r2PublicUrl)) {
+      const key = url.replace(`${r2PublicUrl}/`, "");
+      const { getPresignedUrl } = await import("@/lib/r2");
+      return await getPresignedUrl(key);
+    }
+  }
+  return url;
+}
+
 export async function deleteReferencielAction(id: number) {
   const user = await getUserContext();
   if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
@@ -68,6 +94,16 @@ export async function deleteReferencielAction(id: number) {
   }
 
   try {
+    const referenciel = await prisma.referenciel.findUnique({
+      where: { id },
+    });
+    if (referenciel) {
+      const key = referenciel.pdfUrl.replace(
+        `${process.env.R2_PUBLIC_URL}/`,
+        ""
+      );
+      await deleteFile(key);
+    }
     await prisma.referenciel.delete({
       where: { id },
     });
@@ -98,19 +134,10 @@ async function saveFile(
   const extension = "pdf"; // Enforce PDF as per requirements
   const fileName = `${slug}_${year}_${timestamp}.${extension}`;
 
-  // Ensure directory exists
-  const uploadDir = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "referenciels"
-  );
-  await mkdir(uploadDir, { recursive: true });
+  const mode = process.env.APP_MODE || "dev";
+  const key = `${mode}/referenciels/${fileName}`;
 
-  const filePath = path.join(uploadDir, fileName);
-  await writeFile(filePath, buffer);
-
-  return `uploads/referenciels/${fileName}`;
+  return await uploadFile(key, buffer, "application/pdf", false);
 }
 
 export async function createReferencielAction(formData: FormData) {

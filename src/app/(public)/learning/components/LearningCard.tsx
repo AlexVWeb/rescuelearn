@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { logger } from "@/lib/logger";
+
 interface LearningCardProps {
   theme: string;
   niveau: string;
@@ -21,11 +23,25 @@ export function LearningCard({
   pdfUrl,
   className,
 }: LearningCardProps) {
-  const handleReferenceClick = (e: React.MouseEvent, reference: string) => {
+  const handleReferenceClick = async (
+    e: React.MouseEvent,
+    reference: string
+  ) => {
+    if (!pdfUrl) return;
     e.stopPropagation();
     const pageMatch = reference.match(/Page (\d+)/);
     const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
-    window.open(`/referenciels/PSE1_PSE2.pdf#page=${pageNumber}`, "_blank");
+    let url = pdfUrl;
+    if (url.startsWith("http")) {
+      try {
+        const { getPresignedUrlAction } =
+          await import("@/app/actions/referenciel-actions");
+        url = await getPresignedUrlAction(url);
+      } catch (err) {
+        logger.error("Failed to get presigned URL", err);
+      }
+    }
+    window.open(`${url}#page=${pageNumber}`, "_blank");
   };
 
   return (

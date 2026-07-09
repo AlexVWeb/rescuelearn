@@ -147,7 +147,11 @@ export default function LearningPage() {
                 niveau={card.niveau}
                 info={card.info}
                 reference={card.reference}
-                pdfUrl={`${process.env.NEXT_PUBLIC_BACK_URL}${card.pdfUrl}`}
+                pdfUrl={
+                  card.pdfUrl?.startsWith("http")
+                    ? card.pdfUrl
+                    : `${process.env.NEXT_PUBLIC_BACK_URL}${card.pdfUrl}`
+                }
               />
             ))}
           </div>

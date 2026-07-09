@@ -19,6 +19,10 @@ import { Quiz, deleteQuizAction } from "@/app/actions/quiz-actions";
 import { useRouter } from "next/navigation";
 
 import { ImportDialog } from "@/components/admin/quiz/import-dialog";
+import { AiGenerateDialog } from "@/components/admin/quiz/ai-generate-dialog";
+import { BrainCircuit } from "lucide-react";
+
+import { toast } from "sonner";
 
 interface ClientPageProps {
   initialQuizzes: Quiz[];
@@ -27,9 +31,11 @@ interface ClientPageProps {
 export default function QuizClientPage({ initialQuizzes }: ClientPageProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [idToDelete, setIdToDelete] = useState<number | null>(null);
+  const [generatedData, setGeneratedData] = useState<unknown>(null);
   const router = useRouter();
 
   const handleEdit = (quiz: Quiz) => {
@@ -49,10 +55,32 @@ export default function QuizClientPage({ initialQuizzes }: ClientPageProps) {
 
   const confirmDelete = async () => {
     if (idToDelete) {
-      await deleteQuizAction(idToDelete);
-      setDeleteDialogOpen(false);
-      setIdToDelete(null);
-      router.refresh();
+      try {
+        const result = await deleteQuizAction(idToDelete);
+        if (result.success) {
+          toast.success("Quiz supprimé avec succès");
+        } else {
+          toast.error(result.error || "Impossible de supprimer le quiz");
+        }
+      } catch (err) {
+        toast.error("Une erreur est survenue lors de la suppression");
+      } finally {
+        setDeleteDialogOpen(false);
+        setIdToDelete(null);
+        router.refresh();
+      }
+    }
+  };
+
+  const handleGenerationSuccess = (data: unknown) => {
+    setGeneratedData(data);
+    setImportDialogOpen(true);
+  };
+
+  const handleImportDialogChange = (open: boolean) => {
+    setImportDialogOpen(open);
+    if (!open) {
+      setGeneratedData(null);
     }
   };
 
@@ -66,6 +94,13 @@ export default function QuizClientPage({ initialQuizzes }: ClientPageProps) {
           </p>
         </div>
         <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={() => setAiGenerateDialogOpen(true)}
+            className="border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-950/30"
+          >
+            <BrainCircuit className="mr-2 h-4 w-4" /> Générer avec IA
+          </Button>
           <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Importer
           </Button>
@@ -91,7 +126,14 @@ export default function QuizClientPage({ initialQuizzes }: ClientPageProps) {
 
       <ImportDialog
         open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
+        onOpenChange={handleImportDialogChange}
+        initialData={generatedData}
+      />
+
+      <AiGenerateDialog
+        open={aiGenerateDialogOpen}
+        onOpenChange={setAiGenerateDialogOpen}
+        onGenerationSuccess={handleGenerationSuccess}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

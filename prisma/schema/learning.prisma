@@ -14,4 +14,5 @@ model Referenciel {
   pdfUrl        String
   yearEdition   Int
   learningCards LearningCard[]
+  quizzes       Quiz[]
 }

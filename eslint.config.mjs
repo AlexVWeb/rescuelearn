@@ -13,7 +13,7 @@ export default [
     plugins: {
       "@next/next": nextPlugin,
       "@typescript-eslint": tsPlugin,
-      "react": reactPlugin,
+      react: reactPlugin,
       "react-hooks": hooksPlugin,
     },
     languageOptions: {
@@ -53,8 +53,10 @@ export default [
       "no-restricted-syntax": [
         "error",
         {
-          selector: "CallExpression[callee.object.name='console'][callee.property.name=/^(log|error|warn)$/]",
-          message: "Direct use of console.log, console.warn, or console.error is forbidden. Use the centralized logger from '@/lib/logger' instead to ensure security and PII sanitization.",
+          selector:
+            "CallExpression[callee.object.name='console'][callee.property.name=/^(log|error|warn)$/]",
+          message:
+            "Direct use of console.log, console.warn, or console.error is forbidden. Use the centralized logger from '@/lib/logger' instead to ensure security and PII sanitization.",
         },
       ],
     },

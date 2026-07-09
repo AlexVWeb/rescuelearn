@@ -99,7 +99,7 @@ export const columns = (
         <div className="flex items-center gap-2">
           <FileText className="text-muted-foreground h-4 w-4" />
           <a
-            href={`/${url}`}
+            href={url?.startsWith("http") ? url : `/${url}`}
             target="_blank"
             rel="noreferrer"
             className="block max-w-[200px] truncate text-blue-600 hover:underline"

@@ -31,9 +31,7 @@ const transformApiQuizToComponentData = (
 export const quizService = {
   async getQuiz(id: number): Promise<QuizComponentData> {
     try {
-      const response = await axios.get<ApiQuiz>(
-        `${API_BASE_URL}/quizzes/${id}`
-      );
+      const response = await axios.get<ApiQuiz>(`/api/quizzes/${id}`);
       return transformApiQuizToComponentData(response.data);
     } catch (error) {
       logger.error("Erreur lors de la récupération du quiz:", error);

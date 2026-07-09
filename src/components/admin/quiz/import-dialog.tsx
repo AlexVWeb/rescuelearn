@@ -29,6 +29,7 @@ const DEFAULT_EXAMPLE = {
       options: ["Réponse A", "Réponse B", "Réponse C", "Réponse D"],
       correctAnswer: 1, // Index 0-3 (1 = B)
       explanation: "Explication optionnelle.",
+      tags: ["Secourisme", "Exemple"],
     },
   ],
 };
@@ -38,6 +39,7 @@ interface QuizQuestion {
   options: string[];
   correctAnswer: number;
   explanation?: string;
+  tags?: string[];
 }
 
 interface QuizImportData {
@@ -48,9 +50,14 @@ interface QuizImportData {
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: unknown;
 }
 
-export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
+export function ImportDialog({
+  open,
+  onOpenChange,
+  initialData,
+}: ImportDialogProps) {
   const router = useRouter();
   const [jsonContent, setJsonContent] = useState("");
   const [isValid, setIsValid] = useState(false);
@@ -58,14 +65,23 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (open && !jsonContent) {
-      const content = JSON.stringify(DEFAULT_EXAMPLE, null, 2);
-      setJsonContent(content);
-      // We don't call validateJSON here to avoid dependency issues,
-      // or we could wrap it in useCallback.
-      // Actually, it will be called by the handleChange/initial render if we are not careful.
+    if (open) {
+      if (initialData) {
+        const content = JSON.stringify(initialData, null, 2);
+        setJsonContent(content);
+        validateJSON(content);
+      } else {
+        const content = JSON.stringify(DEFAULT_EXAMPLE, null, 2);
+        setJsonContent(content);
+        setIsValid(false);
+        setError(null);
+      }
+    } else {
+      setJsonContent("");
+      setIsValid(false);
+      setError(null);
     }
-  }, [open, jsonContent]);
+  }, [open, initialData]);
 
   const validateJSON = (content: string) => {
     try {
@@ -193,7 +209,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
             <Info className="h-4 w-4" />
             <AlertDescription className="text-muted-foreground text-xs">
               Structure :{" "}
-              {`{ title, timePerQuestion, passingScore, modeRandom, level, questions: [{ question, options: [], correctAnswer (index), explanation }] }`}
+              {`{ title, timePerQuestion, passingScore, modeRandom, level, questions: [{ question, options: [], correctAnswer (index), explanation, tags: [] }] }`}
             </AlertDescription>
           </Alert>
         </div>
