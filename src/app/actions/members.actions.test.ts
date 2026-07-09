@@ -4,7 +4,7 @@ import {
   updateMemberRoleAction,
   removeMemberFromOrganismeAction,
 } from "./members.actions";
-import { getUserContext, requireOrganisme } from "@/lib/context";
+import { getUserContext } from "@/lib/context";
 
 vi.mock("@/lib/context", () => ({
   getUserContext: vi.fn(),

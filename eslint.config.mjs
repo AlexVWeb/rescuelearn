@@ -4,6 +4,7 @@ import tsParser from "@typescript-eslint/parser";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import reactPlugin from "eslint-plugin-react";
 import hooksPlugin from "eslint-plugin-react-hooks";
+import unusedImports from "eslint-plugin-unused-imports";
 import globals from "globals";
 
 export default [
@@ -15,6 +16,7 @@ export default [
       "@typescript-eslint": tsPlugin,
       react: reactPlugin,
       "react-hooks": hooksPlugin,
+      "unused-imports": unusedImports,
     },
     languageOptions: {
       parser: tsParser,
@@ -46,7 +48,17 @@ export default [
       "no-undef": "off",
       "no-unused-vars": "off",
       "no-redeclare": "off",
-      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-vars": "off",
+      "unused-imports/no-unused-imports": "error",
+      "unused-imports/no-unused-vars": [
+        "warn",
+        {
+          vars: "all",
+          varsIgnorePattern: "^_",
+          args: "after-used",
+          argsIgnorePattern: "^_",
+        },
+      ],
       "@typescript-eslint/no-explicit-any": "error",
       "react/no-unescaped-entities": "off",
       "react-hooks/purity": "off",
@@ -71,3 +83,4 @@ export default [
     ignores: [".next/*", "node_modules/*", "dist/*"],
   },
 ];
+

@@ -2,7 +2,7 @@
 
 import { prisma, withOrganisme } from "@/lib/prisma";
 import { UserRole, hasRole } from "@/lib/roles";
-import { requireOrganisme, getUserContext } from "@/lib/context";
+import { getUserContext } from "@/lib/context";
 import { logger } from "@/lib/logger";
 
 export async function getOrganismeMembersAction(organismeId?: string) {
