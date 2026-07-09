@@ -14,6 +14,7 @@ model Quiz {
   generatedByAi     Boolean            @default(false)
   aiModel           String?
   aiPrompt          String?            @db.Text
+  sessions          QuizSession[]
 }
 
 model Question {
@@ -51,3 +52,61 @@ enum QuizStatus {
   DRAFT
   PUBLISHED
 }
+
+// Session de jeu multijoueurs
+model QuizSession {
+  id                String            @id @default(uuid())
+  code              String            @unique // Code court pour rejoindre (ex: A5B2)
+  quizId            Int
+  quiz              Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  status            QuizSessionStatus @default(LOBBY)
+  currentQuestionId Int?
+  currentQuestionStartedAt DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  participants      QuizParticipant[]
+
+  // Évolutivité V2 (Champs optionnels en V1 pour préserver la compatibilité)
+  hostId            String?           // Hôte (User authentifié comme le formateur)
+  host              User?             @relation(fields: [hostId], references: [id])
+  trainingSessionId String?           // Lien avec une session de formation RescueLearn
+  trainingSession   TrainingSession?  @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+}
+
+enum QuizSessionStatus {
+  LOBBY        // En attente de joueurs
+  IN_PROGRESS  // Quiz en cours
+  FINISHED     // Quiz terminé, classement final affiché
+}
+
+// Participant invité (sans compte obligatoire)
+model QuizParticipant {
+  id           String       @id @default(uuid()) // Identifiant unique stocké localement sur le navigateur du joueur
+  nickname     String       // Pseudo saisi
+  sessionId    String
+  session      QuizSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  score        Int          @default(0)
+  answers      QuizAnswer[]
+  joinedAt     DateTime     @default(now())
+
+  // Évolutivité V2
+  traineeId    String?      // Si le participant est un stagiaire reconnu dans la formation
+  trainee      Trainee?     @relation(fields: [traineeId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, nickname]) // Empêche les doublons de pseudo dans une même session
+}
+
+// Réponses soumises par les participants (pour calculer le score)
+model QuizAnswer {
+  id            String          @id @default(cuid())
+  participantId String
+  participant   QuizParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  questionId    Int
+  optionId      Int?            // Option choisie si QCM
+  isCorrect     Boolean
+  responseTime  Int             // Temps de réponse en ms (pour départager en cas d'égalité)
+  answeredAt    DateTime        @default(now())
+
+  @@unique([participantId, questionId])
+}
+

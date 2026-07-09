@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Heart, Activity, Loader2, List } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Heart, Activity, Loader2, List, Users } from "lucide-react";
 import { Quiz, QuizCollection } from "./interfaces/Quiz";
 import { EcgLine } from "./components/EcgLine";
 import {
@@ -12,6 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
+
+import {
+  joinQuizSessionAction,
+  createQuizSessionAction,
+  checkServerSaturationAction,
+} from "@/app/actions/quiz-session-actions";
 
 // Variants pour les animations Framer Motion
 const containerVariants = {
@@ -44,10 +50,27 @@ const QuizCatalogue = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRandomMode, setIsRandomMode] = useState(false);
   const [totalPages, setTotalPages] = useState<number>(1);
+
+  // State pour le multijoueur
+  const [showJoinForm, setShowJoinForm] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinNickname, setJoinNickname] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [multiplayerLoading, setMultiplayerLoading] = useState(false);
+  const [isServerSaturated, setIsServerSaturated] = useState(false);
+
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
+    const checkSaturation = async () => {
+      const res = await checkServerSaturationAction();
+      if (res.success && res.isSaturated) {
+        setIsServerSaturated(true);
+      }
+    };
+    checkSaturation();
   }, []);
 
   useEffect(() => {
@@ -85,6 +108,56 @@ const QuizCatalogue = () => {
     }
   };
 
+  const handleCreateMultiplayerSession = async () => {
+    if (!selectedQuizId) return;
+    setMultiplayerLoading(true);
+    try {
+      const res = await createQuizSessionAction(selectedQuizId);
+      if (res.success && res.sessionId && res.code) {
+        // Rediriger vers la page de session en tant qu'hôte
+        router.push(`/quiz/session/${res.code}?hostToken=${res.sessionId}`);
+        setIsModalOpen(false);
+      } else {
+        alert(res.error || "Impossible de créer la session multijoueurs");
+      }
+    } catch (err) {
+      alert("Une erreur inattendue est survenue");
+    } finally {
+      setMultiplayerLoading(false);
+    }
+  };
+
+  const handleJoinSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!joinCode || !joinNickname) {
+      setJoinError("Veuillez remplir tous les champs");
+      return;
+    }
+    setJoinLoading(true);
+    setJoinError(null);
+    try {
+      const res = await joinQuizSessionAction(joinCode, joinNickname);
+      if (res.success && res.participantId && res.sessionId) {
+        // Enregistrer l'identité du participant en local (sessionStorage)
+        sessionStorage.setItem(
+          `quiz_participant_${res.sessionId}`,
+          res.participantId
+        );
+        sessionStorage.setItem(
+          `quiz_nickname_${res.sessionId}`,
+          res.nickname || joinNickname
+        );
+        router.push(`/quiz/session/${joinCode.toUpperCase()}`);
+      } else {
+        setJoinError(res.error || "Impossible de rejoindre cette session");
+      }
+    } catch (err) {
+      setJoinError("Une erreur inattendue est survenue");
+    } finally {
+      setJoinLoading(false);
+    }
+  };
+
   if (!mounted) {
     return null;
   }
@@ -107,7 +180,93 @@ const QuizCatalogue = () => {
             Testez et améliorez vos connaissances en secourisme avec nos quiz
             interactifs.
           </p>
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => setShowJoinForm(!showJoinForm)}
+              className="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-purple-50 px-5 py-2.5 text-sm font-semibold text-purple-700 shadow-sm transition-colors hover:bg-purple-100"
+            >
+              <Users className="h-4 w-4" />
+              {showJoinForm
+                ? "Masquer la connexion multijoueurs"
+                : "Rejoindre une session multijoueurs 🎮"}
+            </button>
+          </div>
         </div>
+
+        {/* Rejoindre une session multijoueurs */}
+        <AnimatePresence>
+          {showJoinForm && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: "auto" }}
+              exit={{ opacity: 0, y: -20, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative z-10 mx-auto mb-10 max-w-xl overflow-hidden rounded-2xl border border-purple-100 bg-white p-6 shadow-md"
+            >
+              <h2 className="mb-4 text-center text-lg font-bold text-gray-800">
+                Rejoindre une session multijoueurs
+              </h2>
+              <form onSubmit={handleJoinSession} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="join-code"
+                      className="mb-1 block text-xs font-semibold text-gray-600 uppercase"
+                    >
+                      Code du salon
+                    </label>
+                    <input
+                      id="join-code"
+                      type="text"
+                      placeholder="Ex: A5B2"
+                      value={joinCode}
+                      onChange={(e) =>
+                        setJoinCode(e.target.value.toUpperCase())
+                      }
+                      maxLength={4}
+                      required
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-center text-lg font-bold tracking-wider text-gray-800 uppercase focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="join-nickname"
+                      className="mb-1 block text-xs font-semibold text-gray-600 uppercase"
+                    >
+                      Votre Pseudo
+                    </label>
+                    <input
+                      id="join-nickname"
+                      type="text"
+                      placeholder="Ex: Secouriste44"
+                      value={joinNickname}
+                      onChange={(e) => setJoinNickname(e.target.value)}
+                      maxLength={20}
+                      required
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                {joinError && (
+                  <p
+                    className="text-center text-sm font-medium text-red-600"
+                    role="alert"
+                  >
+                    {joinError}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={joinLoading}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 py-3 font-semibold text-white transition-colors hover:bg-purple-700 disabled:bg-purple-400"
+                >
+                  {joinLoading && <Loader2 className="h-5 w-5 animate-spin" />}
+                  Rejoindre la partie 🎮
+                </button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* État de chargement */}
         {loading && (
@@ -297,6 +456,39 @@ const QuizCatalogue = () => {
                 progression
               </p>
             </button>
+
+            <div className="my-2 border-t border-gray-100" />
+
+            {isServerSaturated ? (
+              <div className="w-full rounded-lg border border-yellow-200 bg-yellow-50/50 p-4 text-center">
+                <h3 className="text-yellow-850 mb-1 flex items-center justify-center gap-2 font-semibold text-yellow-800">
+                  Session multijoueurs temporairement indisponible ⏳
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Les serveurs de jeu sont actuellement très demandés. Veuillez
+                  réessayer plus tard ou lancer une partie solo !
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={handleCreateMultiplayerSession}
+                disabled={multiplayerLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-purple-200 bg-purple-50 p-4 text-left transition-colors hover:bg-purple-100 disabled:opacity-50"
+              >
+                <div className="flex-grow">
+                  <h3 className="mb-1 flex items-center gap-2 font-semibold text-purple-800">
+                    {multiplayerLoading && (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
+                    Lancer en Multijoueurs 🚀
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Créez une session de jeu partagée pour jouer avec d'autres
+                    en temps réel.
+                  </p>
+                </div>
+              </button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
