@@ -18,6 +18,7 @@ model User {
   sessions         Session[]
   trainingSessions TrainingSession[]
   organisme        Organisme?        @relation(fields: [organismeId], references: [id])
+  quizSessions     QuizSession[]
 }
 
 model Member {

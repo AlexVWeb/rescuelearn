@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Heart, Activity, Loader2, List } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Heart, Activity, Loader2, List, Users } from "lucide-react";
 import { Quiz, QuizCollection } from "./interfaces/Quiz";
 import { EcgLine } from "./components/EcgLine";
 import {
@@ -12,6 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
+
+import {
+  joinQuizSessionAction,
+  createQuizSessionAction,
+  checkServerSaturationAction,
+} from "@/app/actions/quiz-session-actions";
 
 // Variants pour les animations Framer Motion
 const containerVariants = {
@@ -44,10 +50,30 @@ const QuizCatalogue = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRandomMode, setIsRandomMode] = useState(false);
   const [totalPages, setTotalPages] = useState<number>(1);
+
+  // State pour le multijoueur
+  const [selectedDifficulty, setSelectedDifficulty] = useState<
+    "easy" | "medium" | "hard"
+  >("medium");
+  const [showJoinForm, setShowJoinForm] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinNickname, setJoinNickname] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [multiplayerLoading, setMultiplayerLoading] = useState(false);
+  const [isServerSaturated, setIsServerSaturated] = useState(false);
+
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
+    const checkSaturation = async () => {
+      const res = await checkServerSaturationAction();
+      if (res.success && res.isSaturated) {
+        setIsServerSaturated(true);
+      }
+    };
+    checkSaturation();
   }, []);
 
   useEffect(() => {
@@ -85,6 +111,59 @@ const QuizCatalogue = () => {
     }
   };
 
+  const handleCreateMultiplayerSession = async () => {
+    if (!selectedQuizId) return;
+    setMultiplayerLoading(true);
+    try {
+      const res = await createQuizSessionAction(
+        selectedQuizId,
+        selectedDifficulty
+      );
+      if (res.success && res.sessionId && res.code) {
+        // Rediriger vers la page de session en tant qu'hôte
+        router.push(`/quiz/session/${res.code}?hostToken=${res.sessionId}`);
+        setIsModalOpen(false);
+      } else {
+        alert(res.error || "Impossible de créer la session multijoueurs");
+      }
+    } catch (err) {
+      alert("Une erreur inattendue est survenue");
+    } finally {
+      setMultiplayerLoading(false);
+    }
+  };
+
+  const handleJoinSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!joinCode || !joinNickname) {
+      setJoinError("Veuillez remplir tous les champs");
+      return;
+    }
+    setJoinLoading(true);
+    setJoinError(null);
+    try {
+      const res = await joinQuizSessionAction(joinCode, joinNickname);
+      if (res.success && res.participantId && res.sessionId) {
+        // Enregistrer l'identité du participant en local (sessionStorage)
+        sessionStorage.setItem(
+          `quiz_participant_${res.sessionId}`,
+          res.participantId
+        );
+        sessionStorage.setItem(
+          `quiz_nickname_${res.sessionId}`,
+          res.nickname || joinNickname
+        );
+        router.push(`/quiz/session/${joinCode.toUpperCase()}`);
+      } else {
+        setJoinError(res.error || "Impossible de rejoindre cette session");
+      }
+    } catch (err) {
+      setJoinError("Une erreur inattendue est survenue");
+    } finally {
+      setJoinLoading(false);
+    }
+  };
+
   if (!mounted) {
     return null;
   }
@@ -107,7 +186,93 @@ const QuizCatalogue = () => {
             Testez et améliorez vos connaissances en secourisme avec nos quiz
             interactifs.
           </p>
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => setShowJoinForm(!showJoinForm)}
+              className="inline-flex items-center gap-2 rounded-full border border-purple-200 bg-purple-50 px-5 py-2.5 text-sm font-semibold text-purple-700 shadow-sm transition-colors hover:bg-purple-100"
+            >
+              <Users className="h-4 w-4" />
+              {showJoinForm
+                ? "Masquer la connexion multijoueurs"
+                : "Rejoindre une session multijoueurs 🎮"}
+            </button>
+          </div>
         </div>
+
+        {/* Rejoindre une session multijoueurs */}
+        <AnimatePresence>
+          {showJoinForm && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: "auto" }}
+              exit={{ opacity: 0, y: -20, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative z-10 mx-auto mb-10 max-w-xl overflow-hidden rounded-2xl border border-purple-100 bg-white p-6 shadow-md"
+            >
+              <h2 className="mb-4 text-center text-lg font-bold text-gray-800">
+                Rejoindre une session multijoueurs
+              </h2>
+              <form onSubmit={handleJoinSession} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="join-code"
+                      className="mb-1 block text-xs font-semibold text-gray-600 uppercase"
+                    >
+                      Code du salon
+                    </label>
+                    <input
+                      id="join-code"
+                      type="text"
+                      placeholder="Ex: A5B2"
+                      value={joinCode}
+                      onChange={(e) =>
+                        setJoinCode(e.target.value.toUpperCase())
+                      }
+                      maxLength={4}
+                      required
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-center text-lg font-bold tracking-wider text-gray-800 uppercase focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="join-nickname"
+                      className="mb-1 block text-xs font-semibold text-gray-600 uppercase"
+                    >
+                      Votre Pseudo
+                    </label>
+                    <input
+                      id="join-nickname"
+                      type="text"
+                      placeholder="Ex: Secouriste44"
+                      value={joinNickname}
+                      onChange={(e) => setJoinNickname(e.target.value)}
+                      maxLength={20}
+                      required
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                {joinError && (
+                  <p
+                    className="text-center text-sm font-medium text-red-600"
+                    role="alert"
+                  >
+                    {joinError}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={joinLoading}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 py-3 font-semibold text-white transition-colors hover:bg-purple-700 disabled:bg-purple-400"
+                >
+                  {joinLoading && <Loader2 className="h-5 w-5 animate-spin" />}
+                  Rejoindre la partie 🎮
+                </button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* État de chargement */}
         {loading && (
@@ -264,8 +429,12 @@ const QuizCatalogue = () => {
               </button>
             </div>
             <button
-              onClick={() => handleQuizStart("easy")}
-              className="w-full rounded-lg border-2 border-green-200 bg-green-50 p-4 text-left transition-colors hover:bg-green-100"
+              onClick={() => setSelectedDifficulty("easy")}
+              className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
+                selectedDifficulty === "easy"
+                  ? "border-green-500 bg-green-50/70 shadow-sm ring-1 ring-green-500"
+                  : "border-gray-200 bg-gray-50/50 hover:bg-gray-100/50"
+              }`}
             >
               <h3 className="mb-1 font-semibold text-green-800">Mode Facile</h3>
               <p className="text-sm text-gray-600">
@@ -274,8 +443,12 @@ const QuizCatalogue = () => {
             </button>
 
             <button
-              onClick={() => handleQuizStart("medium")}
-              className="w-full rounded-lg border-2 border-blue-200 bg-blue-50 p-4 text-left transition-colors hover:bg-blue-100"
+              onClick={() => setSelectedDifficulty("medium")}
+              className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
+                selectedDifficulty === "medium"
+                  ? "border-blue-500 bg-blue-50/70 shadow-sm ring-1 ring-blue-500"
+                  : "border-gray-200 bg-gray-50/50 hover:bg-gray-100/50"
+              }`}
             >
               <h3 className="mb-1 font-semibold text-blue-800">
                 Mode Intermédiaire
@@ -286,8 +459,12 @@ const QuizCatalogue = () => {
             </button>
 
             <button
-              onClick={() => handleQuizStart("hard")}
-              className="w-full rounded-lg border-2 border-red-200 bg-red-50 p-4 text-left transition-colors hover:bg-red-100"
+              onClick={() => setSelectedDifficulty("hard")}
+              className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
+                selectedDifficulty === "hard"
+                  ? "border-red-500 bg-red-50/70 shadow-sm ring-1 ring-red-500"
+                  : "border-gray-200 bg-gray-50/50 hover:bg-gray-100/50"
+              }`}
             >
               <h3 className="mb-1 font-semibold text-red-800">
                 Mode Difficile
@@ -297,6 +474,36 @@ const QuizCatalogue = () => {
                 progression
               </p>
             </button>
+
+            <div className="my-2 border-t border-gray-100" />
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                onClick={() => handleQuizStart(selectedDifficulty)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 font-bold text-white shadow-md transition-colors hover:bg-blue-700"
+              >
+                Jouer en Solo 👤
+              </button>
+
+              {isServerSaturated ? (
+                <div className="flex items-center justify-center rounded-xl border border-yellow-200 bg-yellow-50/50 p-2 text-center">
+                  <p className="text-xs leading-tight font-semibold text-yellow-800">
+                    Multijoueurs indisponible ⏳ (serveurs complets)
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleCreateMultiplayerSession}
+                  disabled={multiplayerLoading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 py-3.5 font-bold text-white shadow-md transition-colors hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {multiplayerLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                  Lancer Multijoueurs 🚀
+                </button>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

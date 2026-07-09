@@ -46,21 +46,12 @@ export const metadata: Metadata = {
     title: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
     description:
       "Apprenez, testez et améliorez vos connaissances en secourisme avec RescueLearn.",
-    images: [
-      {
-        url: "/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
     description:
       "Apprenez, testez et améliorez vos connaissances en secourisme avec RescueLearn.",
-    images: ["/twitter-image.jpg"],
     creator: "@rescuelearn",
   },
   robots: {
