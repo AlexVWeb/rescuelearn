@@ -71,8 +71,8 @@ export async function generateQuizWithAiAction(jsonData: unknown) {
       const { buffer } = await getFile(key, false);
       const fs = await import("fs/promises");
       const path = await import("path");
-      const tempDir = path.join(process.cwd(), ".next/cache");
-      await fs.mkdir(tempDir, { recursive: true });
+      const os = await import("os");
+      const tempDir = os.tmpdir();
       pdfPath = path.join(tempDir, `temp-${Date.now()}-${path.basename(key)}`);
       await fs.writeFile(pdfPath, buffer);
       tempFileCreated = true;
