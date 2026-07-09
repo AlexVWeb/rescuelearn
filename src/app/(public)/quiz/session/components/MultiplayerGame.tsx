@@ -18,6 +18,7 @@ interface Question {
 
 interface QuizSessionState {
   timePerQuestion: number;
+  difficulty: string;
 }
 
 interface MultiplayerGameProps {
@@ -27,6 +28,7 @@ interface MultiplayerGameProps {
   participantId: string | null;
   timeRemaining: number;
   answeredCount: number;
+  totalPlayers: number;
   hasAnswered: boolean;
   selectedOptionId: number | null;
   answerFeedback: { isCorrect: boolean; points: number } | null;
@@ -41,12 +43,16 @@ export function MultiplayerGame({
   participantId,
   timeRemaining,
   answeredCount,
+  totalPlayers,
   hasAnswered,
   selectedOptionId,
   answerFeedback,
   handleSubmitAnswer,
   handleNextQuestion,
 }: MultiplayerGameProps) {
+  const isEasyMode = session.difficulty === "easy";
+  const isHardMode = session.difficulty === "hard";
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -57,13 +63,13 @@ export function MultiplayerGame({
       <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-md">
         <div className="mb-4 flex items-center justify-between">
           <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">
-            Temps restant : {timeRemaining}s
+            {isEasyMode
+              ? "⏱️ Chronomètre désactivé"
+              : `Temps restant : ${timeRemaining}s`}
           </span>
-          {isHost && (
-            <span className="text-xs font-semibold text-gray-600">
-              Réponses reçues : {answeredCount}
-            </span>
-          )}
+          <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-800">
+            Réponses : {answeredCount} / {totalPlayers}
+          </span>
         </div>
 
         <h2 className="mb-6 text-xl font-bold text-gray-800 md:text-2xl">
@@ -71,14 +77,16 @@ export function MultiplayerGame({
         </h2>
 
         {/* Progress timer bar */}
-        <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
-          <div
-            className="h-full bg-purple-600 transition-all duration-1000"
-            style={{
-              width: `${(timeRemaining / session.timePerQuestion) * 100}%`,
-            }}
-          />
-        </div>
+        {!isEasyMode && (
+          <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
+            <div
+              className="h-full bg-purple-600 transition-all duration-1000"
+              style={{
+                width: `${(timeRemaining / session.timePerQuestion) * 100}%`,
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Answer Options */}
@@ -113,7 +121,8 @@ export function MultiplayerGame({
 
           <button
             onClick={handleNextQuestion}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 py-4 font-bold text-white shadow-md transition-colors hover:bg-purple-700"
+            disabled={answeredCount < totalPlayers}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 py-4 font-bold text-white shadow-md transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:opacity-50"
           >
             Suivant <ArrowRight className="h-5 w-5" />
           </button>
@@ -136,7 +145,7 @@ export function MultiplayerGame({
                 <button
                   key={opt.id}
                   onClick={() => handleSubmitAnswer(opt.id)}
-                  disabled={hasAnswered || timeRemaining === 0}
+                  disabled={hasAnswered || (!isEasyMode && timeRemaining === 0)}
                   className={`relative flex min-h-[90px] w-full items-center overflow-hidden rounded-2xl border-2 p-6 text-left text-lg font-semibold shadow-sm transition-all focus:ring-2 focus:ring-purple-500 focus:outline-none ${
                     colors[index % colors.length]
                   } ${hasAnswered && !isSelected ? "scale-95 opacity-50" : ""} ${
@@ -158,11 +167,12 @@ export function MultiplayerGame({
           {isHost && (
             <div className="mt-4 flex items-center justify-between rounded-2xl border border-purple-100 bg-white p-4 shadow-sm">
               <span className="text-sm font-semibold text-gray-600">
-                Hôte : {answeredCount} réponses reçues
+                Hôte : {answeredCount} / {totalPlayers} réponses reçues
               </span>
               <button
                 onClick={handleNextQuestion}
-                className="flex items-center gap-2 rounded-xl bg-purple-600 px-6 py-3 font-bold text-white shadow-md transition-colors hover:bg-purple-700"
+                disabled={answeredCount < totalPlayers}
+                className="flex items-center gap-2 rounded-xl bg-purple-600 px-6 py-3 font-bold text-white shadow-md transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:opacity-50"
               >
                 Suivant <ArrowRight className="h-4 w-4" />
               </button>
@@ -178,7 +188,11 @@ export function MultiplayerGame({
           animate={{ opacity: 1, y: 0 }}
           className="rounded-xl border border-gray-100 bg-white p-4 text-center font-medium shadow-sm"
         >
-          {!answerFeedback ? (
+          {isHardMode ? (
+            <p className="font-semibold text-purple-700">
+              Réponse enregistrée avec succès ! 📝
+            </p>
+          ) : !answerFeedback ? (
             <p className="animate-pulse text-gray-600">
               Réponse soumise, en attente des autres joueurs...
             </p>

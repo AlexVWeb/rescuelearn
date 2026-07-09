@@ -27,7 +27,10 @@ function generateSessionCode(): string {
 /**
  * Creates a new multiplayer quiz session.
  */
-export async function createQuizSessionAction(quizId: number) {
+export async function createQuizSessionAction(
+  quizId: number,
+  difficulty: string = "medium"
+) {
   try {
     const quiz = await prisma.quiz.findUnique({
       where: { id: quizId },
@@ -83,6 +86,7 @@ export async function createQuizSessionAction(quizId: number) {
         quizId,
         code,
         status: "LOBBY",
+        difficulty,
       },
     });
 
@@ -492,6 +496,7 @@ export async function getQuizSessionStateAction(
         id: session.id,
         code: session.code,
         status: session.status,
+        difficulty: session.difficulty,
         currentQuestionId: session.currentQuestionId,
         currentQuestionStartedAt: session.currentQuestionStartedAt,
         timePerQuestion: session.quiz.timePerQuestion,

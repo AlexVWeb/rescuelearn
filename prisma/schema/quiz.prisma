@@ -60,6 +60,7 @@ model QuizSession {
   quizId            Int
   quiz              Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
   status            QuizSessionStatus @default(LOBBY)
+  difficulty        String            @default("medium")
   currentQuestionId Int?
   currentQuestionStartedAt DateTime?
   createdAt         DateTime          @default(now())

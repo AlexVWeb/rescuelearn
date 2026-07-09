@@ -2,7 +2,9 @@
 
 import dayjs from "dayjs";
 import Link from "next/link";
+import Image from "next/image";
 import { MobileMenu } from "@/components/MobileMenu";
+import logoImg from "@/app/icon.png";
 
 export default function PublicLayout({
   children,
@@ -17,8 +19,15 @@ export default function PublicLayout({
             <div className="flex items-center">
               <Link
                 href="/"
-                className="flex cursor-pointer items-center text-blue-600 transition-colors hover:text-blue-700"
+                className="flex cursor-pointer items-center gap-2 text-blue-600 transition-colors hover:text-blue-700"
               >
+                <Image
+                  src={logoImg}
+                  alt="RescueLearn Logo"
+                  width={32}
+                  height={32}
+                  className="rounded-lg"
+                />
                 <span className="text-2xl font-bold">RescueLearn</span>
               </Link>
             </div>

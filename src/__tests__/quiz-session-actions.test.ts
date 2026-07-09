@@ -67,7 +67,7 @@ describe("quiz-session-actions", () => {
       expect(result).toEqual({ success: false, error: "Quiz introuvable" });
     });
 
-    it("should create a quiz session successfully with a unique code", async () => {
+    it("should create a quiz session successfully with a unique code and default difficulty", async () => {
       mockPrisma.quiz.findUnique.mockResolvedValue({ id: 1 });
       mockPrisma.quizSession.findFirst.mockResolvedValue(null); // No collision
       mockPrisma.quizSession.create.mockResolvedValue({
@@ -78,7 +78,35 @@ describe("quiz-session-actions", () => {
       const result = await createQuizSessionAction(1);
       expect(result.success).toBe(true);
       expect(result.code).toHaveLength(4);
-      expect(mockPrisma.quizSession.create).toHaveBeenCalled();
+      expect(mockPrisma.quizSession.create).toHaveBeenCalledWith({
+        data: {
+          quizId: 1,
+          code: expect.any(String),
+          status: "LOBBY",
+          difficulty: "medium",
+        },
+      });
+    });
+
+    it("should create a quiz session successfully with a unique code and custom difficulty", async () => {
+      mockPrisma.quiz.findUnique.mockResolvedValue({ id: 1 });
+      mockPrisma.quizSession.findFirst.mockResolvedValue(null); // No collision
+      mockPrisma.quizSession.create.mockResolvedValue({
+        id: "session-1",
+        code: "ABCD",
+      });
+
+      const result = await createQuizSessionAction(1, "easy");
+      expect(result.success).toBe(true);
+      expect(result.code).toHaveLength(4);
+      expect(mockPrisma.quizSession.create).toHaveBeenCalledWith({
+        data: {
+          quizId: 1,
+          code: expect.any(String),
+          status: "LOBBY",
+          difficulty: "easy",
+        },
+      });
     });
 
     it("should fail if maximum active sessions count is reached", async () => {

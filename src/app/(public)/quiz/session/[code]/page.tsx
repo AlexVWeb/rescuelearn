@@ -24,6 +24,7 @@ interface ParticipantPresence {
   presence_ref: string;
   nickname: string;
   id: string;
+  hasAnswered?: boolean;
 }
 
 // Session state interface
@@ -31,6 +32,7 @@ interface QuizSessionState {
   id: string;
   code: string;
   status: "LOBBY" | "IN_PROGRESS" | "FINISHED";
+  difficulty: string;
   currentQuestionId: number | null;
   currentQuestionStartedAt: Date | null;
   timePerQuestion: number;
@@ -74,7 +76,7 @@ export default function QuizSessionPage() {
 
   // Realtime lists & states
   const [participants, setParticipants] = useState<
-    { id: string; nickname: string }[]
+    { id: string; nickname: string; hasAnswered?: boolean }[]
   >([]);
   const [leaderboard, setLeaderboard] = useState<ParticipantScore[]>([]);
 
@@ -91,10 +93,10 @@ export default function QuizSessionPage() {
     isCorrect: boolean;
     points: number;
   } | null>(null);
-  const [answeredCount, setAnsweredCount] = useState(0);
 
   // Refs for tracking presence & channel
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const isTransitioningRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -115,6 +117,7 @@ export default function QuizSessionPage() {
             id: res.data.id,
             code: res.data.code,
             status: res.data.status as "LOBBY" | "IN_PROGRESS" | "FINISHED",
+            difficulty: res.data.difficulty,
             currentQuestionId: res.data.currentQuestionId,
             currentQuestionStartedAt: res.data.currentQuestionStartedAt
               ? new Date(res.data.currentQuestionStartedAt)
@@ -190,6 +193,7 @@ export default function QuizSessionPage() {
           await channelRef.current.track({
             nickname: res.nickname || hostNicknameInput,
             id: res.participantId,
+            hasAnswered: false,
           });
         }
       } else {
@@ -199,6 +203,20 @@ export default function QuizSessionPage() {
       alert("Une erreur inattendue est survenue");
     }
   };
+
+  // Dynamically calculate answered count from presence data
+  const answeredCount = participants.filter((p) => p.hasAnswered).length;
+
+  // Track player answer status changes in presence
+  useEffect(() => {
+    if (channelRef.current && nickname && participantId) {
+      channelRef.current.track({
+        nickname,
+        id: participantId,
+        hasAnswered,
+      });
+    }
+  }, [hasAnswered, nickname, participantId]);
 
   // 2. Realtime Synchronization (Presence & Broadcast)
   useEffect(() => {
@@ -211,7 +229,11 @@ export default function QuizSessionPage() {
     channel
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
-        const usersList: { id: string; nickname: string }[] = [];
+        const usersList: {
+          id: string;
+          nickname: string;
+          hasAnswered?: boolean;
+        }[] = [];
 
         Object.values(state).forEach((presences) => {
           (presences as unknown as ParticipantPresence[]).forEach(
@@ -220,6 +242,7 @@ export default function QuizSessionPage() {
                 usersList.push({
                   id: presence.id,
                   nickname: presence.nickname,
+                  hasAnswered: !!presence.hasAnswered,
                 });
               }
             }
@@ -236,8 +259,7 @@ export default function QuizSessionPage() {
         "broadcast",
         { event: "quiz-control" },
         (payload: { payload: BroadcastPayload }) => {
-          const { type, currentQuestionId, status, answersCount } =
-            payload.payload;
+          const { type, currentQuestionId, status } = payload.payload;
 
           if (type === "start" || type === "next-question") {
             setSession((prev) => {
@@ -252,7 +274,6 @@ export default function QuizSessionPage() {
             setHasAnswered(false);
             setSelectedOptionId(null);
             setAnswerFeedback(null);
-            setAnsweredCount(0);
           } else if (type === "status-change") {
             setSession((prev) => {
               if (!prev) return null;
@@ -263,8 +284,6 @@ export default function QuizSessionPage() {
                   prev.status,
               };
             });
-          } else if (type === "answer-submitted") {
-            setAnsweredCount(answersCount || 0);
           }
         }
       )
@@ -273,6 +292,7 @@ export default function QuizSessionPage() {
           await channel.track({
             nickname,
             id: participantId,
+            hasAnswered,
           });
         }
       });
@@ -286,7 +306,7 @@ export default function QuizSessionPage() {
     return () => {
       supabase?.removeChannel(channel);
     };
-  }, [session, isHost, nickname, participantId]);
+  }, [session, isHost, nickname, participantId, hasAnswered]);
 
   // 3. Question Timer countdown
   useEffect(() => {
@@ -296,6 +316,11 @@ export default function QuizSessionPage() {
       !session.currentQuestionId
     )
       return;
+
+    if (session.difficulty === "easy") {
+      setTimeRemaining(999999);
+      return;
+    }
 
     setTimeRemaining(session.timePerQuestion);
 
@@ -319,7 +344,7 @@ export default function QuizSessionPage() {
       !currentQuestion ||
       isHost ||
       hasAnswered ||
-      timeRemaining === 0
+      (session.difficulty !== "easy" && timeRemaining === 0)
     )
       return;
 
@@ -342,7 +367,8 @@ export default function QuizSessionPage() {
 
   // 4. Actions
   const handleStartQuiz = async () => {
-    if (!session || !isHost) return;
+    if (!session || !isHost || isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
     try {
       const res = await startQuizSessionAction(session.id);
       if (res.success && res.currentQuestionId) {
@@ -366,11 +392,14 @@ export default function QuizSessionPage() {
       }
     } catch (err) {
       alert("Erreur lors du démarrage du quiz");
+    } finally {
+      isTransitioningRef.current = false;
     }
   };
 
   const handleNextQuestion = async () => {
-    if (!session || !isHost) return;
+    if (!session || !isHost || isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
     try {
       const res = await nextQuestionAction(session.id);
       if (res.success) {
@@ -404,7 +433,6 @@ export default function QuizSessionPage() {
               currentQuestionStartedAt: new Date(),
             };
           });
-          setAnsweredCount(0);
           channelRef.current?.send({
             type: "broadcast",
             event: "quiz-control",
@@ -417,8 +445,30 @@ export default function QuizSessionPage() {
       }
     } catch (err) {
       alert("Erreur lors du passage à la question suivante");
+    } finally {
+      isTransitioningRef.current = false;
     }
   };
+
+  // Automated next question transition
+  useEffect(() => {
+    if (
+      !isHost ||
+      !session ||
+      session.status !== "IN_PROGRESS" ||
+      participants.length === 0 ||
+      isTransitioningRef.current
+    )
+      return;
+
+    const allAnswered = answeredCount === participants.length;
+    const isEasyMode = session.difficulty === "easy";
+    const timeOut = !isEasyMode && timeRemaining === 0;
+
+    if (allAnswered || timeOut) {
+      handleNextQuestion();
+    }
+  }, [isHost, session, participants.length, answeredCount, timeRemaining]);
 
   const handleSubmitAnswer = async (optionId: number) => {
     if (
@@ -448,17 +498,6 @@ export default function QuizSessionPage() {
         setAnswerFeedback({
           isCorrect: res.isCorrect,
           points: res.points,
-        });
-
-        const newCount = answeredCount + 1;
-        setAnsweredCount(newCount);
-        channelRef.current?.send({
-          type: "broadcast",
-          event: "quiz-control",
-          payload: {
-            type: "answer-submitted",
-            answersCount: newCount,
-          },
         });
       } else {
         alert(res.error || "Erreur lors de l'enregistrement de la réponse");
@@ -559,6 +598,7 @@ export default function QuizSessionPage() {
             participantId={participantId}
             timeRemaining={timeRemaining}
             answeredCount={answeredCount}
+            totalPlayers={participants.length}
             hasAnswered={hasAnswered}
             selectedOptionId={selectedOptionId}
             answerFeedback={answerFeedback}

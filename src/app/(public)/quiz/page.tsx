@@ -52,6 +52,9 @@ const QuizCatalogue = () => {
   const [totalPages, setTotalPages] = useState<number>(1);
 
   // State pour le multijoueur
+  const [selectedDifficulty, setSelectedDifficulty] = useState<
+    "easy" | "medium" | "hard"
+  >("medium");
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joinNickname, setJoinNickname] = useState("");
@@ -112,7 +115,10 @@ const QuizCatalogue = () => {
     if (!selectedQuizId) return;
     setMultiplayerLoading(true);
     try {
-      const res = await createQuizSessionAction(selectedQuizId);
+      const res = await createQuizSessionAction(
+        selectedQuizId,
+        selectedDifficulty
+      );
       if (res.success && res.sessionId && res.code) {
         // Rediriger vers la page de session en tant qu'hôte
         router.push(`/quiz/session/${res.code}?hostToken=${res.sessionId}`);
@@ -423,8 +429,12 @@ const QuizCatalogue = () => {
               </button>
             </div>
             <button
-              onClick={() => handleQuizStart("easy")}
-              className="w-full rounded-lg border-2 border-green-200 bg-green-50 p-4 text-left transition-colors hover:bg-green-100"
+              onClick={() => setSelectedDifficulty("easy")}
+              className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
+                selectedDifficulty === "easy"
+                  ? "border-green-500 bg-green-50/70 shadow-sm ring-1 ring-green-500"
+                  : "border-gray-200 bg-gray-50/50 hover:bg-gray-100/50"
+              }`}
             >
               <h3 className="mb-1 font-semibold text-green-800">Mode Facile</h3>
               <p className="text-sm text-gray-600">
@@ -433,8 +443,12 @@ const QuizCatalogue = () => {
             </button>
 
             <button
-              onClick={() => handleQuizStart("medium")}
-              className="w-full rounded-lg border-2 border-blue-200 bg-blue-50 p-4 text-left transition-colors hover:bg-blue-100"
+              onClick={() => setSelectedDifficulty("medium")}
+              className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
+                selectedDifficulty === "medium"
+                  ? "border-blue-500 bg-blue-50/70 shadow-sm ring-1 ring-blue-500"
+                  : "border-gray-200 bg-gray-50/50 hover:bg-gray-100/50"
+              }`}
             >
               <h3 className="mb-1 font-semibold text-blue-800">
                 Mode Intermédiaire
@@ -445,8 +459,12 @@ const QuizCatalogue = () => {
             </button>
 
             <button
-              onClick={() => handleQuizStart("hard")}
-              className="w-full rounded-lg border-2 border-red-200 bg-red-50 p-4 text-left transition-colors hover:bg-red-100"
+              onClick={() => setSelectedDifficulty("hard")}
+              className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
+                selectedDifficulty === "hard"
+                  ? "border-red-500 bg-red-50/70 shadow-sm ring-1 ring-red-500"
+                  : "border-gray-200 bg-gray-50/50 hover:bg-gray-100/50"
+              }`}
             >
               <h3 className="mb-1 font-semibold text-red-800">
                 Mode Difficile
@@ -459,36 +477,33 @@ const QuizCatalogue = () => {
 
             <div className="my-2 border-t border-gray-100" />
 
-            {isServerSaturated ? (
-              <div className="w-full rounded-lg border border-yellow-200 bg-yellow-50/50 p-4 text-center">
-                <h3 className="text-yellow-850 mb-1 flex items-center justify-center gap-2 font-semibold text-yellow-800">
-                  Session multijoueurs temporairement indisponible ⏳
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Les serveurs de jeu sont actuellement très demandés. Veuillez
-                  réessayer plus tard ou lancer une partie solo !
-                </p>
-              </div>
-            ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
-                onClick={handleCreateMultiplayerSession}
-                disabled={multiplayerLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-purple-200 bg-purple-50 p-4 text-left transition-colors hover:bg-purple-100 disabled:opacity-50"
+                onClick={() => handleQuizStart(selectedDifficulty)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 font-bold text-white shadow-md transition-colors hover:bg-blue-700"
               >
-                <div className="flex-grow">
-                  <h3 className="mb-1 flex items-center gap-2 font-semibold text-purple-800">
-                    {multiplayerLoading && (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    )}
-                    Lancer en Multijoueurs 🚀
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Créez une session de jeu partagée pour jouer avec d'autres
-                    en temps réel.
+                Jouer en Solo 👤
+              </button>
+
+              {isServerSaturated ? (
+                <div className="flex items-center justify-center rounded-xl border border-yellow-200 bg-yellow-50/50 p-2 text-center">
+                  <p className="text-xs leading-tight font-semibold text-yellow-800">
+                    Multijoueurs indisponible ⏳ (serveurs complets)
                   </p>
                 </div>
-              </button>
-            )}
+              ) : (
+                <button
+                  onClick={handleCreateMultiplayerSession}
+                  disabled={multiplayerLoading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 py-3.5 font-bold text-white shadow-md transition-colors hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {multiplayerLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                  Lancer Multijoueurs 🚀
+                </button>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
