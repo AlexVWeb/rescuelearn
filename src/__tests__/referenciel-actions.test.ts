@@ -46,7 +46,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 import { getUserContext } from "@/lib/context";
-import { uploadFile, deleteFile } from "@/lib/r2";
+import { uploadFile } from "@/lib/r2";
 
 process.env.R2_PUBLIC_URL = "https://r2.example.com";
 import {
@@ -121,17 +121,11 @@ describe("referenciel-actions", () => {
   });
 
   describe("deleteReferencielAction", () => {
-    it("should delete referenciel from DB and R2", async () => {
+    it("should delete referenciel from DB", async () => {
       mockUser([UserRole.SUPER_ADMIN]);
-      mockPrisma.referenciel.findUnique.mockResolvedValue({
-        id: 1,
-        title: "PSE",
-        pdfUrl: "https://r2.example.com/dev/referenciels/pse1.pdf",
-      });
 
       const res = await deleteReferencielAction(1);
       expect(res.success).toBe(true);
-      expect(deleteFile).toHaveBeenCalledWith("dev/referenciels/pse1.pdf");
       expect(mockPrisma.referenciel.delete).toHaveBeenCalledWith({
         where: { id: 1 },
       });

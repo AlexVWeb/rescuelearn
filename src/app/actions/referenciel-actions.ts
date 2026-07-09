@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { uploadFile, deleteFile } from "@/lib/r2";
+import { uploadFile } from "@/lib/r2";
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
 
@@ -94,16 +94,6 @@ export async function deleteReferencielAction(id: number) {
   }
 
   try {
-    const referenciel = await prisma.referenciel.findUnique({
-      where: { id },
-    });
-    if (referenciel) {
-      const key = referenciel.pdfUrl.replace(
-        `${process.env.R2_PUBLIC_URL}/`,
-        ""
-      );
-      await deleteFile(key);
-    }
     await prisma.referenciel.delete({
       where: { id },
     });

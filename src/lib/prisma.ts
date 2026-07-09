@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { encrypt, decrypt, hash } from "./encryption";
@@ -34,6 +34,7 @@ type UpsertArgs = {
   create: Record<string, unknown>;
   update: Record<string, unknown>;
 };
+type DeleteArgs = { where: Prisma.ReferencielWhereUniqueInput };
 type FindFirstDelegate = {
   findFirst: (args: Record<string, unknown>) => Promise<unknown>;
 };
@@ -295,6 +296,63 @@ export const prisma =
         },
         async findUnique({ args, query }: QueryCb<unknown>) {
           return decryptData(await query(args), ORGANISME_ENCRYPTED_FIELDS);
+        },
+      },
+      referenciel: {
+        async delete({ args, query }: QueryCb<DeleteArgs>) {
+          const referenciel = await baseClient.referenciel.findUnique({
+            where: args.where,
+            select: { pdfUrl: true },
+          });
+          const result = await query(args);
+          if (referenciel?.pdfUrl) {
+            try {
+              const r2PublicUrl = process.env.R2_PUBLIC_URL;
+              if (r2PublicUrl && referenciel.pdfUrl.startsWith(r2PublicUrl)) {
+                const { deleteFile } = await import("@/lib/r2");
+                const key = referenciel.pdfUrl.replace(`${r2PublicUrl}/`, "");
+                await deleteFile(key);
+              }
+            } catch (error) {
+              logger.error(
+                "Failed to delete referenciel file from R2 during database delete hook:",
+                error
+              );
+            }
+          }
+          return result;
+        },
+        async deleteMany({ args, query }: QueryCb<FindArgs>) {
+          const referenciels = await baseClient.referenciel.findMany({
+            where: args.where,
+            select: { pdfUrl: true },
+          });
+          const result = await query(args);
+          const r2PublicUrl = process.env.R2_PUBLIC_URL;
+          if (r2PublicUrl) {
+            try {
+              const { deleteFile } = await import("@/lib/r2");
+              for (const ref of referenciels) {
+                if (ref.pdfUrl && ref.pdfUrl.startsWith(r2PublicUrl)) {
+                  try {
+                    const key = ref.pdfUrl.replace(`${r2PublicUrl}/`, "");
+                    await deleteFile(key);
+                  } catch (error) {
+                    logger.error(
+                      "Failed to delete referenciel file from R2 during database deleteMany hook:",
+                      error
+                    );
+                  }
+                }
+              }
+            } catch (error) {
+              logger.error(
+                "Failed to run R2 cleanup during database deleteMany hook:",
+                error
+              );
+            }
+          }
+          return result;
         },
       },
     },
