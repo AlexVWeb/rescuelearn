@@ -1,4 +1,5 @@
 import { getScenariosAction, SNVScenario } from "@/app/actions/snv-actions";
+import { getAllReferencielsSimpleAction } from "@/app/actions/quiz-actions";
 import ScenariosClientPage from "./client-page";
 import { requireSuperAdmin } from "@/lib/context";
 
@@ -10,8 +11,17 @@ export default async function ScenariosPage(props: {
   const page = Number(searchParams?.page) || 1;
   const search = searchParams?.search || "";
 
-  const result = await getScenariosAction(page, 100, search); // Fetch 100 for now
-  const scenarios = result.success ? result.data : [];
+  const [scenariosResult, referenciels] = await Promise.all([
+    getScenariosAction(page, 100, search),
+    getAllReferencielsSimpleAction(),
+  ]);
 
-  return <ScenariosClientPage initialScenarios={scenarios as SNVScenario[]} />;
+  const scenarios = scenariosResult.success ? scenariosResult.data : [];
+
+  return (
+    <ScenariosClientPage
+      initialScenarios={scenarios as SNVScenario[]}
+      referenciels={referenciels}
+    />
+  );
 }

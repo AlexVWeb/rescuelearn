@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { logger } from "@/lib/logger";
+import { z } from "zod";
 
 // --- Types ---
 // Matches Prisma model
@@ -273,5 +274,128 @@ export async function getAllScenariosSimpleAction() {
   } catch (error) {
     logger.error("Failed to fetch all scenarios:", error);
     return [];
+  }
+}
+
+const importSNVVictimeSchema = z.object({
+  description: z
+    .string()
+    .min(10, "La description doit faire au moins 10 caractères."),
+  correctAnswer: z.number().min(0).max(3),
+  explanation: z
+    .string()
+    .min(10, "L'explication doit faire au moins 10 caractères."),
+});
+
+const importSNVScenarioSchema = z.object({
+  title: z.string().min(1, "Le titre est requis"),
+  level: z.string().min(1, "Le niveau est requis"),
+  description: z.string().min(1, "La description est requise"),
+  victimes: z
+    .array(importSNVVictimeSchema)
+    .min(1, "Il faut au moins une victime"),
+});
+
+export async function importSNVScenarioAction(jsonData: unknown) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const parsed = importSNVScenarioSchema.safeParse(jsonData);
+  if (!parsed.success) {
+    logger.error(
+      "JSON validation failed for SNV Scenario import:",
+      parsed.error
+    );
+    return { success: false, error: "Structure JSON invalide" };
+  }
+
+  const { title, level, description, victimes } = parsed.data;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const scenario = await tx.sNVScenario.create({
+        data: {
+          title,
+          level,
+          description,
+        },
+      });
+
+      for (const v of victimes) {
+        await tx.sNVVictim.create({
+          data: {
+            description: v.description,
+            correctAnswer: v.correctAnswer,
+            explanation: v.explanation,
+            scenarioId: scenario.id,
+          },
+        });
+      }
+    });
+
+    revalidatePath("/admin/snv/scenarios");
+    revalidatePath("/admin/snv/victims");
+    revalidatePath("/snv");
+    return { success: true };
+  } catch (error) {
+    logger.error("Failed to import SNV Scenario and Victims:", error);
+    return { success: false, error: "Impossible d'importer le scénario." };
+  }
+}
+
+export async function getPublicScenariosAction(
+  page: number = 1,
+  limit: number = 10
+) {
+  const skip = (page - 1) * limit;
+  try {
+    const [scenarios, total] = await Promise.all([
+      prisma.sNVScenario.findMany({
+        skip,
+        take: limit,
+        orderBy: { id: "desc" },
+        include: {
+          victimes: true,
+        },
+      }),
+      prisma.sNVScenario.count(),
+    ]);
+
+    return {
+      success: true,
+      data: scenarios,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  } catch (error) {
+    logger.error("Failed to fetch public scenarios:", error);
+    return { success: false, error: "Impossible de récupérer les scénarios." };
+  }
+}
+
+export async function getPublicScenarioByIdAction(id: number) {
+  try {
+    const scenario = await prisma.sNVScenario.findUnique({
+      where: { id },
+      include: {
+        victimes: true,
+      },
+    });
+
+    if (!scenario) {
+      return { success: false, error: "Scénario introuvable." };
+    }
+
+    return {
+      success: true,
+      data: scenario,
+    };
+  } catch (error) {
+    logger.error("Failed to fetch public scenario by id:", error);
+    return { success: false, error: "Impossible de récupérer le scénario." };
   }
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SNVScenariosTable } from "@/components/admin/snv/scenarios-table";
 import { SNVScenarioDialog } from "@/components/admin/snv/scenario-dialog";
+import { AiGenerateScenarioDialog } from "@/components/admin/snv/ai-generate-scenario-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,18 +15,27 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, BrainCircuit } from "lucide-react";
 import { SNVScenario, deleteScenarioAction } from "@/app/actions/snv-actions";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+interface ReferencielSimple {
+  id: number;
+  title: string;
+}
 
 interface ClientPageProps {
   initialScenarios: SNVScenario[];
+  referenciels: ReferencielSimple[];
 }
 
 export default function ScenariosClientPage({
   initialScenarios,
+  referenciels,
 }: ClientPageProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedScenario, setSelectedScenario] = useState<SNVScenario | null>(
     null
@@ -50,10 +60,20 @@ export default function ScenariosClientPage({
 
   const confirmDelete = async () => {
     if (idToDelete) {
-      await deleteScenarioAction(idToDelete);
-      setDeleteDialogOpen(false);
-      setIdToDelete(null);
-      router.refresh();
+      try {
+        const result = await deleteScenarioAction(idToDelete);
+        if (result.success) {
+          toast.success("Scénario supprimé avec succès");
+        } else {
+          toast.error(result.error || "Impossible de supprimer le scénario");
+        }
+      } catch {
+        toast.error("Une erreur est survenue lors de la suppression");
+      } finally {
+        setDeleteDialogOpen(false);
+        setIdToDelete(null);
+        router.refresh();
+      }
     }
   };
 
@@ -67,6 +87,13 @@ export default function ScenariosClientPage({
           </p>
         </div>
         <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={() => setAiGenerateDialogOpen(true)}
+            className="border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-950/30"
+          >
+            <BrainCircuit className="mr-2 h-4 w-4" /> Générer avec IA
+          </Button>
           <Button onClick={handleCreate}>
             <Plus className="mr-2 h-4 w-4" /> Nouveau Scénario
           </Button>
@@ -85,6 +112,12 @@ export default function ScenariosClientPage({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         scenario={selectedScenario}
+      />
+
+      <AiGenerateScenarioDialog
+        open={aiGenerateDialogOpen}
+        onOpenChange={setAiGenerateDialogOpen}
+        referenciels={referenciels}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
