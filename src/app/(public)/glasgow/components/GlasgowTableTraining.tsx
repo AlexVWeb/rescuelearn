@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { motion } from "framer-motion";
 import {
   Shuffle,
   RotateCcw,
@@ -8,7 +9,8 @@ import {
   XCircle,
   Eye,
   MessageCircle,
-  Hand,
+  Activity,
+  Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,34 +22,30 @@ import type {
   ScoreResult,
 } from "../interfaces/GlasgowData";
 
-/**
- * Composant d'entraînement au Score de Glasgow
- * Permet de s'entraîner à mémoriser les scores et descriptions du tableau de Glasgow
- */
 export function GlasgowTableTraining({ className }: { className?: string }) {
-  // Données complètes du score de Glasgow
+  // Official French first aid (DGSCGC / SUAP) terms for Glasgow scale
   const glasgowData: GlasgowData = useMemo<GlasgowData>(
     () => ({
       oculaire: [
         { score: 1, description: "Aucune" },
-        { score: 2, description: "Douleur" },
-        { score: 3, description: "Appel" },
-        { score: 4, description: "Normale" },
+        { score: 2, description: "À la douleur" },
+        { score: 3, description: "À la demande" },
+        { score: 4, description: "Spontanée" },
       ],
       verbale: [
         { score: 1, description: "Aucune" },
-        { score: 2, description: "Sons" },
-        { score: 3, description: "Mots" },
+        { score: 2, description: "Incompréhensible" },
+        { score: 3, description: "Inappropriée" },
         { score: 4, description: "Confuse" },
-        { score: 5, description: "Normale" },
+        { score: 5, description: "Orientée" },
       ],
       motrice: [
         { score: 1, description: "Aucune" },
-        { score: 2, description: "Extension" },
-        { score: 3, description: "Flexion stéréotypée" },
-        { score: 4, description: "Flexion simple" },
-        { score: 5, description: "Dirigée vers la douleur" },
-        { score: 6, description: "Normale" },
+        { score: 2, description: "Extension anormale" },
+        { score: 3, description: "Flexion anormale" },
+        { score: 4, description: "Évitement / Retrait" },
+        { score: 5, description: "Localise la douleur" },
+        { score: 6, description: "À l'ordre" },
       ],
     }),
     []
@@ -57,37 +55,29 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
   const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
   const [showResults, setShowResults] = useState<boolean>(false);
   const [gameMode, setGameMode] = useState<GameMode>("mixed");
-  const [numCellsToHide, setNumCellsToHide] = useState<number>(8);
+  const [numCellsToHide, setNumCellsToHide] = useState<number>(6);
 
-  /**
-   * Calculer le nombre maximum de cellules selon le mode
-   */
   const getMaxCells = useCallback((): number => {
-    const totalRows = 15; // 4 + 5 + 6 = 15 lignes
+    const totalRows = 15; // 4 + 5 + 6 = 15 rows
     if (gameMode === "scores" || gameMode === "descriptions") {
       return totalRows;
     }
-    return totalRows * 2; // scores + descriptions
+    return totalRows * 2;
   }, [gameMode]);
 
-  /**
-   * Générer les cellules cachées
-   */
   const generateHiddenCells = useCallback((): void => {
     const allCells: string[] = [];
 
-    // Créer toutes les combinaisons possibles (typage strict des items)
     (Object.keys(glasgowData) as Array<keyof GlasgowData>).forEach(
       (category) => {
         const items = glasgowData[category];
         items.forEach((item) => {
-          allCells.push(`${String(category)}-${item.score}-score`);
-          allCells.push(`${String(category)}-${item.score}-description`);
+          allCells.push(`${category}-${item.score}-score`);
+          allCells.push(`${category}-${item.score}-description`);
         });
       }
     );
 
-    // Filtrer selon le mode de jeu
     let availableCells = allCells;
     if (gameMode === "scores") {
       availableCells = allCells.filter((cell) => cell.endsWith("-score"));
@@ -95,7 +85,6 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
       availableCells = allCells.filter((cell) => cell.endsWith("-description"));
     }
 
-    // Mélanger et sélectionner le nombre demandé
     const shuffled = secureShuffle(availableCells);
     const actualNumToHide = Math.min(numCellsToHide, availableCells.length);
     const selected = shuffled.slice(0, actualNumToHide);
@@ -105,9 +94,6 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
     setShowResults(false);
   }, [gameMode, numCellsToHide, glasgowData]);
 
-  /**
-   * Ajuster le nombre de cellules si le mode change
-   */
   useEffect(() => {
     const maxCells = getMaxCells();
     if (numCellsToHide > maxCells) {
@@ -115,16 +101,10 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
     }
   }, [gameMode, numCellsToHide, getMaxCells]);
 
-  /**
-   * Générer le tableau initial
-   */
   useEffect(() => {
     generateHiddenCells();
   }, [generateHiddenCells]);
 
-  /**
-   * Gérer les réponses utilisateur
-   */
   const handleAnswerChange = (cellId: string, value: string): void => {
     setUserAnswers((prev) => ({
       ...prev,
@@ -132,50 +112,44 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
     }));
   };
 
-  /**
-   * Vérifier les réponses
-   */
   const checkAnswers = (): void => {
     setShowResults(true);
   };
 
-  /**
-   * Obtenir la réponse correcte
-   */
-  const getCorrectAnswer = (cellId: string): string => {
-    const [category, scoreStr, type] = cellId.split("-");
-    const score = parseInt(scoreStr);
-    const item = glasgowData[category as keyof GlasgowData].find(
-      (i) => i.score === score
-    );
-
-    if (!item) return "";
-    return type === "score" ? score.toString() : item.description;
-  };
-
-  /**
-   * Vérifier si une réponse est correcte
-   */
-  const isCorrect = (cellId: string): boolean | null => {
-    if (!showResults) return null;
-    const userAnswer = userAnswers[cellId];
-    const correctAnswer = getCorrectAnswer(cellId);
-
-    if (!userAnswer) return false;
-
-    if (cellId.endsWith("-score")) {
-      return parseInt(userAnswer) === parseInt(correctAnswer);
-    } else {
-      return (
-        userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
+  const getCorrectAnswer = useCallback(
+    (cellId: string): string => {
+      const [category, scoreStr, type] = cellId.split("-");
+      const score = parseInt(scoreStr);
+      const item = glasgowData[category as keyof GlasgowData].find(
+        (i) => i.score === score
       );
-    }
-  };
 
-  /**
-   * Calculer le score
-   */
-  const calculateScore = (): ScoreResult => {
+      if (!item) return "";
+      return type === "score" ? score.toString() : item.description;
+    },
+    [glasgowData]
+  );
+
+  const isCorrect = useCallback(
+    (cellId: string): boolean | null => {
+      if (!showResults) return null;
+      const userAnswer = userAnswers[cellId];
+      const correctAnswer = getCorrectAnswer(cellId);
+
+      if (!userAnswer) return false;
+
+      if (cellId.endsWith("-score")) {
+        return parseInt(userAnswer) === parseInt(correctAnswer);
+      } else {
+        return (
+          userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
+        );
+      }
+    },
+    [showResults, userAnswers, getCorrectAnswer]
+  );
+
+  const calculateScore = useCallback((): ScoreResult => {
     let correct = 0;
     const total = hiddenCells.size;
 
@@ -184,11 +158,8 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
     });
 
     return { correct, total };
-  };
+  }, [hiddenCells, isCorrect]);
 
-  /**
-   * Rendu d'une cellule
-   */
   const renderCell = (
     category: string,
     item: { score: number; description: string },
@@ -202,7 +173,7 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
       return (
         <td
           key={cellId}
-          className="border border-gray-300 bg-gray-50 px-3 py-2 text-center"
+          className="border border-gray-100 bg-gray-50/50 px-4 py-3 text-center text-sm font-medium text-gray-700 dark:border-gray-800 dark:bg-gray-900/35 dark:text-gray-300"
         >
           {type === "score" ? item.score : item.description}
         </td>
@@ -213,222 +184,215 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
       <td
         key={cellId}
         className={cn(
-          "border border-gray-300 px-2 py-2 text-center",
+          "border border-gray-200 p-2 text-center transition-all duration-300 dark:border-gray-800",
           showResults
             ? correct
-              ? "border-green-400 bg-green-100"
-              : correct === false
-                ? "border-red-400 bg-red-100"
-                : "bg-yellow-100"
-            : "bg-yellow-50"
+              ? "border-green-400 bg-green-50 dark:border-green-900 dark:bg-green-950/20"
+              : "border-rose-400 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/20"
+            : "bg-amber-50/30 hover:bg-amber-50/60 dark:bg-amber-950/5"
         )}
       >
-        {type === "score" ? (
-          <input
-            type="number"
-            min="1"
-            max="6"
-            value={userAnswers[cellId] || ""}
-            onChange={(e) => handleAnswerChange(cellId, e.target.value)}
-            disabled={showResults}
-            className="w-12 rounded border border-gray-300 px-1 py-1 text-center focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            placeholder="?"
-          />
-        ) : (
-          <input
-            type="text"
-            value={userAnswers[cellId] || ""}
-            onChange={(e) => handleAnswerChange(cellId, e.target.value)}
-            disabled={showResults}
-            className="w-full rounded border border-gray-300 px-1 py-1 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            placeholder="?"
-          />
-        )}
+        <div className="flex w-full flex-col items-center justify-center gap-1.5">
+          {type === "score" ? (
+            <input
+              type="number"
+              min="1"
+              max="6"
+              value={userAnswers[cellId] || ""}
+              onChange={(e) => handleAnswerChange(cellId, e.target.value)}
+              disabled={showResults}
+              aria-label={`Score pour ${category} description ${item.description}`}
+              className="h-9 w-14 rounded-lg border border-gray-200 bg-white text-center text-sm font-bold focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              placeholder="?"
+            />
+          ) : (
+            <input
+              type="text"
+              value={userAnswers[cellId] || ""}
+              onChange={(e) => handleAnswerChange(cellId, e.target.value)}
+              disabled={showResults}
+              aria-label={`Description pour ${category} score ${item.score}`}
+              className="h-9 w-full max-w-[200px] rounded-lg border border-gray-200 bg-white px-2 text-center text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              placeholder="Écrivez..."
+            />
+          )}
 
-        {showResults && (
-          <div className="mt-1 flex justify-center">
-            {correct ? (
-              <CheckCircle size={16} className="text-green-600" />
-            ) : correct === false ? (
-              <div className="text-xs">
-                <XCircle size={16} className="mx-auto text-red-600" />
-                <div className="mt-1 font-medium text-red-700">
-                  {getCorrectAnswer(cellId)}
+          {showResults && (
+            <div className="flex items-center justify-center">
+              {correct ? (
+                <CheckCircle
+                  size={16}
+                  className="animate-bounce text-green-600 dark:text-green-400"
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-0.5">
+                  <XCircle
+                    size={16}
+                    className="text-rose-600 dark:text-rose-400"
+                  />
+                  <span className="mt-0.5 text-[10px] font-bold text-rose-700 dark:text-rose-400">
+                    {getCorrectAnswer(cellId)}
+                  </span>
                 </div>
-              </div>
-            ) : null}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </td>
     );
   };
 
-  /**
-   * Obtenir l'icône de catégorie
-   */
   const getCategoryIcon = (category: string): React.ReactNode => {
     switch (category) {
       case "oculaire":
-        return <Eye size={20} className="text-blue-600" />;
+        return <Eye size={18} className="text-blue-600" />;
       case "verbale":
-        return <MessageCircle size={20} className="text-green-600" />;
+        return <MessageCircle size={18} className="text-green-600" />;
       case "motrice":
-        return <Hand size={20} className="text-red-600" />;
+        return <Activity size={18} className="text-rose-600" />;
       default:
         return null;
     }
   };
 
-  /**
-   * Obtenir la couleur de catégorie
-   */
   const getCategoryColor = (category: string): string => {
     switch (category) {
       case "oculaire":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-50/50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-200 border-blue-100 dark:border-blue-900";
       case "verbale":
-        return "bg-green-100 text-green-800";
+        return "bg-green-50/50 dark:bg-green-950/20 text-green-900 dark:text-green-200 border-green-100 dark:border-green-900";
       case "motrice":
-        return "bg-red-100 text-red-800";
+        return "bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200 border-rose-100 dark:border-rose-900";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white";
     }
   };
 
-  const score = showResults
-    ? calculateScore()
-    : { correct: 0, total: hiddenCells.size };
+  const score = useMemo(() => {
+    if (showResults) return calculateScore();
+    return { correct: 0, total: hiddenCells.size };
+  }, [showResults, calculateScore, hiddenCells.size]);
 
   return (
-    <div className={cn("mx-auto max-w-6xl bg-white p-6", className)}>
-      <div className="mb-8 text-center">
-        <p className="text-gray-600">
-          Complétez les cases manquantes dans le tableau de Glasgow
+    <div
+      className={cn(
+        "mx-auto max-w-5xl rounded-3xl border border-gray-100 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900",
+        className
+      )}
+    >
+      <div className="mb-6 text-center">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+          Activez votre mémorisation
+        </h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Complétez les cases masquées du tableau pour tester vos connaissances.
         </p>
       </div>
 
-      {/* Contrôles */}
-      <div className="mb-6 flex flex-wrap justify-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Mode:</span>
+      {/* Paramètres & Contrôles */}
+      <div className="mb-6 grid grid-cols-1 gap-4 border-b border-gray-100 pb-6 md:grid-cols-2 lg:grid-cols-3 dark:border-gray-800">
+        {/* Mode de Jeu */}
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="select-game-mode"
+            className="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500"
+          >
+            Mode d'entraînement
+          </label>
           <select
+            id="select-game-mode"
             value={gameMode}
             onChange={(e) => setGameMode(e.target.value as GameMode)}
-            className="rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            className="rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-gray-700 dark:text-white"
           >
-            <option value="mixed">Scores et descriptions</option>
+            <option value="mixed">Tout deviner (Aléatoire)</option>
             <option value="scores">Scores uniquement</option>
             <option value="descriptions">Descriptions uniquement</option>
           </select>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Cases à deviner:</span>
+        {/* Curseurs de volume */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor="range-cells-to-hide"
+              className="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500"
+            >
+              Nombre de défis
+            </label>
+            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+              {numCellsToHide} / {getMaxCells()} cases
+            </span>
+          </div>
           <input
+            id="range-cells-to-hide"
             type="range"
             min="1"
             max={getMaxCells()}
             value={numCellsToHide}
             onChange={(e) => setNumCellsToHide(parseInt(e.target.value))}
-            className="w-20"
+            className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600 dark:bg-gray-800"
           />
-          <span className="min-w-[60px] text-sm font-bold text-blue-600">
-            {numCellsToHide}/{getMaxCells()}
-          </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Difficulté:</span>
-          <div className="flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setNumCellsToHide(Math.ceil(getMaxCells() * 0.25))}
-              className="bg-green-100 text-xs text-green-700 hover:bg-green-200"
-            >
-              Facile (25%)
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setNumCellsToHide(Math.ceil(getMaxCells() * 0.5))}
-              className="bg-yellow-100 text-xs text-yellow-700 hover:bg-yellow-200"
-            >
-              Moyen (50%)
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setNumCellsToHide(Math.ceil(getMaxCells() * 0.75))}
-              className="bg-orange-100 text-xs text-orange-700 hover:bg-orange-200"
-            >
-              Difficile (75%)
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setNumCellsToHide(getMaxCells())}
-              className="bg-red-100 text-xs text-red-700 hover:bg-red-200"
-            >
-              Expert (100%)
-            </Button>
-          </div>
+        {/* Boutons d'action rapides */}
+        <div className="flex items-end justify-start gap-2 md:col-span-2 md:justify-end lg:col-span-1">
+          <Button
+            onClick={generateHiddenCells}
+            className="flex h-10 items-center gap-2 px-4 text-xs font-semibold"
+            variant="outline"
+          >
+            <Shuffle size={14} />
+            Mélanger
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setUserAnswers({});
+              setShowResults(false);
+            }}
+            className="flex h-10 items-center gap-2 px-4 text-xs font-semibold"
+          >
+            <RotateCcw size={14} />
+            Effacer
+          </Button>
         </div>
-
-        <Button
-          onClick={generateHiddenCells}
-          className="flex items-center gap-2"
-        >
-          <Shuffle size={16} />
-          Nouveau tableau
-        </Button>
-
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setUserAnswers({});
-            setShowResults(false);
-          }}
-          className="flex items-center gap-2"
-        >
-          <RotateCcw size={16} />
-          Recommencer
-        </Button>
       </div>
 
-      {/* Tableau principal */}
-      <div className="mb-6 overflow-x-auto">
-        <table className="mx-auto w-full border-collapse border border-gray-400">
+      {/* Tableau interactif */}
+      <div className="border-gray-150 mb-6 overflow-x-auto rounded-2xl border dark:border-gray-800">
+        <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-gray-200">
-              <th className="border border-gray-400 px-4 py-3 text-left">
-                Réponse
+            <tr className="border-gray-150 border-b bg-gray-50/75 dark:border-gray-800 dark:bg-gray-900">
+              <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+                Catégorie
               </th>
-              <th className="border border-gray-400 px-4 py-3 text-center">
+              <th className="w-24 px-4 py-3 text-center text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
                 Score
               </th>
-              <th className="border border-gray-400 px-4 py-3 text-center">
-                Description
+              <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+                Description clinique
               </th>
             </tr>
           </thead>
           <tbody>
-            {/* Réponse Oculaire */}
+            {/* Oculaire */}
             {glasgowData.oculaire.map((item, index) => (
-              <tr key={`oculaire-${item.score}`}>
+              <tr
+                key={`oculaire-${item.score}`}
+                className="dark:border-gray-850 border-b border-gray-100 hover:bg-gray-50/20 dark:hover:bg-gray-900/10"
+              >
                 {index === 0 && (
                   <td
                     rowSpan={4}
                     className={cn(
-                      "border border-gray-400 px-4 py-8 text-center font-bold",
+                      "border-r border-gray-100 px-4 py-6 text-center text-xs font-bold tracking-wider uppercase dark:border-gray-800",
                       getCategoryColor("oculaire")
                     )}
                   >
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-col items-center justify-center gap-2">
                       {getCategoryIcon("oculaire")}
-                      <div>Réponse</div>
-                      <div>Oculaire</div>
-                      <div className="text-lg">(Y)</div>
+                      <span>Yeux (Y)</span>
                     </div>
                   </td>
                 )}
@@ -437,22 +401,23 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
               </tr>
             ))}
 
-            {/* Réponse Verbale */}
+            {/* Verbale */}
             {glasgowData.verbale.map((item, index) => (
-              <tr key={`verbale-${item.score}`}>
+              <tr
+                key={`verbale-${item.score}`}
+                className="dark:border-gray-850 border-b border-gray-100 hover:bg-gray-50/20 dark:hover:bg-gray-900/10"
+              >
                 {index === 0 && (
                   <td
                     rowSpan={5}
                     className={cn(
-                      "border border-gray-400 px-4 py-8 text-center font-bold",
+                      "border-r border-gray-100 px-4 py-6 text-center text-xs font-bold tracking-wider uppercase dark:border-gray-800",
                       getCategoryColor("verbale")
                     )}
                   >
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-col items-center justify-center gap-2">
                       {getCategoryIcon("verbale")}
-                      <div>Réponse</div>
-                      <div>Verbale</div>
-                      <div className="text-lg">(V)</div>
+                      <span>Voix (V)</span>
                     </div>
                   </td>
                 )}
@@ -461,22 +426,23 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
               </tr>
             ))}
 
-            {/* Réponse Motrice */}
+            {/* Motrice */}
             {glasgowData.motrice.map((item, index) => (
-              <tr key={`motrice-${item.score}`}>
+              <tr
+                key={`motrice-${item.score}`}
+                className="dark:border-gray-850 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/20 dark:hover:bg-gray-900/10"
+              >
                 {index === 0 && (
                   <td
                     rowSpan={6}
                     className={cn(
-                      "border border-gray-400 px-4 py-8 text-center font-bold",
+                      "border-r border-gray-100 px-4 py-6 text-center text-xs font-bold tracking-wider uppercase dark:border-gray-800",
                       getCategoryColor("motrice")
                     )}
                   >
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-col items-center justify-center gap-2">
                       {getCategoryIcon("motrice")}
-                      <div>Réponse</div>
-                      <div>Motrice</div>
-                      <div className="text-lg">(M)</div>
+                      <span>Mouvement (M)</span>
                     </div>
                   </td>
                 )}
@@ -488,147 +454,53 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
         </table>
       </div>
 
-      {/* Informations et contrôles */}
-      <div className="mb-4 text-center">
-        <div className="mb-4 text-sm text-gray-600">
-          Cases à compléter:{" "}
-          <span className="font-bold text-yellow-600">{hiddenCells.size}</span>
-          <span className="text-gray-500"> / {getMaxCells()} possibles</span>
-          {showResults && (
-            <>
-              {" | "}
-              Score:{" "}
-              <span
-                className={cn(
-                  "font-bold",
-                  score.correct === score.total
-                    ? "text-green-600"
-                    : "text-blue-600"
-                )}
-              >
-                {score.correct}/{score.total}
-              </span>
-              <span className="text-gray-500">
-                {" "}
-                ({Math.round((score.correct / score.total) * 100)}%)
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Indicateur de progression */}
-        <div className="mx-auto mb-4 max-w-md">
-          <div className="mb-1 flex justify-between text-xs text-gray-500">
-            <span>Facile</span>
-            <span>Difficile</span>
-            <span>Expert</span>
-          </div>
-          <div className="h-2 w-full rounded-full bg-gray-200">
-            <div
-              className={cn(
-                "h-2 rounded-full transition-all duration-300",
-                numCellsToHide / getMaxCells() <= 0.25
-                  ? "bg-green-500"
-                  : numCellsToHide / getMaxCells() <= 0.5
-                    ? "bg-yellow-500"
-                    : numCellsToHide / getMaxCells() <= 0.75
-                      ? "bg-orange-500"
-                      : "bg-red-500"
-              )}
-              style={{ width: `${(numCellsToHide / getMaxCells()) * 100}%` }}
-            ></div>
-          </div>
-        </div>
-
+      {/* Validation */}
+      <div className="mt-8 flex flex-col items-center justify-center">
         {!showResults ? (
           <Button
             onClick={checkAnswers}
             disabled={Object.keys(userAnswers).length === 0}
-            className="bg-green-500 px-6 py-3 text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+            className="h-12 rounded-xl bg-blue-600 px-8 py-3 font-bold text-white shadow-md transition-all hover:bg-blue-700 hover:shadow-lg disabled:opacity-50"
           >
-            Vérifier les réponses
+            Vérifier mes réponses
           </Button>
         ) : (
-          <div className="mx-auto max-w-md rounded-lg bg-gray-50 p-6">
-            <h3 className="mb-2 text-xl font-bold">Résultats</h3>
-            <p className="mb-2 text-lg">
-              Score:{" "}
-              <span className="font-bold text-blue-600">
-                {score.correct}/{score.total}
-              </span>
-              <span className="text-gray-600">
-                {" "}
-                ({Math.round((score.correct / score.total) * 100)}%)
-              </span>
-            </p>
-
-            {/* Niveau de maîtrise */}
-            <div className="mb-3">
-              {score.correct === score.total ? (
-                <div className="flex items-center justify-center gap-2 text-green-700">
-                  <CheckCircle size={20} />
-                  <span className="font-semibold">Parfait !</span>
-                </div>
-              ) : (
-                <div className="text-gray-600">
-                  Niveau:{" "}
-                  <span className="font-semibold">
-                    {score.correct / score.total >= 0.9
-                      ? "Excellent"
-                      : score.correct / score.total >= 0.8
-                        ? "Très bien"
-                        : score.correct / score.total >= 0.7
-                          ? "Bien"
-                          : score.correct / score.total >= 0.6
-                            ? "Moyen"
-                            : "À améliorer"}
-                  </span>
-                </div>
-              )}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md rounded-2xl border border-gray-100 bg-gray-50/50 p-5 text-center dark:border-gray-800 dark:bg-gray-900/50"
+          >
+            <div className="mb-2 flex items-center justify-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-500" />
+              <h4 className="text-lg font-bold text-gray-900 dark:text-white">
+                Vos résultats
+              </h4>
             </div>
-
-            <p className="text-sm text-gray-600">
-              {score.correct === score.total
-                ? `Vous maîtrisez ${numCellsToHide === getMaxCells() ? "parfaitement" : "bien"} le tableau de Glasgow !`
-                : score.correct >= score.total * 0.8
-                  ? "Très bien ! Presque parfait !"
-                  : score.correct >= score.total * 0.6
-                    ? "Bien ! Continuez à vous entraîner !"
-                    : "Il faut réviser encore un peu !"}
+            <p className="text-3xl font-black text-blue-600 dark:text-blue-400">
+              {score.correct} / {score.total}
+              <span className="ml-1.5 text-sm font-medium text-gray-500 dark:text-gray-400">
+                ({Math.round((score.correct / score.total) * 100)}% de réussite)
+              </span>
             </p>
 
-            {/* Suggestion pour augmenter la difficulté */}
-            {score.correct === score.total &&
-              numCellsToHide < getMaxCells() && (
-                <Button
-                  onClick={() => {
-                    const newNum = Math.min(
-                      numCellsToHide + Math.ceil(getMaxCells() * 0.25),
-                      getMaxCells()
-                    );
-                    setNumCellsToHide(newNum);
-                  }}
-                  className="mt-3"
-                  size="sm"
-                >
-                  Augmenter la difficulté
-                </Button>
-              )}
-          </div>
-        )}
-      </div>
+            <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+              {score.correct === score.total
+                ? "Incroyable ! C'est un sans-faute parfait !"
+                : score.correct >= score.total * 0.8
+                  ? "Excellent travail ! Presque toutes les réponses sont correctes."
+                  : score.correct >= score.total * 0.5
+                    ? "Bon début ! Révisez les quelques erreurs et réessayez."
+                    : "Prenez le temps d'observer le tableau complet et tentez de nouveau."}
+            </p>
 
-      {/* Formule de calcul */}
-      <div className="rounded-lg bg-blue-50 p-4 text-center">
-        <div className="mb-2 text-lg font-semibold text-blue-800">
-          Score de Glasgow = Y + V + M
-        </div>
-        <div className="text-sm text-blue-700">
-          <strong>Score ≤ 8 :</strong> Victime inconsciente → BILAN JAUNE
-        </div>
-        <div className="mt-2 text-xs text-blue-600">
-          Y (Oculaire): 1-4 | V (Verbale): 1-5 | M (Motrice): 1-6
-        </div>
+            <Button
+              onClick={generateHiddenCells}
+              className="mt-4 h-10 w-full rounded-xl bg-gray-900 text-xs font-bold text-white hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
+            >
+              Relever un autre défi
+            </Button>
+          </motion.div>
+        )}
       </div>
     </div>
   );
