@@ -82,6 +82,8 @@ export default function LoginPage() {
     },
   });
 
+  // Justification: RHF watch() API incompatible avec la mémoïsation automatique du compilateur React.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchPassword = mainForm.watch("password");
 
   const getStrength = (pass: string) => {

@@ -7,11 +7,13 @@ vi.mock("next/headers", () => ({
 }));
 
 const mockAuthSignUp = vi.fn();
+const mockGetSession = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
   auth: {
     api: {
       signUpEmail: (...args: unknown[]) => mockAuthSignUp(...args),
+      getSession: (...args: unknown[]) => mockGetSession(...args),
     },
   },
 }));
@@ -130,5 +132,121 @@ describe("registerPlayerAction", () => {
 
     expect(res.success).toBe(false);
     expect(res.error).toBe("Une erreur interne est survenue.");
+  });
+});
+
+import {
+  savePlayerOnboardingAction,
+  getPlayerOnboardingStatusAction,
+  resetPlayerOnboardingAction,
+} from "@/app/actions/player-actions";
+
+describe("onboarding server actions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("savePlayerOnboardingAction", () => {
+    it("fails if unauthorized", async () => {
+      mockGetSession.mockResolvedValue(null);
+      const res = await savePlayerOnboardingAction({
+        experience: "beginner",
+        objective: "safety",
+        expectation: "quizzes",
+      });
+      expect(res.success).toBe(false);
+      expect(res.error).toBe("Non autorisé.");
+    });
+
+    it("fails if payload validation fails", async () => {
+      mockGetSession.mockResolvedValue({ user: { id: "user-123" } });
+      const res = await savePlayerOnboardingAction({
+        experience: "",
+        objective: "",
+        expectation: "",
+      });
+      expect(res.success).toBe(false);
+      expect(res.error).toBeDefined();
+    });
+
+    it("updates user onboarding fields in DB", async () => {
+      mockGetSession.mockResolvedValue({
+        user: { id: "user-123", email: "player@example.com" },
+      });
+      vi.mocked(mockPrisma.user.update).mockResolvedValue({ id: "user-123" });
+
+      const res = await savePlayerOnboardingAction({
+        experience: "beginner",
+        objective: "safety",
+        expectation: "quizzes",
+      });
+
+      expect(res.success).toBe(true);
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: "user-123" },
+        data: {
+          onboardingCompleted: true,
+          onboardingExperience: "beginner",
+          onboardingObjective: "safety",
+          onboardingExpectation: "quizzes",
+        },
+      });
+    });
+  });
+
+  describe("getPlayerOnboardingStatusAction", () => {
+    it("fails if unauthorized", async () => {
+      mockGetSession.mockResolvedValue(null);
+      const res = await getPlayerOnboardingStatusAction();
+      expect(res.success).toBe(false);
+      expect(res.error).toBe("Non autorisé.");
+    });
+
+    it("returns onboarding status from DB", async () => {
+      mockGetSession.mockResolvedValue({ user: { id: "user-123" } });
+      vi.mocked(mockPrisma.user.findUnique).mockResolvedValue({
+        onboardingCompleted: true,
+        onboardingExperience: "intermediate",
+        onboardingObjective: "exam",
+        onboardingExpectation: "memos",
+      });
+
+      const res = await getPlayerOnboardingStatusAction();
+      expect(res.success).toBe(true);
+      expect(res.data).toEqual({
+        completed: true,
+        experience: "intermediate",
+        objective: "exam",
+        expectation: "memos",
+      });
+    });
+  });
+
+  describe("resetPlayerOnboardingAction", () => {
+    it("fails if unauthorized", async () => {
+      mockGetSession.mockResolvedValue(null);
+      const res = await resetPlayerOnboardingAction();
+      expect(res.success).toBe(false);
+      expect(res.error).toBe("Non autorisé.");
+    });
+
+    it("resets fields to false and null in DB", async () => {
+      mockGetSession.mockResolvedValue({
+        user: { id: "user-123", email: "player@example.com" },
+      });
+      vi.mocked(mockPrisma.user.update).mockResolvedValue({ id: "user-123" });
+
+      const res = await resetPlayerOnboardingAction();
+      expect(res.success).toBe(true);
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: "user-123" },
+        data: {
+          onboardingCompleted: false,
+          onboardingExperience: null,
+          onboardingObjective: null,
+          onboardingExpectation: null,
+        },
+      });
+    });
   });
 });

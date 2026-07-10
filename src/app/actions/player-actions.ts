@@ -67,3 +67,107 @@ export async function registerPlayerAction(values: unknown) {
     return { success: false, error: "Une erreur interne est survenue." };
   }
 }
+
+const onboardingSchema = z.object({
+  experience: z.string().min(1, "Expérience requise"),
+  objective: z.string().min(1, "Objectif requis"),
+  expectation: z.string().min(1, "Attente requise"),
+});
+
+export async function savePlayerOnboardingAction(values: unknown) {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session || !session.user) {
+      return { success: false, error: "Non autorisé." };
+    }
+
+    const parsed = onboardingSchema.safeParse(values);
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.issues[0].message };
+    }
+
+    const { experience, objective, expectation } = parsed.data;
+
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        onboardingCompleted: true,
+        onboardingExperience: experience,
+        onboardingObjective: objective,
+        onboardingExpectation: expectation,
+      },
+    });
+
+    logger.info(`Onboarding complété pour l'utilisateur ${session.user.email}`);
+    return { success: true };
+  } catch (error) {
+    logger.error("Erreur lors de la sauvegarde de l'onboarding :", error);
+    return { success: false, error: "Une erreur interne est survenue." };
+  }
+}
+
+export async function getPlayerOnboardingStatusAction() {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session || !session.user) {
+      return { success: false, error: "Non autorisé." };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        onboardingCompleted: true,
+        onboardingExperience: true,
+        onboardingObjective: true,
+        onboardingExpectation: true,
+      },
+    });
+
+    if (!user) {
+      return { success: false, error: "Utilisateur introuvable." };
+    }
+
+    return {
+      success: true,
+      data: {
+        completed: user.onboardingCompleted,
+        experience: user.onboardingExperience || "",
+        objective: user.onboardingObjective || "",
+        expectation: user.onboardingExpectation || "",
+      },
+    };
+  } catch (error) {
+    logger.error(
+      "Erreur lors de la récupération du statut d'onboarding :",
+      error
+    );
+    return { success: false, error: "Une erreur interne est survenue." };
+  }
+}
+
+export async function resetPlayerOnboardingAction() {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session || !session.user) {
+      return { success: false, error: "Non autorisé." };
+    }
+
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        onboardingCompleted: false,
+        onboardingExperience: null,
+        onboardingObjective: null,
+        onboardingExpectation: null,
+      },
+    });
+
+    logger.info(
+      `Onboarding réinitialisé pour l'utilisateur ${session.user.email}`
+    );
+    return { success: true };
+  } catch (error) {
+    logger.error("Erreur lors de la réinitialisation de l'onboarding :", error);
+    return { success: false, error: "Une erreur interne est survenue." };
+  }
+}
