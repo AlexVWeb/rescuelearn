@@ -19,15 +19,22 @@ model User {
   trainingSessions TrainingSession[]
   organisme        Organisme?        @relation(fields: [organismeId], references: [id])
   quizSessions     QuizSession[]
-  
-  onboardingCompleted   Boolean   @default(false)
+
+  onboardingCompleted   Boolean @default(false)
   onboardingExperience  String?
   onboardingObjective   String?
   onboardingExpectation String?
 
   questionSubscriptionEnabled   Boolean   @default(false)
-  questionSubscriptionFrequency String?   // "daily" | "weekly" | "monthly"
+  questionSubscriptionFrequency String? // "daily" | "weekly" | "monthly"
   lastQuestionSentAt            DateTime?
+
+  xp             Int              @default(0)
+  hearts         Int              @default(5)
+  streak         Int              @default(0)
+  lastActiveAt   DateTime?
+
+  playerProgress PlayerProgress[]
 }
 
 model Member {

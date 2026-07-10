@@ -71,26 +71,26 @@ model Slot {
 }
 
 model Trainee {
-  id                String             @id @default(cuid())
-  firstName         String?
-  lastName          String?
-  email             String?
-  phone             String?
-  dateOfBirth       String?
-  organismeId       String
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  address           String?
-  civility          String?
-  birthPlace        String?
-  emailHash         String?
-  ageAtFormation    Int?
-  department        String?
-  isAnonymized      Boolean            @default(false)
-  lastActivityAt    DateTime           @default(now())
-  externalTrainings ExternalTraining[]
-  inscriptions      Inscription[]
-  organisme         Organisme          @relation(fields: [organismeId], references: [id], onDelete: Cascade)
+  id                 String             @id @default(cuid())
+  firstName          String?
+  lastName           String?
+  email              String?
+  phone              String?
+  dateOfBirth        String?
+  organismeId        String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  address            String?
+  civility           String?
+  birthPlace         String?
+  emailHash          String?
+  ageAtFormation     Int?
+  department         String?
+  isAnonymized       Boolean            @default(false)
+  lastActivityAt     DateTime           @default(now())
+  externalTrainings  ExternalTraining[]
+  inscriptions       Inscription[]
+  organisme          Organisme          @relation(fields: [organismeId], references: [id], onDelete: Cascade)
   quizParticipations QuizParticipant[]
 
   @@unique([emailHash, organismeId])

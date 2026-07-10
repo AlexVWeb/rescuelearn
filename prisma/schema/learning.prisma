@@ -1,11 +1,12 @@
 model LearningCard {
-  id            Int          @id @default(autoincrement())
-  theme         String
-  niveau        String
-  info          String
-  reference     String
-  referencielId Int?
-  referenciel   Referenciel? @relation(fields: [referencielId], references: [id])
+  id                   Int                       @id @default(autoincrement())
+  theme                String
+  niveau               String
+  info                 String
+  reference            String
+  referencielId        Int?
+  referenciel          Referenciel?              @relation(fields: [referencielId], references: [id])
+  progressionExercises ProgressionNodeExercise[]
 }
 
 model Referenciel {

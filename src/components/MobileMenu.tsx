@@ -3,8 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 
-export function MobileMenu() {
+type SessionType = ReturnType<typeof authClient.useSession>["data"];
+
+interface MobileMenuProps {
+  session: SessionType;
+  isPending: boolean;
+  dashboardUrl: string;
+}
+
+export function MobileMenu({
+  session,
+  isPending,
+  dashboardUrl,
+}: MobileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -62,13 +75,25 @@ export function MobileMenu() {
             >
               Organismes de formation
             </Link>
-            <Link
-              href="/login"
-              className="mx-4 rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
-              onClick={() => setIsOpen(false)}
-            >
-              Connexion
-            </Link>
+            {isPending ? (
+              <div className="mx-4 h-9 animate-pulse rounded-md bg-gray-200" />
+            ) : session?.user ? (
+              <Link
+                href={dashboardUrl}
+                className="mx-4 rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
+                onClick={() => setIsOpen(false)}
+              >
+                Mon espace
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="mx-4 rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
+                onClick={() => setIsOpen(false)}
+              >
+                Connexion
+              </Link>
+            )}
           </nav>
         </div>
       )}

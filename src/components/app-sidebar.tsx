@@ -11,6 +11,7 @@ import {
   FileText,
   Calendar,
   Building,
+  Milestone,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -143,6 +144,17 @@ const getNavData = (roles: unknown, hasOrganisme: boolean) => {
               {
                 title: "Référentiels",
                 url: "/admin/referenciels",
+              },
+            ],
+          },
+          {
+            title: "Progression (Duolingo)",
+            url: "#",
+            icon: Milestone,
+            items: [
+              {
+                title: "Gérer le parcours",
+                url: "/admin/progression",
               },
             ],
           },

@@ -8,3 +8,8 @@ export {
   buildSNVScenarioPrompt,
   generateSNVScenarioFromPdf,
 } from "./gemini/snv";
+export {
+  buildProgressionPrompt,
+  generateProgressionNodeFromPdf,
+  generateEntireTreeFromPdf,
+} from "./gemini/progression";

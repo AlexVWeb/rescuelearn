@@ -5,12 +5,34 @@ import Link from "next/link";
 import Image from "next/image";
 import { MobileMenu } from "@/components/MobileMenu";
 import logoImg from "@/app/icon.png";
+import { authClient } from "@/lib/auth-client";
 
 export default function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { data: session, isPending } = authClient.useSession();
+
+  const getDashboardUrl = () => {
+    if (!session?.user) return "/login";
+    const user = session.user as typeof session.user & { roles?: unknown };
+    const rolesRaw = user.roles;
+    let roles: string[] = [];
+    if (typeof rolesRaw === "string") {
+      try {
+        roles = JSON.parse(rolesRaw);
+      } catch {
+        roles = [rolesRaw];
+      }
+    } else if (Array.isArray(rolesRaw)) {
+      roles = rolesRaw;
+    }
+    return roles.includes("PLAYER") ? "/player" : "/admin";
+  };
+
+  const dashboardUrl = getDashboardUrl();
+
   return (
     <>
       <header className="sticky top-0 z-40 bg-white shadow-sm">
@@ -64,17 +86,32 @@ export default function PublicLayout({
               >
                 Organismes de formation
               </Link>
-              <Link
-                href="/login"
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-              >
-                Connexion
-              </Link>
+              {isPending ? (
+                <div className="h-9 w-24 animate-pulse rounded-md bg-gray-200" />
+              ) : session?.user ? (
+                <Link
+                  href={dashboardUrl}
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                >
+                  Mon espace
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                >
+                  Connexion
+                </Link>
+              )}
             </div>
 
             {/* Menu mobile */}
             <div className="flex items-center md:hidden">
-              <MobileMenu />
+              <MobileMenu
+                session={session}
+                isPending={isPending}
+                dashboardUrl={dashboardUrl}
+              />
             </div>
           </div>
         </nav>

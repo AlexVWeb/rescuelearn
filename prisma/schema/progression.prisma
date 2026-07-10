@@ -1,0 +1,74 @@
+// Représente un arbre de progression pour un niveau de formation spécifique (GQS, PSC, SST, PSE)
+model ProgressionTree {
+  id          String            @id @default(cuid())
+  level       String            @unique // "GQS" | "PSC" | "SST" | "PSE"
+  description String?
+  nodes       ProgressionNode[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+// Représente un bloc d'apprentissage (un nœud/cercle sur le parcours)
+model ProgressionNode {
+  id          String          @id @default(cuid())
+  treeId      String
+  tree        ProgressionTree @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  order       Int // Position ordonnée sur le parcours (0, 1, 2...)
+  xpReward    Int             @default(100)
+
+  // Liste des exercices composants ce bloc
+  exercises ProgressionNodeExercise[]
+
+  playerProgress PlayerProgress[]
+
+  @@unique([treeId, order])
+}
+
+// Représente un exercice individuel à l'intérieur d'un bloc d'apprentissage
+model ProgressionNodeExercise {
+  id     String                  @id @default(cuid())
+  nodeId String
+  node   ProgressionNode         @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  order  Int // Ordre de passage de l'exercice au sein de la session (0, 1, 2...)
+  type   ProgressionExerciseType
+
+  // Contenu Quiz : Association avec une question de la banque de questions (générée ou liée)
+  questionId Int?
+  question   Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  // Contenu Flashcard : Association avec une fiche mémo (LearningCard)
+  learningCardId Int?
+  learningCard   LearningCard? @relation(fields: [learningCardId], references: [id], onDelete: SetNull)
+
+  // Contenu Micro-cours : Contenu directement embarqué dans l'exercice au format Markdown
+  courseTitle   String?
+  courseContent String? @db.Text // Format Markdown pour faciliter la génération IA
+
+  // Configuration JSON générique pour de futurs mini-jeux (ex: ordonner des gestes)
+  gameConfig Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ProgressionExerciseType {
+  QUIZ_QUESTION
+  MICRO_COURSE
+  FLASHCARD
+  MINI_GAME
+}
+
+// Suivi de la complétion du joueur pour chaque bloc
+model PlayerProgress {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nodeId      String
+  node        ProgressionNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  completedAt DateTime        @default(now())
+  score       Int? // Pourcentage de réussite ou score obtenu
+
+  @@unique([userId, nodeId])
+}

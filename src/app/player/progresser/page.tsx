@@ -10,13 +10,15 @@ import {
   getPlayerOnboardingStatusAction,
   savePlayerOnboardingAction,
 } from "@/app/actions/player-actions";
+import { getPlayerProgressionPathAction } from "@/app/actions/progression-player-actions";
+import { useRouter } from "next/navigation";
 
 interface LevelNode {
   id: string;
   title: string;
   subtitle: string;
   description: string;
-  type: "quiz" | "snv" | "card";
+  type: "quiz" | "snv" | "card"; // compatible with LearningPath render logic
   status: "completed" | "current" | "locked";
   xpReward: number;
   themeColor: string;
@@ -26,6 +28,7 @@ export default function ProgresserPage() {
   const [mounted, setMounted] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const [loadingOnboarding, setLoadingOnboarding] = useState(true);
+  const router = useRouter();
 
   // Onboarding Wizard States
   const [experience, setExperience] = useState("");
@@ -33,10 +36,11 @@ export default function ProgresserPage() {
   const [expectation, setExpectation] = useState("");
 
   // Game States
-  const [streak] = useState(5);
-  const [xp] = useState(1250);
-  const [hearts] = useState(5);
+  const [streak, setStreak] = useState(0);
+  const [xp, setXp] = useState(0);
+  const [hearts, setHearts] = useState(5);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [levels, setLevels] = useState<LevelNode[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -48,6 +52,27 @@ export default function ProgresserPage() {
           setExperience(res.data.experience);
           setObjective(res.data.objective);
           setExpectation(res.data.expectation);
+
+          if (res.data.completed) {
+            const pathRes = await getPlayerProgressionPathAction();
+            if (pathRes.success && pathRes.data) {
+              // Convert node structure to match visual component props
+              const mappedNodes = pathRes.data.nodes.map((node) => ({
+                id: node.id,
+                title: node.title,
+                subtitle: node.subtitle,
+                description: node.description,
+                type: "quiz" as const, // Default fallback type for LearningPath icons
+                status: node.status,
+                xpReward: node.xpReward,
+                themeColor: node.themeColor,
+              }));
+              setLevels(mappedNodes);
+              setXp(pathRes.data.stats.xp);
+              setHearts(pathRes.data.stats.hearts);
+              setStreak(pathRes.data.stats.streak);
+            }
+          }
         }
       } finally {
         setLoadingOnboarding(false);
@@ -67,6 +92,25 @@ export default function ProgresserPage() {
         setOnboardingCompleted(true);
         playSound("success");
         toast.success("Profil d'apprentissage configuré avec succès !");
+
+        // Load path
+        const pathRes = await getPlayerProgressionPathAction();
+        if (pathRes.success && pathRes.data) {
+          const mappedNodes = pathRes.data.nodes.map((node) => ({
+            id: node.id,
+            title: node.title,
+            subtitle: node.subtitle,
+            description: node.description,
+            type: "quiz" as const,
+            status: node.status,
+            xpReward: node.xpReward,
+            themeColor: node.themeColor,
+          }));
+          setLevels(mappedNodes);
+          setXp(pathRes.data.stats.xp);
+          setHearts(pathRes.data.stats.hearts);
+          setStreak(pathRes.data.stats.streak);
+        }
       } else {
         toast.error(
           res.error || "Une erreur est survenue lors de la configuration."
@@ -120,72 +164,6 @@ export default function ProgresserPage() {
     }
   };
 
-  const levels: LevelNode[] = [
-    {
-      id: "1",
-      title: "Hémorragies Externes",
-      subtitle: "Niveau 1 - Quiz",
-      description: "Compresser et alerter face à un saignement important.",
-      type: "quiz",
-      status: "completed",
-      xpReward: 100,
-      themeColor:
-        "from-green-400 to-green-500 border-green-600 shadow-green-200",
-    },
-    {
-      id: "2",
-      title: "Le Garrot de Secours",
-      subtitle: "Niveau 2 - Fiche Mémo",
-      description: "Apprends à poser un garrot tourniquet de manière conforme.",
-      type: "card",
-      status: "completed",
-      xpReward: 50,
-      themeColor: "from-blue-400 to-blue-500 border-blue-600 shadow-blue-200",
-    },
-    {
-      id: "3",
-      title: "Victime Inconsciente",
-      subtitle: "Niveau 3 - Scénario SNV",
-      description: "Libération des Voies Aériennes (LVA) et PLS.",
-      type: "snv",
-      status: "current",
-      xpReward: 150,
-      themeColor:
-        "from-amber-400 to-amber-500 border-amber-600 shadow-amber-200",
-    },
-    {
-      id: "4",
-      title: "Arrêt Cardiaque",
-      subtitle: "Niveau 4 - Quiz",
-      description: "Massage cardiaque et utilisation du DAE.",
-      type: "quiz",
-      status: "locked",
-      xpReward: 200,
-      themeColor:
-        "from-purple-400 to-purple-500 border-purple-600 shadow-purple-200",
-    },
-    {
-      id: "5",
-      title: "Obstructions Aiguës",
-      subtitle: "Niveau 5 - Scénario SNV",
-      description: "Claques dans le dos et compressions abdominales.",
-      type: "snv",
-      status: "locked",
-      xpReward: 150,
-      themeColor: "from-rose-400 to-rose-500 border-rose-600 shadow-rose-200",
-    },
-    {
-      id: "6",
-      title: "Malaises & Alertes",
-      subtitle: "Niveau 6 - Fiche Mémo",
-      description: "Reconnaître l'AVC, l'infarctus et transmettre l'alerte.",
-      type: "card",
-      status: "locked",
-      xpReward: 50,
-      themeColor: "from-cyan-400 to-cyan-500 border-cyan-600 shadow-cyan-200",
-    },
-  ];
-
   if (!mounted || loadingOnboarding) return null;
 
   if (!onboardingCompleted) {
@@ -214,14 +192,32 @@ export default function ProgresserPage() {
       />
 
       <div className="mx-auto max-w-2xl py-4">
-        <LearningPath
-          levels={levels}
-          onLevelClick={(node) => {
-            if (node.status === "locked") playSound("locked");
-            else if (node.status === "completed") playSound("success");
-            else playSound("click");
-          }}
-        />
+        {levels.length === 0 ? (
+          <div className="text-muted-foreground flex flex-col items-center justify-center rounded-3xl border-2 border-dashed p-8 text-center">
+            <p className="text-lg font-semibold text-gray-700">
+              Aucun arbre disponible
+            </p>
+            <p className="text-sm">
+              Votre formateur configurera bientôt votre parcours
+              d'apprentissage.
+            </p>
+          </div>
+        ) : (
+          <LearningPath
+            levels={levels}
+            onLevelClick={(node) => {
+              if (node.status === "locked") {
+                playSound("locked");
+                toast.error(
+                  "Cette étape est verrouillée ! Terminez l'étape précédente."
+                );
+              } else {
+                playSound("click");
+                router.push(`/player/progression/play/${node.id}`);
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   );
