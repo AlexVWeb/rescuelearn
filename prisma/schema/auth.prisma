@@ -24,6 +24,10 @@ model User {
   onboardingExperience  String?
   onboardingObjective   String?
   onboardingExpectation String?
+
+  questionSubscriptionEnabled   Boolean   @default(false)
+  questionSubscriptionFrequency String?   // "daily" | "weekly" | "monthly"
+  lastQuestionSentAt            DateTime?
 }
 
 model Member {

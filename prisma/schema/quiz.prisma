@@ -18,14 +18,15 @@ model Quiz {
 }
 
 model Question {
-  id            Int              @id @default(autoincrement())
+  id            Int                   @id @default(autoincrement())
   text          String
   correctAnswer String
   explanation   String?
   quizId        Int
-  quiz          Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quiz          Quiz                  @relation(fields: [quizId], references: [id], onDelete: Cascade)
   options       QuestionOption[]
-  tags          String[]         @default([])
+  tags          String[]              @default([])
+  dailyAnswers  DailyQuestionAnswer[]
 }
 
 model QuestionOption {
@@ -109,5 +110,17 @@ model QuizAnswer {
   answeredAt    DateTime        @default(now())
 
   @@unique([participantId, questionId])
+}
+
+model DailyQuestionAnswer {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  isCorrect  Boolean
+  answeredAt DateTime @default(now())
+  tags       String[]
+
+  @@index([userId])
 }
 

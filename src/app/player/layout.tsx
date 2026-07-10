@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hasRole, UserRole } from "@/lib/roles";
 import Link from "next/link";
-import { LogOut, User as UserIcon, Trophy } from "lucide-react";
+import { LogOut, User as UserIcon } from "lucide-react";
+import { PlayerNav } from "./components/PlayerNav";
 
 export const dynamic = "force-dynamic";
 
@@ -69,18 +70,9 @@ export default async function PlayerLayout({
                 Élève
               </span>
             </Link>
-            <nav
-              className="hidden items-center gap-4 md:flex"
-              aria-label="Navigation principale"
-            >
-              <Link
-                href="/player"
-                className="flex items-center gap-2 rounded-md bg-blue-50/50 px-3 py-2 text-sm font-medium text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
-              >
-                <Trophy className="h-4 w-4" />
-                Tableau de bord
-              </Link>
-            </nav>
+            <div className="hidden md:block">
+              <PlayerNav />
+            </div>
           </div>
 
           <div className="flex items-center gap-4">

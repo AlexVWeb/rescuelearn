@@ -4,18 +4,35 @@ import React, { useState, useEffect } from "react";
 import { Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 
 import { PlayerStatsBanner } from "./components/PlayerStatsBanner";
 import { PlayerOnboarding } from "./components/PlayerOnboarding";
-import { LearningPath } from "./components/LearningPath";
 import { MascotWidget } from "./components/MascotWidget";
 import { LeaderboardWidget } from "./components/LeaderboardWidget";
 import { BoutiqueWidget } from "./components/BoutiqueWidget";
+import { SubscriptionWidget } from "./components/SubscriptionWidget";
 import {
   getPlayerOnboardingStatusAction,
   savePlayerOnboardingAction,
   resetPlayerOnboardingAction,
 } from "@/app/actions/player-actions";
+import { useSearchParams } from "next/navigation";
+import {
+  getQuestionForPlayerAction,
+  submitDailyQuestionAnswerAction,
+  getDailyQuestionStatsAction,
+} from "@/app/actions/player-quiz-actions";
+import { DailyStatsWidget } from "./components/DailyStatsWidget";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, XCircle, Loader2, Mail } from "lucide-react";
 
 interface LevelNode {
   id: string;
@@ -31,6 +48,7 @@ interface LevelNode {
 export default function PlayerPage() {
   const [mounted, setMounted] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [loadingOnboarding, setLoadingOnboarding] = useState(true);
 
   // Onboarding Wizard States
   const [experience, setExperience] = useState("");
@@ -43,31 +61,161 @@ export default function PlayerPage() {
   const [hearts] = useState(5);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
+  // Daily Question Modal States
+  const searchParams = useSearchParams();
+  const [dailyQuestion, setDailyQuestion] = useState<{
+    id: number;
+    text: string;
+    options: { id: number; text: string }[];
+  } | null>(null);
+  const [dailyQuestionLoading, setDailyQuestionLoading] = useState(false);
+  const [dailySelectedOption, setDailySelectedOption] = useState<string | null>(
+    null
+  );
+  const [dailyFeedback, setDailyFeedback] = useState<{
+    isCorrect: boolean;
+    correctAnswer: string;
+    explanation: string | null;
+    alreadyAnswered?: boolean;
+  } | null>(null);
+  const [dailySubmitting, setDailySubmitting] = useState(false);
+  const [showDailyModal, setShowDailyModal] = useState(false);
+
+  const loadDailyQuestion = async (qId: number) => {
+    setDailyQuestionLoading(true);
+    setShowDailyModal(true);
+    try {
+      const res = await getQuestionForPlayerAction(qId);
+      if (res.success && res.data) {
+        setDailyQuestion(res.data);
+
+        // Check if there's a pre-selected option in search params
+        const selectOptionParam = searchParams.get("selectOption");
+        if (selectOptionParam !== null) {
+          handleDailySubmit(qId, selectOptionParam);
+        }
+      } else {
+        toast.error(res.error || "Impossible de charger la question.");
+        setShowDailyModal(false);
+      }
+    } catch {
+      toast.error("Erreur lors du chargement de la question.");
+      setShowDailyModal(false);
+    } finally {
+      setDailyQuestionLoading(false);
+    }
+  };
+
+  interface DailyStats {
+    total: number;
+    correct: number;
+    successRate: number;
+    tagStats: {
+      tag: string;
+      total: number;
+      correct: number;
+      rate: number;
+    }[];
+  }
+
+  const [stats, setStats] = useState<DailyStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  const fetchStats = async () => {
+    setStatsLoading(true);
+    try {
+      const res = await getDailyQuestionStatsAction();
+      if (res.success && res.data) {
+        setStats(res.data);
+      }
+    } catch {
+      // Ignored
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const handleDailySubmit = async (qId: number, optionIndex: string) => {
+    setDailySelectedOption(optionIndex);
+    setDailySubmitting(true);
+    try {
+      const res = await submitDailyQuestionAnswerAction({
+        questionId: qId,
+        optionIndex,
+      });
+      if (res.success && res.data) {
+        setDailyFeedback(res.data);
+        if (res.data.isCorrect && !res.data.alreadyAnswered) {
+          playSound("success");
+          toast.success("Bonne réponse !");
+        } else if (!res.data.isCorrect && !res.data.alreadyAnswered) {
+          toast.error("Mauvaise réponse. Révisez le concept !");
+        }
+        fetchStats();
+      } else {
+        toast.error(res.error || "Erreur lors de la validation.");
+      }
+    } catch {
+      toast.error("Erreur réseau.");
+    } finally {
+      setDailySubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const questionIdParam = searchParams.get("dailyQuestionId");
+    if (questionIdParam) {
+      const qId = parseInt(questionIdParam, 10);
+      if (!isNaN(qId)) {
+        loadDailyQuestion(qId);
+      }
+    }
+  }, [searchParams, mounted]);
+
   // Load onboarding state and protect against SSR hydration mismatch
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Justification : Nécessaire pour éviter les erreurs d'hydratation (hydration mismatch) en forçant un rendu côté client après le montage.
     setMounted(true);
     async function loadStatus() {
-      const res = await getPlayerOnboardingStatusAction();
-      if (res.success && res.data) {
-        setOnboardingCompleted(res.data.completed);
-        setExperience(res.data.experience);
-        setObjective(res.data.objective);
-        setExpectation(res.data.expectation);
+      try {
+        const res = await getPlayerOnboardingStatusAction();
+        if (res.success && res.data) {
+          setOnboardingCompleted(res.data.completed);
+          setExperience(res.data.experience);
+          setObjective(res.data.objective);
+          setExpectation(res.data.expectation);
+        }
+      } finally {
+        setLoadingOnboarding(false);
       }
     }
     loadStatus();
+    fetchStats();
   }, []);
 
   const handleFinishOnboarding = async () => {
-    const res = await savePlayerOnboardingAction({
-      experience,
-      objective,
-      expectation,
-    });
-    if (res.success) {
-      setOnboardingCompleted(true);
-      playSound("success");
+    try {
+      const res = await savePlayerOnboardingAction({
+        experience,
+        objective,
+        expectation,
+      });
+      if (res.success) {
+        setOnboardingCompleted(true);
+        playSound("success");
+        toast.success("Profil d'apprentissage configuré avec succès !");
+      } else {
+        toast.error(
+          res.error || "Une erreur est survenue lors de la configuration."
+        );
+      }
+    } catch (error) {
+      logger.error(
+        "Erreur inattendue durant la configuration de l'onboarding :",
+        error
+      );
+      toast.error("Une erreur inattendue est survenue.");
     }
   };
 
@@ -211,7 +359,7 @@ export default function PlayerPage() {
     { text: "Réviser 5 cartes mémo", progress: 2, target: 5, xp: 50 },
   ];
 
-  if (!mounted) return null;
+  if (!mounted || loadingOnboarding) return null;
 
   if (!onboardingCompleted) {
     return (
@@ -239,77 +387,202 @@ export default function PlayerPage() {
       />
 
       <div className="grid gap-8 lg:grid-cols-12">
-        {/* Column 1: Mascot & Daily Quests */}
-        <aside className="space-y-6 lg:col-span-3">
-          <MascotWidget onResetOnboarding={resetOnboarding} />
+        {/* Column 1: Mascot, Stats, Quests, Subscription */}
+        <div className="space-y-6 lg:col-span-8">
+          <div className="grid gap-6 md:grid-cols-2">
+            <MascotWidget onResetOnboarding={resetOnboarding} />
+            <DailyStatsWidget stats={stats} loading={statsLoading} />
+          </div>
 
-          <section
-            className="space-y-4 rounded-3xl border-2 border-gray-100 bg-white p-6 shadow-sm"
-            aria-labelledby="quests-title-left"
-          >
-            <h2
-              id="quests-title-left"
-              className="flex items-center gap-2 text-sm font-black tracking-wider text-gray-900 uppercase"
+          <div className="grid gap-6 md:grid-cols-2">
+            <section
+              className="space-y-4 rounded-3xl border-2 border-gray-100 bg-white p-6 shadow-sm"
+              aria-labelledby="quests-title-left"
             >
-              <Trophy className="h-4 w-4 text-yellow-500" />
-              Défis quotidiens
-            </h2>
-            <div className="space-y-4">
-              {dailyQuests.map((quest, i) => (
-                <div key={i} className="space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <span
-                      className={cn(
-                        "text-xs font-bold",
-                        quest.completed
-                          ? "text-gray-400 line-through"
-                          : "text-gray-700"
-                      )}
-                    >
-                      {quest.text}
-                    </span>
-                    <span className="shrink-0 text-[10px] font-black text-yellow-600">
-                      +{quest.xp} XP
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                      <div
-                        style={{
-                          width: `${(quest.progress / quest.target) * 100}%`,
-                        }}
+              <h2
+                id="quests-title-left"
+                className="flex items-center gap-2 text-sm font-black tracking-wider text-gray-900 uppercase"
+              >
+                <Trophy className="h-4 w-4 text-yellow-500" />
+                Défis quotidiens
+              </h2>
+              <div className="space-y-4">
+                {dailyQuests.map((quest, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <span
                         className={cn(
-                          "h-full rounded-full transition-all duration-300",
-                          quest.completed ? "bg-emerald-500" : "bg-blue-600"
+                          "text-xs font-bold",
+                          quest.completed
+                            ? "text-gray-400 line-through"
+                            : "text-gray-700"
                         )}
-                      />
+                      >
+                        {quest.text}
+                      </span>
+                      <span className="shrink-0 text-[10px] font-black text-yellow-600">
+                        +{quest.xp} XP
+                      </span>
                     </div>
-                    <span className="shrink-0 text-[10px] font-bold text-gray-500">
-                      {quest.progress}/{quest.target}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                        <div
+                          style={{
+                            width: `${(quest.progress / quest.target) * 100}%`,
+                          }}
+                          className={cn(
+                            "h-full rounded-full transition-all duration-300",
+                            quest.completed ? "bg-emerald-500" : "bg-blue-600"
+                          )}
+                        />
+                      </div>
+                      <span className="shrink-0 text-[10px] font-bold text-gray-500">
+                        {quest.progress}/{quest.target}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </aside>
+                ))}
+              </div>
+            </section>
 
-        {/* Column 2: Center Learning Path */}
-        <LearningPath
-          levels={levels}
-          onLevelClick={(node) => {
-            if (node.status === "locked") playSound("locked");
-            else if (node.status === "completed") playSound("success");
-            else playSound("click");
-          }}
-        />
+            <SubscriptionWidget playSound={playSound} />
+          </div>
+        </div>
 
-        {/* Column 3: Leaderboard & Boutique */}
-        <aside className="space-y-6 lg:col-span-3">
+        {/* Column 2: Leaderboard & Boutique */}
+        <aside className="space-y-6 lg:col-span-4">
           <LeaderboardWidget leaderboard={leaderboard} />
           <BoutiqueWidget />
         </aside>
       </div>
+
+      <Dialog
+        open={showDailyModal}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowDailyModal(false);
+            setDailyQuestion(null);
+            setDailySelectedOption(null);
+            setDailyFeedback(null);
+          }
+        }}
+      >
+        <DialogContent className="rounded-3xl border-none bg-white p-6 shadow-xl sm:max-w-[500px]">
+          {dailyQuestionLoading ? (
+            <div className="flex h-60 flex-col items-center justify-center gap-3">
+              <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+              <p className="text-sm font-black text-slate-500">
+                Chargement de ton défi...
+              </p>
+            </div>
+          ) : dailyQuestion ? (
+            <div className="space-y-6">
+              <DialogHeader className="text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                  <Mail className="h-6 w-6" />
+                </div>
+                <DialogTitle className="text-2xl font-black tracking-tight text-slate-800">
+                  Défi Secourisme
+                </DialogTitle>
+                <DialogDescription className="mt-1 text-xs font-bold tracking-widest text-slate-400 uppercase">
+                  Question Unique
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <p className="text-base leading-snug font-bold text-slate-800">
+                  {dailyQuestion.text}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {dailyQuestion.options.map((opt, idx) => {
+                  const optionId = idx.toString();
+                  const isSelected = dailySelectedOption === optionId;
+                  const showCorrect =
+                    dailyFeedback && optionId === dailyFeedback.correctAnswer;
+                  const showWrong =
+                    dailyFeedback && isSelected && !dailyFeedback.isCorrect;
+
+                  return (
+                    <button
+                      key={opt.id}
+                      disabled={dailySubmitting || dailyFeedback !== null}
+                      onClick={() =>
+                        handleDailySubmit(dailyQuestion.id, optionId)
+                      }
+                      className={cn(
+                        "w-full cursor-pointer rounded-2xl border-2 p-4 text-left text-sm font-bold transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:outline-none",
+                        isSelected
+                          ? "border-blue-600 bg-blue-50 text-blue-700"
+                          : "border-slate-100 bg-white text-slate-700 hover:border-blue-300",
+                        showCorrect &&
+                          "border-emerald-500 bg-emerald-50 text-emerald-800 hover:border-emerald-500",
+                        showWrong &&
+                          "border-rose-500 bg-rose-50 text-rose-800 hover:border-rose-500"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={cn(
+                            "flex h-7 w-7 items-center justify-center rounded-full text-xs font-black",
+                            isSelected
+                              ? "bg-blue-600 text-white"
+                              : "bg-slate-100 text-slate-500",
+                            showCorrect && "bg-emerald-500 text-white",
+                            showWrong && "bg-rose-500 text-white"
+                          )}
+                        >
+                          {showCorrect ? (
+                            <CheckCircle className="h-4 w-4" />
+                          ) : showWrong ? (
+                            <XCircle className="h-4 w-4" />
+                          ) : (
+                            idx + 1
+                          )}
+                        </span>
+                        <span>{opt.text}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {dailyFeedback && (
+                <div
+                  className={cn(
+                    "animate-fade-in rounded-2xl border p-4 transition-all duration-350",
+                    dailyFeedback.isCorrect
+                      ? "border-emerald-100 bg-emerald-50/50 text-emerald-800"
+                      : "text-rose-850 border-rose-100 bg-rose-50/50"
+                  )}
+                >
+                  <p className="mb-1 text-xs font-black tracking-wider uppercase">
+                    {dailyFeedback.isCorrect ? "Bien joué !" : "Oups !"}
+                  </p>
+                  <p className="text-xs leading-relaxed font-bold">
+                    {dailyFeedback.explanation || "Pas d'explication fournie."}
+                  </p>
+                </div>
+              )}
+
+              {dailyFeedback && (
+                <Button
+                  onClick={() => {
+                    setShowDailyModal(false);
+                    setDailyQuestion(null);
+                    setDailySelectedOption(null);
+                    setDailyFeedback(null);
+                  }}
+                  className="w-full rounded-2xl bg-slate-900 py-6 text-sm font-black text-white shadow-sm hover:bg-slate-800"
+                >
+                  Fermer
+                </Button>
+              )}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
