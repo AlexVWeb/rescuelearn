@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hasRole, UserRole } from "@/lib/roles";
 import Link from "next/link";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { User as UserIcon } from "lucide-react";
 import { PlayerNav } from "./components/PlayerNav";
+import { PlayerSignOutButton } from "./components/PlayerSignOutButton";
+import { isFeatureEnabled, FeatureKey } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,23 @@ export default async function PlayerLayout({
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+
+  const playerEnabled = await isFeatureEnabled(FeatureKey.PLAYER_SYSTEM);
+  if (!playerEnabled) {
+    redirect("/section-disabled");
+  }
+
+  const reqHeaders = await headers();
+  const pathname = reqHeaders.get("x-pathname") || "";
+  if (
+    pathname.startsWith("/player/progresser") ||
+    pathname.startsWith("/player/progression")
+  ) {
+    const duolingoEnabled = await isFeatureEnabled(FeatureKey.DUOLINGO_SYSTEM);
+    if (!duolingoEnabled) {
+      redirect("/section-disabled");
+    }
+  }
 
   if (!session) {
     redirect("/login");
@@ -86,14 +105,7 @@ export default async function PlayerLayout({
             </div>
 
             {/* Bouton de déconnexion utilisant un composant interactif léger */}
-            <Link
-              href="/api/auth/sign-out"
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
-              aria-label="Se déconnecter"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Déconnexion</span>
-            </Link>
+            <PlayerSignOutButton />
           </div>
         </div>
       </header>

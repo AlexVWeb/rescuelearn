@@ -12,6 +12,7 @@ import {
   Calendar,
   Building,
   Milestone,
+  Settings,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -155,6 +156,17 @@ const getNavData = (roles: unknown, hasOrganisme: boolean) => {
               {
                 title: "Gérer le parcours",
                 url: "/admin/progression",
+              },
+            ],
+          },
+          {
+            title: "Réglages",
+            url: "#",
+            icon: Settings,
+            items: [
+              {
+                title: "Options Système",
+                url: "/admin/settings",
               },
             ],
           },

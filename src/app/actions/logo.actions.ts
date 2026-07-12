@@ -32,7 +32,9 @@ export async function uploadOrganismeLogoAction(
       return { success: false, error: "Forbidden" };
     }
 
-    const client = isSuperAdmin ? prisma : withOrganisme(user.organismeId!);
+    const client = (
+      isSuperAdmin ? prisma : withOrganisme(user.organismeId!)
+    ) as typeof prisma;
 
     const file = formData.get("file");
     if (!(file instanceof File)) {
@@ -90,7 +92,9 @@ export async function deleteOrganismeLogoAction(id: string) {
       return { success: false, error: "Forbidden" };
     }
 
-    const client = isSuperAdmin ? prisma : withOrganisme(user.organismeId!);
+    const client = (
+      isSuperAdmin ? prisma : withOrganisme(user.organismeId!)
+    ) as typeof prisma;
 
     const organisme = await client.organisme.findUnique({
       where: { id },
@@ -127,7 +131,9 @@ export async function getOrganismeLogoUrlAction(
     const user = await getUserContext();
     const isSuperAdmin = hasRole(user.roles, UserRole.SUPER_ADMIN);
 
-    const client = isSuperAdmin ? prisma : withOrganisme(user.organismeId!);
+    const client = (
+      isSuperAdmin ? prisma : withOrganisme(user.organismeId!)
+    ) as typeof prisma;
 
     const organisme = await client.organisme.findUnique({
       where: { id },

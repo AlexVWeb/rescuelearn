@@ -92,7 +92,9 @@ export async function updateMemberRoleAction(
       }
     }
 
-    const client = isSuperAdmin ? prisma : withOrganisme(targetOrganismeId);
+    const client = (
+      isSuperAdmin ? prisma : withOrganisme(targetOrganismeId)
+    ) as typeof prisma;
 
     await client.user.update({
       where: { id: userId },
@@ -154,7 +156,9 @@ export async function removeMemberFromOrganismeAction(
     });
 
     if (targetUser && targetUser.organismeId === targetOrganismeId) {
-      const client = isSuperAdmin ? prisma : withOrganisme(targetOrganismeId);
+      const client = (
+        isSuperAdmin ? prisma : withOrganisme(targetOrganismeId)
+      ) as typeof prisma;
       await client.user.update({
         where: { id: userId },
         data: { organismeId: null },
@@ -196,7 +200,9 @@ export async function searchUsersAction(query: string) {
     const user = await getUserContext();
     const isSuperAdmin = hasRole(user.roles, UserRole.SUPER_ADMIN);
 
-    const client = isSuperAdmin ? prisma : withOrganisme(user.organismeId!);
+    const client = (
+      isSuperAdmin ? prisma : withOrganisme(user.organismeId!)
+    ) as typeof prisma;
 
     const users = await client.user.findMany({
       where: {

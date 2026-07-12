@@ -18,6 +18,9 @@ function safeCompare(a: string, b: string): boolean {
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
   // Exclude static assets, public files, API, and the maintenance page itself
   const isAsset =
     pathname.startsWith("/_next") ||
@@ -27,14 +30,22 @@ export function middleware(request: NextRequest) {
     pathname === "/maintenance";
 
   if (isAsset) {
-    return NextResponse.next();
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   const isMaintenance = process.env.MAINTENANCE_MODE === "true";
   const bypassToken = process.env.MAINTENANCE_BYPASS_TOKEN || "";
 
   if (!isMaintenance) {
-    return NextResponse.next();
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   // Enforce secure token rules: must be at least 32 characters
@@ -63,7 +74,11 @@ export function middleware(request: NextRequest) {
   // Check existing bypass cookie
   const cookieBypass = request.cookies.get("maintenance_bypass")?.value;
   if (cookieBypass && isTokenSecure && safeCompare(cookieBypass, bypassToken)) {
-    return NextResponse.next();
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   // Redirect to maintenance page

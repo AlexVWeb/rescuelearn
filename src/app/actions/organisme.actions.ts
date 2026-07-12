@@ -63,7 +63,9 @@ export async function getOrganismeByIdAction(id: string) {
     const user = await getUserContext();
     const isSuperAdmin = hasRole(user.roles, UserRole.SUPER_ADMIN);
 
-    const client = isSuperAdmin ? prisma : withOrganisme(user.organismeId!);
+    const client = (
+      isSuperAdmin ? prisma : withOrganisme(user.organismeId!)
+    ) as typeof prisma;
 
     const organisme = await client.organisme.findUnique({ where: { id } });
     if (!organisme) return { success: false, error: "Organisme introuvable" };
@@ -189,7 +191,9 @@ export async function updateOrganismeAction(
   const user = await getUserContext();
   const isSuperAdmin = hasRole(user.roles, UserRole.SUPER_ADMIN);
 
-  const client = isSuperAdmin ? prisma : withOrganisme(user.organismeId!);
+  const client = (
+    isSuperAdmin ? prisma : withOrganisme(user.organismeId!)
+  ) as typeof prisma;
 
   if (!isSuperAdmin && user.organismeId !== id) {
     return { success: false, error: "Forbidden" };
