@@ -288,7 +288,7 @@ export default function AdminProgressionPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200">
-        {["GQS", "PSC", "SST", "PSE"].map((lvl) => (
+        {["GQS", "PSC", "SST", "PSE1", "PSE2"].map((lvl) => (
           <button
             key={lvl}
             onClick={() => setSelectedLevel(lvl)}

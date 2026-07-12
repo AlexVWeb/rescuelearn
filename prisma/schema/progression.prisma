@@ -1,7 +1,7 @@
-// Représente un arbre de progression pour un niveau de formation spécifique (GQS, PSC, SST, PSE)
+// Représente un arbre de progression pour un niveau de formation spécifique (GQS, PSC, SST, PSE1, PSE2)
 model ProgressionTree {
   id          String            @id @default(cuid())
-  level       String            @unique // "GQS" | "PSC" | "SST" | "PSE"
+  level       String            @unique // "GQS" | "PSC" | "SST" | "PSE1" | "PSE2"
   description String?
   nodes       ProgressionNode[]
   createdAt   DateTime          @default(now())

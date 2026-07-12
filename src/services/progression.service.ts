@@ -10,7 +10,7 @@ import { ProgressionExerciseInput } from "@/types/progression";
 
 export class ProgressionAdminService {
   static async getProgressionTrees() {
-    const levels = ["GQS", "PSC", "SST", "PSE"];
+    const levels = ["GQS", "PSC", "SST", "PSE1", "PSE2"];
     for (const lvl of levels) {
       await prisma.progressionTree.upsert({
         where: { level: lvl },
@@ -476,7 +476,7 @@ export class ProgressionPlayerService {
     if (experience === "intermediate") {
       targetLevel = "PSC";
     } else if (experience === "professional") {
-      targetLevel = "PSE";
+      targetLevel = "PSE1";
     }
 
     let tree = await prisma.progressionTree.findUnique({

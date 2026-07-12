@@ -156,6 +156,25 @@ describe("progression server actions", () => {
       expect(res.data?.nodes[1].status).toBe("current");
     });
 
+    it("should load the PSE1 progression tree for professional onboarding experience", async () => {
+      mockUser([UserRole.PLAYER], "professional"); // maps to PSE1
+      mockPrisma.progressionTree.findUnique.mockResolvedValue({
+        id: "tree-pse1",
+        level: "PSE1",
+        nodes: [{ id: "node-1", title: "Bilan", xpReward: 100 }],
+      });
+      mockPrisma.playerProgress.findMany.mockResolvedValue([]);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        xp: 0,
+        hearts: 5,
+        streak: 0,
+      });
+
+      const res = await getPlayerProgressionPathAction();
+      expect(res.success).toBe(true);
+      expect(res.data?.level).toBe("PSE1");
+    });
+
     it("should successfully complete a node, reward XP, and calculate streak", async () => {
       mockUser([UserRole.PLAYER]);
       mockPrisma.progressionNode.findUnique.mockResolvedValue({

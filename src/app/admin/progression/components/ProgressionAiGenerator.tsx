@@ -169,7 +169,8 @@ export function ProgressionAiGenerator({
                 <SelectItem value="GQS">GQS</SelectItem>
                 <SelectItem value="PSC">PSC</SelectItem>
                 <SelectItem value="SST">SST</SelectItem>
-                <SelectItem value="PSE">PSE</SelectItem>
+                <SelectItem value="PSE1">PSE1</SelectItem>
+                <SelectItem value="PSE2">PSE2</SelectItem>
               </SelectContent>
             </Select>
           </div>
