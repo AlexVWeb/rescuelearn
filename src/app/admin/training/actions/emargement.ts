@@ -118,11 +118,20 @@ export async function updateEmargementStatus(
     throw new Error("Inscription introuvable ou non autorisée");
   }
 
-  return tenant.emargement.upsert({
+  const emargement = await tenant.emargement.upsert({
     where: { inscriptionId_slotId: { inscriptionId, slotId } },
     update: { status },
     create: { inscriptionId, slotId, status },
   });
+
+  if (status === "validé") {
+    await tenant.inscription.update({
+      where: { id: inscriptionId },
+      data: { status: "présent" },
+    });
+  }
+
+  return emargement;
 }
 
 export async function bulkUpdateEmargementStatus(
@@ -145,7 +154,7 @@ export async function bulkUpdateEmargementStatus(
     where: { trainingSessionId: slot.trainingSessionId },
   });
 
-  return tenant.$transaction(
+  const results = await tenant.$transaction(
     inscriptions.map((ins: Inscription) =>
       tenant.emargement.upsert({
         where: { inscriptionId_slotId: { inscriptionId: ins.id, slotId } },
@@ -154,4 +163,15 @@ export async function bulkUpdateEmargementStatus(
       })
     )
   );
+
+  if (status === "validé" && inscriptions.length > 0) {
+    await tenant.inscription.updateMany({
+      where: {
+        id: { in: inscriptions.map((ins: Inscription) => ins.id) },
+      },
+      data: { status: "présent" },
+    });
+  }
+
+  return results;
 }

@@ -86,11 +86,23 @@ export async function getTraineesByPin(pin: string) {
 }
 
 export async function validatePresencePublic(emargementId: string) {
-  return prisma.emargement.update({
+  const updatedEmargement = await prisma.emargement.update({
     where: { id: emargementId },
     data: {
       status: EMARGEMENT_STATUS.VALIDE,
       validatedAt: dayjs().toDate(),
     },
+    include: {
+      inscription: true,
+    },
   });
+
+  if (updatedEmargement.inscriptionId) {
+    await prisma.inscription.update({
+      where: { id: updatedEmargement.inscriptionId },
+      data: { status: "présent" },
+    });
+  }
+
+  return updatedEmargement;
 }

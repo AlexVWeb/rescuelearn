@@ -18,7 +18,12 @@ const mockPrisma = vi.hoisted(() => ({
   user: { findUnique: vi.fn() },
   slot: { findUnique: vi.fn() },
   trainingSession: { findUnique: vi.fn(), findFirst: vi.fn() },
-  inscription: { findMany: vi.fn(), findUnique: vi.fn() },
+  inscription: {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+  },
   emargement: {
     upsert: vi.fn(),
     findMany: vi.fn(),
@@ -297,6 +302,21 @@ describe("updateEmargementStatus", () => {
         create: expect.objectContaining({ status: EMARGEMENT_STATUS.ABSENT }),
       })
     );
+    expect(mockPrisma.inscription.update).not.toHaveBeenCalled();
+  });
+
+  it("met à jour le statut d'inscription en présent si le statut d'émargement est validé", async () => {
+    mockAuthenticatedUser("org-1");
+    mockPrisma.inscription.findUnique.mockResolvedValue({
+      id: "ins-1",
+      trainingSession: { organismeId: "org-1" },
+    });
+
+    await updateEmargementStatus("ins-1", "slot-1", EMARGEMENT_STATUS.VALIDE);
+    expect(mockPrisma.inscription.update).toHaveBeenCalledWith({
+      where: { id: "ins-1" },
+      data: { status: "présent" },
+    });
   });
 });
 
@@ -328,7 +348,7 @@ describe("bulkUpdateEmargementStatus", () => {
     ).rejects.toThrow("Créneau introuvable ou non autorisé");
   });
 
-  it("génère un upsert pour chaque inscription du créneau", async () => {
+  it("génère un upsert pour chaque inscription du créneau et met à jour les inscriptions en présent si validé", async () => {
     mockAuthenticatedUser("org-1");
     mockPrisma.slot.findUnique.mockResolvedValue({
       id: "slot-1",
@@ -344,6 +364,10 @@ describe("bulkUpdateEmargementStatus", () => {
     await bulkUpdateEmargementStatus("slot-1", EMARGEMENT_STATUS.VALIDE);
 
     expect(mockPrisma.emargement.upsert).toHaveBeenCalledTimes(3);
+    expect(mockPrisma.inscription.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["ins-1", "ins-2", "ins-3"] } },
+      data: { status: "présent" },
+    });
   });
 });
 
