@@ -190,6 +190,14 @@ export default function PublicLayout({
                 </li>
                 <li>
                   <Link
+                    href="/changelog"
+                    className="text-sm text-gray-500 hover:text-blue-600"
+                  >
+                    Mises à jour & Roadmap
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/login"
                     className="text-sm text-gray-500 hover:text-blue-600"
                   >

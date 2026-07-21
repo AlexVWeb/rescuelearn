@@ -39,24 +39,32 @@ const getNavData = (roles: unknown, hasOrganisme: boolean) => {
   const isAdminOrganisme =
     hasRole(roles, UserRole.ADMIN_ORGANISME) && hasOrganisme;
 
-  const trainingSubItems = [
-    { title: "Tableau de bord", url: "/admin/training/dashboard" },
-    { title: "Sessions", url: "/admin/training/sessions" },
-    { title: "Stagiaires", url: "/admin/training/stagiaires" },
-    ...(isAdminOrganisme
-      ? [{ title: "Mon organisme", url: "/admin/training/organisme" }]
-      : []),
-  ];
-
   const trainingItems = isFormateur
     ? [
         {
-          title: "Gest. Formations",
-          url: "#",
-          icon: Calendar,
-          isActive: true,
-          items: trainingSubItems,
+          title: "Tableau de bord",
+          url: "/admin/training/dashboard",
+          icon: SquareTerminal,
         },
+        {
+          title: "Sessions",
+          url: "/admin/training/sessions",
+          icon: Calendar,
+        },
+        {
+          title: "Stagiaires",
+          url: "/admin/training/stagiaires",
+          icon: Users,
+        },
+        ...(isAdminOrganisme
+          ? [
+              {
+                title: "Mon organisme",
+                url: "/admin/training/organisme",
+                icon: Building,
+              },
+            ]
+          : []),
       ]
     : [];
 
