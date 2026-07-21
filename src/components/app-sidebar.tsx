@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
+import logoImg from "@/app/icon.png";
 import {
   BookOpen,
-  GalleryVerticalEnd,
   SquareTerminal,
   Users,
   Activity,
@@ -189,9 +190,13 @@ export function AppSidebar({
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2">
-          <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-            <GalleryVerticalEnd className="size-4" />
-          </div>
+          <Image
+            src={logoImg}
+            alt="RescueLearn Logo"
+            width={32}
+            height={32}
+            className="size-8 shrink-0 rounded-lg"
+          />
           <div className="grid flex-1 text-left text-sm leading-tight">
             <span className="truncate font-semibold">RescueLearn</span>
             <span className="truncate text-xs">Admin</span>

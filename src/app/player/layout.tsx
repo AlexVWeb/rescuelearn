@@ -1,4 +1,6 @@
 import React from "react";
+import Image from "next/image";
+import logoImg from "@/app/icon.png";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -82,9 +84,16 @@ export default async function PlayerLayout({
           <div className="flex items-center gap-6">
             <Link
               href="/player"
-              className="rounded-md px-2 py-1 text-xl font-bold text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+              className="flex items-center gap-2 rounded-md px-2 py-1 text-xl font-bold text-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
             >
-              RescueLearn{" "}
+              <Image
+                src={logoImg}
+                alt="RescueLearn Logo"
+                width={32}
+                height={32}
+                className="shrink-0 rounded-lg"
+              />
+              <span>RescueLearn</span>
               <span className="ml-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500">
                 Élève
               </span>

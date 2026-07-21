@@ -102,17 +102,6 @@ export function ExternalTrainingDialog({
   });
 
   const selectedType = useWatch({ control: form.control, name: "type" });
-  const currentName = useWatch({ control: form.control, name: "name" });
-
-  // Auto-fill name if empty when type changes
-  useEffect(() => {
-    if (
-      selectedType &&
-      (!currentName || TRAINING_TYPES.includes(currentName))
-    ) {
-      form.setValue("name", selectedType);
-    }
-  }, [selectedType, currentName, form]);
 
   // Determine if initial training exists for the selected type
   const hasInitialTraining = Boolean(
@@ -300,19 +289,6 @@ export function ExternalTrainingDialog({
                         : "Option désactivée."}
                     </p>
                   )}
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom de la formation</FormLabel>
-                  <FormControl>
-                    <Input placeholder="PSC adultes" {...field} />
-                  </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
