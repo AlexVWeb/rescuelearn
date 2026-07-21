@@ -245,4 +245,83 @@ export const EmailService = {
 
     return this.send({ to, subject, text, html });
   },
+
+  /**
+   * Envoie une alerte de sécurité à l'ancienne adresse email suite à sa modification.
+   */
+  async sendEmailChangedNotification({
+    oldEmail,
+    newEmail,
+  }: {
+    oldEmail: string;
+    newEmail: string;
+  }) {
+    const subject =
+      "Alerte de sécurité : Modification de votre adresse e-mail - RescueLearn";
+    const text = `Bonjour,\n\nNous vous informons que l'adresse e-mail associée à votre compte RescueLearn a été modifiée de ${oldEmail} vers ${newEmail}.\n\nSi vous êtes à l'origine de cette modification, aucune action supplémentaire n'est requise.\n\nSi vous N'ÊTES PAS à l'origine de ce changement, veuillez contacter immédiatement l'assistance ou réinitialiser votre mot de passe.\n\nL'équipe RescueLearn`;
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; max-width: 580px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden;">
+        <div style="background-color: #dc2626; padding: 32px 24px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800;">RescueLearn</h1>
+          <p style="color: #fecaca; margin: 4px 0 0 0; font-size: 14px;">Alerte de sécurité concernant votre compte</p>
+        </div>
+        <div style="padding: 40px 32px; background-color: #ffffff;">
+          <h2 style="margin-top: 0; color: #111827; font-size: 18px; font-weight: 700;">Votre adresse e-mail a été modifiée</h2>
+          <p style="font-size: 15px; color: #4b5563;">Bonjour,</p>
+          <p style="font-size: 15px; color: #4b5563;">
+            L'adresse e-mail associée à votre compte RescueLearn a été modifiée avec succès.
+          </p>
+          <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 24px 0;">
+            <p style="margin: 0; font-size: 14px; color: #374151;">Ancienne adresse : <strong>${oldEmail}</strong></p>
+            <p style="margin: 8px 0 0 0; font-size: 14px; color: #374151;">Nouvelle adresse : <strong>${newEmail}</strong></p>
+          </div>
+          <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #f3f4f6;">
+            <p style="color: #9ca3af; font-size: 13px; margin: 0;">
+              Si vous n'êtes pas à l'origine de ce changement, votre compte a peut-être été compromis. Contactez immédiatement notre support de sécurité.
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    return this.send({ to: oldEmail, subject, text, html });
+  },
+
+  /**
+   * Envoie une alerte de sécurité lors de la modification du mot de passe.
+   */
+  async sendPasswordChangedNotification({ to }: { to: string }) {
+    const subject =
+      "Alerte de sécurité : Modification de votre mot de passe - RescueLearn";
+    const text = `Bonjour,\n\nNous vous informons que le mot de passe de votre compte RescueLearn a été modifié avec succès.\n\nSi vous êtes à l'origine de cette modification, aucune action supplémentaire n'est requise.\n\nSi vous N'ÊTES PAS à l'origine de ce changement, veuillez réinitialiser votre mot de passe immédiatement ou contacter le support.\n\nL'équipe RescueLearn`;
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; max-width: 580px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden;">
+        <div style="background-color: #2563eb; padding: 32px 24px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800;">RescueLearn</h1>
+          <p style="color: #bfdbfe; margin: 4px 0 0 0; font-size: 14px;">Alerte de sécurité concernant votre compte</p>
+        </div>
+        <div style="padding: 40px 32px; background-color: #ffffff;">
+          <h2 style="margin-top: 0; color: #111827; font-size: 18px; font-weight: 700;">Votre mot de passe a été modifié</h2>
+          <p style="font-size: 15px; color: #4b5563;">Bonjour,</p>
+          <p style="font-size: 15px; color: #4b5563;">
+            Le mot de passe associé à votre compte <strong>RescueLearn</strong> a été modifié avec succès.
+          </p>
+          <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #f3f4f6;">
+            <p style="color: #9ca3af; font-size: 13px; margin: 0;">
+              Si vous n'êtes pas à l'origine de cette modification, votre compte a peut-être été compromis. Veuillez réinitialiser votre mot de passe ou contacter immédiatement l'assistance.
+            </p>
+          </div>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px 32px; text-align: center; border-top: 1px solid #f3f4f6;">
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+            &copy; ${new Date().getFullYear()} RescueLearn. Tous droits réservés.
+          </p>
+        </div>
+      </div>
+    `;
+
+    return this.send({ to, subject, text, html });
+  },
 };

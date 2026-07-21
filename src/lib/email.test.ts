@@ -80,4 +80,39 @@ describe("EmailService", () => {
       expect(callArgs.html).toContain("RescueLearn");
     });
   });
+
+  describe("sendPasswordChangedNotification", () => {
+    it("should send password changed security alert email", async () => {
+      const result = await EmailService.sendPasswordChangedNotification({
+        to: "user@test.com",
+      });
+
+      expect(result.success).toBe(true);
+      const sendMailCall = vi.mocked(nodemailer.createTransport().sendMail);
+      const callArgs = sendMailCall.mock
+        .calls[0][0] as nodemailer.SendMailOptions;
+
+      expect(callArgs.to).toBe("user@test.com");
+      expect(callArgs.subject).toContain("Modification de votre mot de passe");
+    });
+  });
+
+  describe("sendEmailChangedNotification", () => {
+    it("should send email changed security alert to old email", async () => {
+      const result = await EmailService.sendEmailChangedNotification({
+        oldEmail: "old@test.com",
+        newEmail: "new@test.com",
+      });
+
+      expect(result.success).toBe(true);
+      const sendMailCall = vi.mocked(nodemailer.createTransport().sendMail);
+      const callArgs = sendMailCall.mock
+        .calls[0][0] as nodemailer.SendMailOptions;
+
+      expect(callArgs.to).toBe("old@test.com");
+      expect(callArgs.subject).toContain(
+        "Modification de votre adresse e-mail"
+      );
+    });
+  });
 });
