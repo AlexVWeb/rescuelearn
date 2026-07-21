@@ -3,6 +3,7 @@ import {
   createExternalTraining,
   uploadExternalTrainingFile,
   deleteExternalTraining,
+  updateExternalTraining,
 } from "./external-trainings";
 import { prisma } from "@/lib/prisma";
 import { requireOrganisme } from "@/lib/context";
@@ -19,6 +20,11 @@ vi.mock("@/lib/prisma", () => ({
       create: vi.fn(),
       findUnique: vi.fn(),
       delete: vi.fn(),
+      update: vi.fn(),
+      findFirst: vi.fn(),
+    },
+    inscription: {
+      findFirst: vi.fn(),
     },
   },
 }));
@@ -83,6 +89,111 @@ describe("ExternalTraining Actions", () => {
       expect(prisma.externalTraining.create).toHaveBeenCalledWith({
         data: { ...data, organismeId: "org-1" },
       });
+    });
+
+    it("throws error if creating FC when no initial training exists", async () => {
+      vi.mocked(prisma.trainee.findUnique).mockResolvedValue({
+        id: "trainee-1",
+        organismeId: "org-1",
+      } as never);
+      vi.mocked(prisma.inscription.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.externalTraining.findFirst).mockResolvedValue(null);
+
+      const data = {
+        traineeId: "trainee-1",
+        type: "PSE1",
+        name: "Recyclage PSE1",
+        organisme: "Croix Rouge",
+        obtainedAt: new Date(),
+        isFC: true,
+      };
+
+      await expect(createExternalTraining(data)).rejects.toThrow(
+        "Impossible d'ajouter une Formation Continue (FC) pour la filière PSE1 : aucune formation initiale préalable n'est enregistrée."
+      );
+    });
+
+    it("creates FC training if initial platform training exists", async () => {
+      vi.mocked(prisma.trainee.findUnique).mockResolvedValue({
+        id: "trainee-1",
+        organismeId: "org-1",
+      } as never);
+      vi.mocked(prisma.inscription.findFirst).mockResolvedValue({
+        id: "ins-1",
+      } as never);
+      vi.mocked(prisma.externalTraining.create).mockResolvedValue({
+        id: "new-id",
+      } as never);
+
+      const data = {
+        traineeId: "trainee-1",
+        type: "PSE1",
+        name: "Recyclage PSE1",
+        organisme: "Croix Rouge",
+        obtainedAt: new Date(),
+        isFC: true,
+      };
+
+      const result = await createExternalTraining(data);
+
+      expect(result).toEqual({ id: "new-id" });
+      expect(prisma.externalTraining.create).toHaveBeenCalled();
+    });
+  });
+
+  describe("updateExternalTraining", () => {
+    it("updates external training and cleans up old file if changed", async () => {
+      vi.mocked(prisma.externalTraining.findUnique).mockResolvedValue({
+        id: "ext-1",
+        traineeId: "trainee-1",
+        organismeId: "org-1",
+        fileKey: "old-key",
+      } as never);
+      vi.mocked(prisma.externalTraining.update).mockResolvedValue({
+        id: "ext-1",
+      } as never);
+
+      const data = {
+        type: "PSC",
+        name: "Updated Test",
+        organisme: "Croix Rouge",
+        obtainedAt: new Date(),
+        fileKey: "new-key",
+      };
+
+      const result = await updateExternalTraining("ext-1", data);
+
+      expect(result).toEqual({ id: "ext-1" });
+      expect(r2.deleteFile).toHaveBeenCalledWith("old-key");
+      expect(prisma.externalTraining.update).toHaveBeenCalledWith({
+        where: { id: "ext-1" },
+        data: {
+          type: "PSC",
+          name: "Updated Test",
+          organisme: "Croix Rouge",
+          obtainedAt: data.obtainedAt,
+          isFC: false,
+          certificateNumber: null,
+          fileUrl: null,
+          fileKey: "new-key",
+        },
+      });
+    });
+
+    it("throws error if trying to update record from another organism", async () => {
+      vi.mocked(prisma.externalTraining.findUnique).mockResolvedValue({
+        id: "ext-1",
+        organismeId: "other-org",
+      } as never);
+
+      await expect(
+        updateExternalTraining("ext-1", {
+          type: "PSC",
+          name: "Test",
+          organisme: "Croix Rouge",
+          obtainedAt: new Date(),
+        })
+      ).rejects.toThrow("Formation introuvable ou non autorisée");
     });
   });
 

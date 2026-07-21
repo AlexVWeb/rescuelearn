@@ -7,6 +7,7 @@ const schema = z.object({
   organisme: z.string().min(2, "Organisme requis"),
   obtainedAt: z.string().min(1, "Date requise"),
   certificateNumber: z.string().optional(),
+  isFC: z.boolean(),
 });
 
 describe("ExternalTraining form schema", () => {
@@ -17,16 +18,18 @@ describe("ExternalTraining form schema", () => {
       organisme: "Croix Rouge",
       obtainedAt: "2024-01-15",
       certificateNumber: "CERT-001",
+      isFC: false,
     });
     expect(result.success).toBe(true);
   });
 
-  it("validates without optional fields", () => {
+  it("validates FC training", () => {
     const result = schema.safeParse({
       type: "PSE1",
-      name: "PSE Niveau 1",
+      name: "Recyclage PSE1",
       organisme: "SDIS",
       obtainedAt: "2024-06-01",
+      isFC: true,
     });
     expect(result.success).toBe(true);
   });
@@ -37,6 +40,7 @@ describe("ExternalTraining form schema", () => {
       name: "PSE Niveau 1",
       organisme: "SDIS",
       obtainedAt: "2024-06-01",
+      isFC: false,
     });
     expect(result.success).toBe(false);
   });
@@ -47,6 +51,7 @@ describe("ExternalTraining form schema", () => {
       name: "A",
       organisme: "SDIS",
       obtainedAt: "2024-06-01",
+      isFC: false,
     });
     expect(result.success).toBe(false);
   });
@@ -57,6 +62,7 @@ describe("ExternalTraining form schema", () => {
       name: "PSC",
       organisme: "SDIS",
       obtainedAt: "",
+      isFC: false,
     });
     expect(result.success).toBe(false);
   });

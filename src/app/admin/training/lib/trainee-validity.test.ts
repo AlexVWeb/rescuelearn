@@ -4,6 +4,7 @@ import {
   computeFilieres,
   computeValidCompetences,
   computeNextExpiry,
+  detectExternalTrainingAnomalies,
 } from "./trainee-validity";
 
 const NOW = dayjs("2026-01-01");
@@ -186,5 +187,67 @@ describe("computeNextExpiry", () => {
       NOW
     );
     expect(result!.type).toBe("PSE1");
+  });
+});
+
+describe("detectExternalTrainingAnomalies", () => {
+  it("returns no anomalies for a valid initial training", () => {
+    const ext = {
+      id: "1",
+      type: "PSE1",
+      obtainedAt: "2025-06-01",
+      isFC: false,
+    };
+    const result = detectExternalTrainingAnomalies(ext, [], [ext], NOW);
+    expect(result).toHaveLength(0);
+  });
+
+  it("detects FUTURE_DATE anomaly when obtainedAt is in the future", () => {
+    const ext = {
+      id: "1",
+      type: "PSE2",
+      obtainedAt: "2027-03-16",
+      isFC: false,
+    };
+    const result = detectExternalTrainingAnomalies(ext, [], [ext], NOW);
+    expect(result).toEqual([
+      {
+        code: "FUTURE_DATE",
+        message:
+          "Date d'obtention incohérente : le 16/03/2027 se situe dans le futur.",
+      },
+    ]);
+  });
+
+  it("detects MISSING_INITIAL anomaly when FC has no initial training", () => {
+    const ext = { id: "1", type: "PSE1", obtainedAt: "2025-06-01", isFC: true };
+    const result = detectExternalTrainingAnomalies(ext, [], [ext], NOW);
+    expect(result).toEqual([
+      {
+        code: "MISSING_INITIAL",
+        message: "Aucune formation initiale connue pour la filière PSE1.",
+      },
+    ]);
+  });
+
+  it("detects FC_BEFORE_INITIAL anomaly when FC obtainedAt is before initial diploma date", () => {
+    const initial = {
+      id: "1",
+      type: "PSE2",
+      obtainedAt: "2027-03-16",
+      isFC: false,
+    };
+    const fc = {
+      id: "2",
+      type: "PSE2",
+      obtainedAt: "2026-07-08",
+      isFC: true,
+    };
+    const result = detectExternalTrainingAnomalies(fc, [], [initial, fc], NOW);
+    expect(result).toContainEqual({
+      code: "FC_BEFORE_INITIAL",
+      message:
+        "Incohérence chronologique : la Formation Continue du 08/07/2026 est antérieure au diplôme initial du 16/03/2027.",
+    });
   });
 });

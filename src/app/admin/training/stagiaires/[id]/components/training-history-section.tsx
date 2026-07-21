@@ -1,12 +1,22 @@
 import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { InscriptionWithSession, ExternalTraining } from "../../../types";
+
 import { ExternalTrainingDialog } from "./external-training-dialog";
 import { DeleteExternalTrainingButton } from "./delete-external-training-button";
-import { computeFilieres } from "../../../lib/trainee-validity";
+import {
+  computeFilieres,
+  detectExternalTrainingAnomalies,
+} from "../../../lib/trainee-validity";
 
 const statusConfig: Record<
   string,
@@ -161,7 +171,11 @@ export async function TrainingHistorySection({
               ({externalTrainings.length})
             </span>
           </h2>
-          <ExternalTrainingDialog traineeId={traineeId} />
+          <ExternalTrainingDialog
+            traineeId={traineeId}
+            inscriptions={inscriptions}
+            externalTrainings={externalTrainings}
+          />
         </div>
 
         {trainingsWithUrls.length === 0 ? (
@@ -174,7 +188,6 @@ export async function TrainingHistorySection({
               <thead className="bg-muted/50">
                 <tr>
                   <th className="px-4 py-2 text-left font-medium">Type</th>
-                  <th className="px-4 py-2 text-left font-medium">Formation</th>
                   <th className="px-4 py-2 text-left font-medium">Organisme</th>
                   <th className="px-4 py-2 text-left font-medium">Obtention</th>
                   <th className="px-4 py-2 text-left font-medium">Validité</th>
@@ -192,23 +205,52 @@ export async function TrainingHistorySection({
                     .endOf("year");
                   const expired = expiryDate.isBefore(dayjs());
 
+                  const anomalies = detectExternalTrainingAnomalies(
+                    ext,
+                    inscriptions,
+                    externalTrainings
+                  );
+
                   return (
                     <tr key={ext.id} className="border-t">
                       <td className="px-4 py-2">
-                        <Badge variant="outline">{ext.type}</Badge>
-                        {ext.isFC && (
-                          <Badge variant="outline" className="ml-1 text-xs">
-                            FC
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline">{ext.type}</Badge>
+                          {ext.isFC && (
+                            <Badge variant="outline" className="text-xs">
+                              FC
+                            </Badge>
+                          )}
+                          {anomalies.length > 0 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge
+                                    variant="destructive"
+                                    className="flex cursor-help items-center gap-1 bg-amber-500 text-xs text-white hover:bg-amber-600"
+                                  >
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Anomalie
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs space-y-1 text-xs">
+                                  {anomalies.map((a) => (
+                                    <p key={a.code}>⚠️ {a.message}</p>
+                                  ))}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-4 py-2 font-medium">{ext.name}</td>
-                      <td className="text-muted-foreground px-4 py-2">
+
+                      <td className="text-muted-foreground px-4 py-2 font-medium">
                         {ext.organisme}
                       </td>
                       <td className="text-muted-foreground px-4 py-2">
                         {dayjs(ext.obtainedAt).format("DD/MM/YYYY")}
                       </td>
+
                       <td className="px-4 py-2">
                         <Badge variant={expired ? "destructive" : "default"}>
                           {expired ? "Expiré" : "Valide"} —{" "}
@@ -233,7 +275,15 @@ export async function TrainingHistorySection({
                         )}
                       </td>
                       <td className="px-4 py-2 text-right">
-                        <DeleteExternalTrainingButton id={ext.id} />
+                        <div className="flex items-center justify-end gap-1">
+                          <ExternalTrainingDialog
+                            traineeId={traineeId}
+                            training={ext}
+                            inscriptions={inscriptions}
+                            externalTrainings={externalTrainings}
+                          />
+                          <DeleteExternalTrainingButton id={ext.id} />
+                        </div>
                       </td>
                     </tr>
                   );
@@ -243,6 +293,7 @@ export async function TrainingHistorySection({
           </div>
         )}
       </section>
+
       {/* === Validité par filière === */}
       {filieres.length > 0 && (
         <section>

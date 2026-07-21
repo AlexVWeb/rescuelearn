@@ -128,3 +128,77 @@ export function computeNextExpiry(
   );
   return { type: soonest.type, expiryDate: soonest.effectiveExpiry };
 }
+
+export interface ExternalTrainingAnomaly {
+  code: "FUTURE_DATE" | "MISSING_INITIAL" | "FC_BEFORE_INITIAL";
+  message: string;
+}
+
+/**
+ * Detects anomalies for a given external training:
+ * - FUTURE_DATE: obtainedAt is in the future.
+ * - MISSING_INITIAL: isFC is true but no initial training (isFC = false) exists for that type.
+ * - FC_BEFORE_INITIAL: isFC is true, initial training exists, but obtainedAt of FC is BEFORE or SAME AS the initial diploma date.
+ */
+export function detectExternalTrainingAnomalies(
+  ext: ExternalTrainingEntry & { id?: string },
+  inscriptions: PlatformTrainingEntry[],
+  externalTrainings: Array<ExternalTrainingEntry & { id?: string }>,
+  now = dayjs()
+): ExternalTrainingAnomaly[] {
+  const anomalies: ExternalTrainingAnomaly[] = [];
+
+  const extObtainedAt = dayjs(ext.obtainedAt);
+
+  // 1. Check for future date
+  if (extObtainedAt.isAfter(now, "day")) {
+    anomalies.push({
+      code: "FUTURE_DATE",
+      message: `Date d'obtention incohérente : le ${extObtainedAt.format("DD/MM/YYYY")} se situe dans le futur.`,
+    });
+  }
+
+  // 2. Check for FC anomalies
+  if (ext.isFC) {
+    // Find all initial trainings for this type
+    const platformInitialDates = inscriptions
+      .filter(
+        (i) =>
+          i.trainingSession.type === ext.type &&
+          i.status === "présent" &&
+          !i.trainingSession.isFC &&
+          i.trainingSession.startDate != null
+      )
+      .map((i) => dayjs(i.trainingSession.startDate!));
+
+    const externalInitialDates = externalTrainings
+      .filter(
+        (e) =>
+          e.type === ext.type && !e.isFC && (ext.id ? e.id !== ext.id : true)
+      )
+      .map((e) => dayjs(e.obtainedAt));
+
+    const allInitialDates = [
+      ...platformInitialDates,
+      ...externalInitialDates,
+    ].sort((a, b) => a.diff(b));
+
+    if (allInitialDates.length === 0) {
+      anomalies.push({
+        code: "MISSING_INITIAL",
+        message: `Aucune formation initiale connue pour la filière ${ext.type}.`,
+      });
+    } else {
+      // Find the earliest initial diploma date
+      const earliestInitialDate = allInitialDates[0];
+      if (extObtainedAt.isBefore(earliestInitialDate, "day")) {
+        anomalies.push({
+          code: "FC_BEFORE_INITIAL",
+          message: `Incohérence chronologique : la Formation Continue du ${extObtainedAt.format("DD/MM/YYYY")} est antérieure au diplôme initial du ${earliestInitialDate.format("DD/MM/YYYY")}.`,
+        });
+      }
+    }
+  }
+
+  return anomalies;
+}
