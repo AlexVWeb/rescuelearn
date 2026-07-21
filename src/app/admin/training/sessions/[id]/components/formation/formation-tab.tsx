@@ -50,6 +50,7 @@ interface FormationTabProps {
     location: string;
     startDate: Date | null;
     slots: Slot[];
+    status?: string;
   };
   inscriptions: Inscription[];
   formateur: {
@@ -68,12 +69,16 @@ export function FormationTab({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
+  const isClosed =
+    session.status === "terminée" || session.status === "annulée";
+
   const inscriptionsWithResult = inscriptions.filter(
     (i) => !!i.attestationResult
   );
   const hasAnyResult = inscriptionsWithResult.length > 0;
 
   async function handleUpdateResult(id: string, value: string) {
+    if (isClosed) return;
     setLoading(true);
     try {
       await updateAttestationResult(
@@ -217,7 +222,7 @@ export function FormationTab({
                     onValueChange={(val) =>
                       handleUpdateResult(inscription.id, val)
                     }
-                    disabled={loading}
+                    disabled={loading || isClosed}
                   >
                     <SelectTrigger className="h-8 w-[140px]">
                       <SelectValue placeholder="Non défini" />

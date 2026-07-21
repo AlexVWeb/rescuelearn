@@ -46,7 +46,10 @@ describe("TrainingSessionService", () => {
       const data = { title: "Updated" } as unknown as Parameters<
         typeof TrainingSessionService.updateSession
       >[1];
-      mockPrisma.trainingSession.findFirst.mockResolvedValue({ id: "s1" });
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "planifiée",
+      });
       mockPrisma.trainingSession.update.mockResolvedValue({
         id: "s1",
         ...data,
@@ -65,6 +68,60 @@ describe("TrainingSessionService", () => {
       });
     });
 
+    it("allows updating status on a closed session", async () => {
+      const data = { status: "en_cours" } as unknown as Parameters<
+        typeof TrainingSessionService.updateSession
+      >[1];
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "terminée",
+      });
+      mockPrisma.trainingSession.update.mockResolvedValue({
+        id: "s1",
+        status: "en_cours",
+      });
+
+      const result = await TrainingSessionService.updateSession(
+        "s1",
+        data,
+        "org-1"
+      );
+
+      expect(result.status).toBe("en_cours");
+    });
+
+    it("throws error when trying to update non-status fields on a closed session", async () => {
+      const data = { title: "New Title" } as unknown as Parameters<
+        typeof TrainingSessionService.updateSession
+      >[1];
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "terminée",
+      });
+
+      await expect(
+        TrainingSessionService.updateSession("s1", data, "org-1")
+      ).rejects.toThrow(
+        "Seul le statut peut être modifié sur une session clôturée"
+      );
+    });
+
+    it("throws error when trying to change status from terminée to planifiée", async () => {
+      const data = { status: "planifiée" } as unknown as Parameters<
+        typeof TrainingSessionService.updateSession
+      >[1];
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "terminée",
+      });
+
+      await expect(
+        TrainingSessionService.updateSession("s1", data, "org-1")
+      ).rejects.toThrow(
+        "Impossible de faire repasser une session terminée au statut planifiée"
+      );
+    });
+
     it("throws error if session not found", async () => {
       mockPrisma.trainingSession.findFirst.mockResolvedValue(null);
       await expect(
@@ -81,7 +138,10 @@ describe("TrainingSessionService", () => {
 
   describe("deleteSession", () => {
     it("deletes a session", async () => {
-      mockPrisma.trainingSession.findFirst.mockResolvedValue({ id: "s1" });
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "planifiée",
+      });
       mockPrisma.trainingSession.delete.mockResolvedValue({ id: "s1" });
 
       const result = await TrainingSessionService.deleteSession("s1", "org-1");
@@ -90,6 +150,17 @@ describe("TrainingSessionService", () => {
       expect(mockPrisma.trainingSession.delete).toHaveBeenCalledWith({
         where: { id: "s1" },
       });
+    });
+
+    it("throws error when trying to delete a completed session", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "terminée",
+      });
+
+      await expect(
+        TrainingSessionService.deleteSession("s1", "org-1")
+      ).rejects.toThrow("Impossible de supprimer une session terminée");
     });
 
     it("throws error if session not found", async () => {

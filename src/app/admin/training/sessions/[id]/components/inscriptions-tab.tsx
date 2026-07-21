@@ -2,6 +2,7 @@
 import { logger } from "@/lib/logger";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -50,6 +51,7 @@ interface InscriptionsTabProps {
     slots: Slot[];
     isFC?: boolean;
     type: string;
+    status?: string;
   };
   inscriptions: Inscription[];
   allTrainees: Trainee[];
@@ -72,6 +74,9 @@ export function InscriptionsTab({
   const [selectedTrainee, setSelectedTrainee] = useState("");
   const [showTraineeDialog, setShowTraineeDialog] = useState(false);
 
+  const isClosed =
+    session.status === "terminée" || session.status === "annulée";
+
   const isPSC = session.type === "PSC";
   const inscribedIds = inscriptions.map((i) => i.traineeId);
   const availableTrainees = allTrainees.filter(
@@ -79,14 +84,18 @@ export function InscriptionsTab({
   );
 
   async function handleAddTrainee() {
-    if (!selectedTrainee) return;
+    if (!selectedTrainee || isClosed) return;
     setLoading(true);
     try {
       await addTraineeToSession(sessionId, selectedTrainee);
       setSelectedTrainee("");
+      toast.success("Stagiaire inscrit avec succès");
       router.refresh();
     } catch (e) {
       logger.error(e);
+      toast.error(
+        e instanceof Error ? e.message : "Erreur lors de l'inscription"
+      );
     } finally {
       setLoading(false);
     }
@@ -95,35 +104,50 @@ export function InscriptionsTab({
   async function handleTraineeCreated(traineeId: string) {
     setLoading(true);
     try {
-      await addTraineeToSession(sessionId, traineeId);
+      if (!isClosed) {
+        await addTraineeToSession(sessionId, traineeId);
+      }
       router.refresh();
     } catch (e) {
       logger.error(e);
+      toast.error(
+        e instanceof Error ? e.message : "Erreur lors de l'inscription"
+      );
     } finally {
       setLoading(false);
     }
   }
 
   async function handleRemove(id: string) {
+    if (isClosed) return;
     if (!confirm("Voulez-vous désinscrire ce stagiaire ?")) return;
     setLoading(true);
     try {
       await removeTraineeFromSession(id);
+      toast.success("Stagiaire désinscrit");
       router.refresh();
     } catch (e) {
       logger.error(e);
+      toast.error(
+        e instanceof Error ? e.message : "Erreur lors de la désinscription"
+      );
     } finally {
       setLoading(false);
     }
   }
 
   async function handleUpdateStatus(id: string, status: string) {
+    if (isClosed) return;
     setLoading(true);
     try {
       await updateInscriptionStatus(id, status);
+      toast.success("Statut mis à jour");
       router.refresh();
     } catch (e) {
       logger.error(e);
+      toast.error(
+        e instanceof Error ? e.message : "Erreur lors de la mise à jour"
+      );
     } finally {
       setLoading(false);
     }
@@ -188,62 +212,64 @@ export function InscriptionsTab({
           )}
         </CardHeader>
         <CardContent>
-          <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row">
-            <Select
-              value={selectedTrainee}
-              onValueChange={setSelectedTrainee}
-              disabled={inscriptions.length >= maxTrainees || loading}
-            >
-              <SelectTrigger className="w-full sm:w-[300px]">
-                <SelectValue placeholder="Sélectionner un stagiaire" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableTrainees.map((trainee) => (
-                  <SelectItem key={trainee.id} value={trainee.id}>
-                    {trainee.firstName} {trainee.lastName}
-                  </SelectItem>
-                ))}
-                {availableTrainees.length === 0 && (
-                  <SelectItem value="none" disabled>
-                    Aucun stagiaire disponible
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-            <Button
-              onClick={handleAddTrainee}
-              disabled={
-                !selectedTrainee ||
-                inscriptions.length >= maxTrainees ||
-                loading
-              }
-              className="w-full sm:w-auto"
-            >
-              <UserPlus className="mr-2 h-4 w-4" /> Inscrire
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowTraineeDialog(true)}
-              disabled={inscriptions.length >= maxTrainees || loading}
-              className="w-full sm:w-auto"
-            >
-              <UserRoundPlus className="mr-2 h-4 w-4" /> Nouveau
-            </Button>
-            <TraineeImportDialog sessionId={sessionId}>
+          {!isClosed && (
+            <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row">
+              <Select
+                value={selectedTrainee}
+                onValueChange={setSelectedTrainee}
+                disabled={inscriptions.length >= maxTrainees || loading}
+              >
+                <SelectTrigger className="w-full sm:w-[300px]">
+                  <SelectValue placeholder="Sélectionner un stagiaire" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTrainees.map((trainee) => (
+                    <SelectItem key={trainee.id} value={trainee.id}>
+                      {trainee.firstName} {trainee.lastName}
+                    </SelectItem>
+                  ))}
+                  {availableTrainees.length === 0 && (
+                    <SelectItem value="none" disabled>
+                      Aucun stagiaire disponible
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleAddTrainee}
+                disabled={
+                  !selectedTrainee ||
+                  inscriptions.length >= maxTrainees ||
+                  loading
+                }
+                className="w-full sm:w-auto"
+              >
+                <UserPlus className="mr-2 h-4 w-4" /> Inscrire
+              </Button>
               <Button
                 variant="outline"
+                onClick={() => setShowTraineeDialog(true)}
                 disabled={inscriptions.length >= maxTrainees || loading}
                 className="w-full sm:w-auto"
               >
-                <Upload className="mr-2 h-4 w-4" /> Importer
+                <UserRoundPlus className="mr-2 h-4 w-4" /> Nouveau
               </Button>
-            </TraineeImportDialog>
-            {inscriptions.length >= maxTrainees && (
-              <span className="text-destructive ml-2 text-sm">
-                Session complète
-              </span>
-            )}
-          </div>
+              <TraineeImportDialog sessionId={sessionId}>
+                <Button
+                  variant="outline"
+                  disabled={inscriptions.length >= maxTrainees || loading}
+                  className="w-full sm:w-auto"
+                >
+                  <Upload className="mr-2 h-4 w-4" /> Importer
+                </Button>
+              </TraineeImportDialog>
+              {inscriptions.length >= maxTrainees && (
+                <span className="text-destructive ml-2 text-sm">
+                  Session complète
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             {inscriptions.length === 0 ? (
@@ -268,23 +294,25 @@ export function InscriptionsTab({
 
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     {getStatusBadge(inscription.status)}
-                    <Select
-                      value={inscription.status}
-                      onValueChange={(val) =>
-                        handleUpdateStatus(inscription.id, val)
-                      }
-                      disabled={loading}
-                    >
-                      <SelectTrigger className="h-8 w-[130px]">
-                        <SelectValue placeholder="Statut" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="inscrit">Inscrit</SelectItem>
-                        <SelectItem value="présent">Présent</SelectItem>
-                        <SelectItem value="absent">Absent</SelectItem>
-                        <SelectItem value="éliminé">Éliminé</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {!isClosed && (
+                      <Select
+                        value={inscription.status}
+                        onValueChange={(val) =>
+                          handleUpdateStatus(inscription.id, val)
+                        }
+                        disabled={loading}
+                      >
+                        <SelectTrigger className="h-8 w-[130px]">
+                          <SelectValue placeholder="Statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inscrit">Inscrit</SelectItem>
+                          <SelectItem value="présent">Présent</SelectItem>
+                          <SelectItem value="absent">Absent</SelectItem>
+                          <SelectItem value="éliminé">Éliminé</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                     {isPSC && (
                       <Button
                         variant="ghost"
@@ -297,15 +325,17 @@ export function InscriptionsTab({
                         <ClipboardList className="h-4 w-4" />
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive h-8 w-8"
-                      onClick={() => handleRemove(inscription.id)}
-                      disabled={loading}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {!isClosed && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive h-8 w-8"
+                        onClick={() => handleRemove(inscription.id)}
+                        disabled={loading}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))

@@ -41,6 +41,7 @@ describe("Slot Actions", () => {
       mockPrisma.trainingSession.findFirst.mockResolvedValue({
         id: "s1",
         organismeId: "org-1",
+        status: "planifiée",
       });
       mockPrisma.slot.create.mockResolvedValue({ id: "slot-1" });
 
@@ -58,6 +59,23 @@ describe("Slot Actions", () => {
       });
     });
 
+    it("throws error if session is closed", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        organismeId: "org-1",
+        status: "terminée",
+      });
+
+      await expect(
+        createSlot("s1", {
+          label: "Day 1",
+          date: new Date(),
+          startTime: "09:00",
+          endTime: "17:00",
+        })
+      ).rejects.toThrow("Impossible de modifier une session clôturée");
+    });
+
     it("throws error if session not found", async () => {
       mockPrisma.trainingSession.findFirst.mockResolvedValue(null);
 
@@ -71,7 +89,7 @@ describe("Slot Actions", () => {
     it("successfully deletes a slot", async () => {
       mockPrisma.slot.findUnique.mockResolvedValue({
         id: "slot-1",
-        trainingSession: { organismeId: "org-1" },
+        trainingSession: { organismeId: "org-1", status: "planifiée" },
       });
       mockPrisma.slot.delete.mockResolvedValue({ id: "slot-1" });
 
@@ -83,10 +101,21 @@ describe("Slot Actions", () => {
       });
     });
 
+    it("throws error if session is closed", async () => {
+      mockPrisma.slot.findUnique.mockResolvedValue({
+        id: "slot-1",
+        trainingSession: { organismeId: "org-1", status: "terminée" },
+      });
+
+      await expect(deleteSlot("slot-1")).rejects.toThrow(
+        "Impossible de modifier une session clôturée"
+      );
+    });
+
     it("throws error if slot not found or unauthorized", async () => {
       mockPrisma.slot.findUnique.mockResolvedValue({
         id: "slot-1",
-        trainingSession: { organismeId: "org-other" },
+        trainingSession: { organismeId: "org-other", status: "planifiée" },
       });
 
       await expect(deleteSlot("slot-1")).rejects.toThrow(

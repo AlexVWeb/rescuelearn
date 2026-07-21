@@ -154,6 +154,7 @@ export function SessionTabsLayout({
               slots={slots}
               sessionStartDate={session.startDate}
               sessionEndDate={session.endDate}
+              sessionStatus={session.status}
             />
           )}
         </TabsContent>
@@ -169,6 +170,7 @@ export function SessionTabsLayout({
                 slots: slots,
                 isFC: session.isFC,
                 type: session.type,
+                status: session.status,
               }}
               inscriptions={inscriptions}
               allTrainees={allTrainees}
@@ -186,6 +188,7 @@ export function SessionTabsLayout({
               sessionTitle={session.title}
               sessionLocation={session.location}
               sessionType={session.type}
+              sessionStatus={session.status}
               slots={slots}
               inscriptions={inscriptions}
             />
@@ -201,6 +204,7 @@ export function SessionTabsLayout({
                 location: session.location,
                 startDate: session.startDate,
                 slots: slots,
+                status: session.status,
               }}
               inscriptions={inscriptions}
               formateur={formateur}

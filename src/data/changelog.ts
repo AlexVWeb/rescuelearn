@@ -19,6 +19,7 @@ export const changelogData: ChangelogItem[] = [
     category: "feature",
     details: [
       "Ajout de la modification et de la mise à jour des formations externes existantes.",
+      "Verrouillage strict des sessions clôturées (créneaux, inscriptions, émargements et résultats), tout en préservant l'édition des données personnelles des stagiaires.",
       "Validation automatique de la présence stagiaire dès validation de l'émargement.",
       "Harmonisation visuelle des espaces administration et formation avec le nouveau logo de la plateforme.",
       "Nettoyage et amélioration des formulaires de session.",

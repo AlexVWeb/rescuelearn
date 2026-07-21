@@ -42,6 +42,7 @@ interface SlotsTabProps {
   slots: Slot[];
   sessionStartDate: Date | null;
   sessionEndDate: Date | null;
+  sessionStatus?: string;
 }
 
 export function SlotsTab({
@@ -49,10 +50,13 @@ export function SlotsTab({
   slots,
   sessionStartDate,
   sessionEndDate,
+  sessionStatus,
 }: SlotsTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState<SlotSuggestion | null>(null);
+
+  const isClosed = sessionStatus === "terminée" || sessionStatus === "annulée";
 
   const [newSlot, setNewSlot] = useState({
     label: "",
@@ -63,6 +67,7 @@ export function SlotsTab({
 
   // Mettre à jour la suggestion quand les slots changent
   useEffect(() => {
+    if (isClosed) return;
     const nextSuggestion = getNextSlotSuggestion(
       slots,
       sessionStartDate,
@@ -74,13 +79,14 @@ export function SlotsTab({
     if (!newSlot.label && nextSuggestion) {
       setNewSlot(nextSuggestion);
     }
-  }, [slots, sessionStartDate, sessionEndDate, newSlot.label]);
+  }, [slots, sessionStartDate, sessionEndDate, newSlot.label, isClosed]);
 
   const isDateValid =
     !newSlot.date ||
     isDateWithinSession(newSlot.date, sessionStartDate, sessionEndDate);
 
   async function handleAddSlot() {
+    if (isClosed) return;
     if (
       !newSlot.label ||
       !newSlot.date ||
@@ -138,6 +144,7 @@ export function SlotsTab({
   }
 
   async function handleDelete(id: string) {
+    if (isClosed) return;
     if (!confirm("Voulez-vous supprimer ce créneau ?")) return;
     setLoading(true);
     try {
@@ -175,7 +182,18 @@ export function SlotsTab({
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid gap-6">
-            {!isDateValid && (
+            {isClosed && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Session clôturée</AlertTitle>
+                <AlertDescription>
+                  La session est clôturée. Les créneaux ne peuvent plus être
+                  modifiés.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!isClosed && !isDateValid && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Attention</AlertTitle>
@@ -185,72 +203,75 @@ export function SlotsTab({
               </Alert>
             )}
 
-            <div className="grid grid-cols-1 items-end gap-4 lg:grid-cols-12">
-              <div className="grid gap-2 lg:col-span-3">
-                <label className="flex items-center gap-2 text-sm font-semibold">
-                  Libellé
-                </label>
-                <Input
-                  value={newSlot.label}
-                  onChange={(e) =>
-                    setNewSlot({ ...newSlot, label: e.target.value })
-                  }
-                  placeholder="Ex: Jour 1 - Matin"
-                  className="bg-muted/30 focus-visible:ring-primary"
-                />
+            {!isClosed && (
+              <div className="grid grid-cols-1 items-end gap-4 lg:grid-cols-12">
+                <div className="grid gap-2 lg:col-span-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold">
+                    Libellé
+                  </label>
+                  <Input
+                    value={newSlot.label}
+                    onChange={(e) =>
+                      setNewSlot({ ...newSlot, label: e.target.value })
+                    }
+                    placeholder="Ex: Jour 1 - Matin"
+                    className="bg-muted/30 focus-visible:ring-primary"
+                  />
+                </div>
+                <div className="grid gap-2 lg:col-span-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold">
+                    <Calendar className="h-3.5 w-3.5" /> Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={newSlot.date}
+                    onChange={(e) =>
+                      setNewSlot({ ...newSlot, date: e.target.value })
+                    }
+                    className={cn(
+                      "bg-muted/30 focus-visible:ring-primary",
+                      !isDateValid && "border-destructive text-destructive"
+                    )}
+                  />
+                </div>
+                <div className="grid gap-2 lg:col-span-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold">
+                    <Clock className="h-3.5 w-3.5" /> Début
+                  </label>
+                  <Input
+                    type="time"
+                    value={newSlot.startTime}
+                    onChange={(e) =>
+                      setNewSlot({ ...newSlot, startTime: e.target.value })
+                    }
+                    className="bg-muted/30 focus-visible:ring-primary"
+                  />
+                </div>
+                <div className="grid gap-2 lg:col-span-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold">
+                    <Clock className="h-3.5 w-3.5" /> Fin
+                  </label>
+                  <Input
+                    type="time"
+                    value={newSlot.endTime}
+                    onChange={(e) =>
+                      setNewSlot({ ...newSlot, endTime: e.target.value })
+                    }
+                    className="bg-muted/30 focus-visible:ring-primary"
+                  />
+                </div>
+                <Button
+                  onClick={handleAddSlot}
+                  disabled={loading || !isDateValid}
+                  className="w-full transition-all hover:scale-[1.02] lg:col-span-2"
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Ajouter
+                </Button>
               </div>
-              <div className="grid gap-2 lg:col-span-3">
-                <label className="flex items-center gap-2 text-sm font-semibold">
-                  <Calendar className="h-3.5 w-3.5" /> Date
-                </label>
-                <Input
-                  type="date"
-                  value={newSlot.date}
-                  onChange={(e) =>
-                    setNewSlot({ ...newSlot, date: e.target.value })
-                  }
-                  className={cn(
-                    "bg-muted/30 focus-visible:ring-primary",
-                    !isDateValid && "border-destructive text-destructive"
-                  )}
-                />
-              </div>
-              <div className="grid gap-2 lg:col-span-2">
-                <label className="flex items-center gap-2 text-sm font-semibold">
-                  <Clock className="h-3.5 w-3.5" /> Début
-                </label>
-                <Input
-                  type="time"
-                  value={newSlot.startTime}
-                  onChange={(e) =>
-                    setNewSlot({ ...newSlot, startTime: e.target.value })
-                  }
-                  className="bg-muted/30 focus-visible:ring-primary"
-                />
-              </div>
-              <div className="grid gap-2 lg:col-span-2">
-                <label className="flex items-center gap-2 text-sm font-semibold">
-                  <Clock className="h-3.5 w-3.5" /> Fin
-                </label>
-                <Input
-                  type="time"
-                  value={newSlot.endTime}
-                  onChange={(e) =>
-                    setNewSlot({ ...newSlot, endTime: e.target.value })
-                  }
-                  className="bg-muted/30 focus-visible:ring-primary"
-                />
-              </div>
-              <Button
-                onClick={handleAddSlot}
-                disabled={loading || !isDateValid}
-                className="w-full transition-all hover:scale-[1.02] lg:col-span-2"
-              >
-                <Plus className="mr-2 h-4 w-4" /> Ajouter
-              </Button>
-            </div>
+            )}
 
-            {suggestion &&
+            {!isClosed &&
+              suggestion &&
               (newSlot.label !== suggestion.label ||
                 newSlot.date !== suggestion.date) && (
                 <div
@@ -301,39 +322,43 @@ export function SlotsTab({
                   .map((slot) => (
                     <div
                       key={slot.id}
-                      className="group bg-card hover:border-primary/20 flex items-center justify-between rounded-xl border p-4 transition-all hover:shadow-md"
+                      className="bg-card hover:border-primary/20 flex flex-col justify-between gap-4 rounded-xl border p-4 shadow-sm transition-all sm:flex-row sm:items-center"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full font-bold">
-                          {slot.label.match(/\d+/)?.[0] || "?"}
+                        <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                          <Calendar className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold lg:text-base">
-                            {slot.label}
-                          </p>
-                          <div className="mt-1 flex items-center gap-4">
-                            <span className="text-muted-foreground flex items-center gap-1.5 text-xs capitalize lg:text-sm">
-                              <Calendar className="h-3.5 w-3.5" />
-                              {dayjs(slot.date)
-                                .startOf("day")
-                                .format("dddd DD/MM/YYYY")}
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-base font-semibold">
+                              {slot.label}
+                            </h4>
+                          </div>
+                          <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                            <span className="capitalize">
+                              {dayjs(slot.date).format("dddd DD MMMM YYYY")}
                             </span>
-                            <span className="text-muted-foreground flex items-center gap-1.5 text-xs lg:text-sm">
+                            <span className="flex items-center gap-1 font-medium">
                               <Clock className="h-3.5 w-3.5" />
                               {slot.startTime} - {slot.endTime}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-                        onClick={() => handleDelete(slot.id)}
-                        disabled={loading}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+
+                      {!isClosed && (
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDelete(slot.id)}
+                            disabled={loading}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ))
               )}

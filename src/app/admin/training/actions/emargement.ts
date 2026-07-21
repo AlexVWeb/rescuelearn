@@ -4,6 +4,13 @@ import { randomInt } from "node:crypto";
 import dayjs from "dayjs";
 import { requireOrganisme, getTenantPrisma } from "@/lib/context";
 import { Inscription, Slot } from "@prisma/client";
+import { SESSION_STATUS } from "../types";
+
+function isSessionClosed(status: string) {
+  return (
+    status === SESSION_STATUS.TERMINEE || status === SESSION_STATUS.ANNULEE
+  );
+}
 
 function generatePin() {
   return randomInt(100000, 1000000).toString();
@@ -24,6 +31,10 @@ export async function generateSlotPin(slotId: string) {
   // Par sécurité et clarté, on garde la vérification explicite.
   if (!slot || slot.trainingSession.organismeId !== user.organismeId) {
     throw new Error("Créneau introuvable ou non autorisé");
+  }
+
+  if (isSessionClosed(slot.trainingSession.status)) {
+    throw new Error("Impossible de modifier une session clôturée");
   }
 
   const pin = generatePin();
@@ -64,6 +75,10 @@ export async function generateSessionPin(sessionId: string) {
 
   if (!session || session.organismeId !== user.organismeId) {
     throw new Error("Session introuvable ou non autorisée");
+  }
+
+  if (isSessionClosed(session.status)) {
+    throw new Error("Impossible de modifier une session clôturée");
   }
 
   const pinBySlot = Object.fromEntries(
@@ -118,6 +133,10 @@ export async function updateEmargementStatus(
     throw new Error("Inscription introuvable ou non autorisée");
   }
 
+  if (isSessionClosed(inscription.trainingSession.status)) {
+    throw new Error("Impossible de modifier une session clôturée");
+  }
+
   const emargement = await tenant.emargement.upsert({
     where: { inscriptionId_slotId: { inscriptionId, slotId } },
     update: { status },
@@ -148,6 +167,10 @@ export async function bulkUpdateEmargementStatus(
 
   if (!slot || slot.trainingSession.organismeId !== user.organismeId) {
     throw new Error("Créneau introuvable ou non autorisé");
+  }
+
+  if (isSessionClosed(slot.trainingSession.status)) {
+    throw new Error("Impossible de modifier une session clôturée");
   }
 
   const inscriptions = await tenant.inscription.findMany({

@@ -121,7 +121,7 @@ describe("generateSlotPin", () => {
     mockPrisma.slot.findUnique.mockResolvedValue({
       id: "slot-1",
       trainingSessionId: "session-1",
-      trainingSession: { organismeId: "org-1" },
+      trainingSession: { organismeId: "org-1", status: "planifiée" },
     });
     mockPrisma.inscription.findMany.mockResolvedValue([
       { id: "ins-1" },
@@ -138,7 +138,7 @@ describe("generateSlotPin", () => {
     mockPrisma.slot.findUnique.mockResolvedValue({
       id: "slot-1",
       trainingSessionId: "session-1",
-      trainingSession: { organismeId: "org-1" },
+      trainingSession: { organismeId: "org-1", status: "planifiée" },
     });
     mockPrisma.inscription.findMany.mockResolvedValue([
       { id: "ins-1" },
@@ -292,7 +292,7 @@ describe("updateEmargementStatus", () => {
     mockAuthenticatedUser("org-1");
     mockPrisma.inscription.findUnique.mockResolvedValue({
       id: "ins-1",
-      trainingSession: { organismeId: "org-1" },
+      trainingSession: { organismeId: "org-1", status: "planifiée" },
     });
 
     await updateEmargementStatus("ins-1", "slot-1", EMARGEMENT_STATUS.ABSENT);
@@ -309,7 +309,7 @@ describe("updateEmargementStatus", () => {
     mockAuthenticatedUser("org-1");
     mockPrisma.inscription.findUnique.mockResolvedValue({
       id: "ins-1",
-      trainingSession: { organismeId: "org-1" },
+      trainingSession: { organismeId: "org-1", status: "planifiée" },
     });
 
     await updateEmargementStatus("ins-1", "slot-1", EMARGEMENT_STATUS.VALIDE);
@@ -353,7 +353,7 @@ describe("bulkUpdateEmargementStatus", () => {
     mockPrisma.slot.findUnique.mockResolvedValue({
       id: "slot-1",
       trainingSessionId: "session-1",
-      trainingSession: { organismeId: "org-1" },
+      trainingSession: { organismeId: "org-1", status: "planifiée" },
     });
     mockPrisma.inscription.findMany.mockResolvedValue([
       { id: "ins-1" },

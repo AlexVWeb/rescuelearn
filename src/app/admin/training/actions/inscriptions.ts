@@ -2,7 +2,13 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireOrganisme, getTenantPrisma } from "@/lib/context";
-import { ATTESTATION_RESULT } from "../types";
+import { ATTESTATION_RESULT, SESSION_STATUS } from "../types";
+
+function isSessionClosed(status: string) {
+  return (
+    status === SESSION_STATUS.TERMINEE || status === SESSION_STATUS.ANNULEE
+  );
+}
 
 export async function addTraineeToSession(
   sessionId: string,
@@ -18,6 +24,10 @@ export async function addTraineeToSession(
 
   if (!session || !trainee)
     throw new Error("Entité introuvable ou non autorisée");
+
+  if (isSessionClosed(session.status)) {
+    throw new Error("Impossible de modifier une session clôturée");
+  }
 
   return tenant.inscription.create({
     data: { trainingSessionId: sessionId, traineeId },
@@ -40,6 +50,10 @@ export async function removeTraineeFromSession(inscriptionId: string) {
     throw new Error("Inscription introuvable ou non autorisée");
   }
 
+  if (isSessionClosed(inscription.trainingSession.status)) {
+    throw new Error("Impossible de modifier une session clôturée");
+  }
+
   return prisma.inscription.delete({ where: { id: inscriptionId } });
 }
 
@@ -59,6 +73,10 @@ export async function updateInscriptionStatus(
     inscription.trainingSession.organismeId !== user.organismeId
   ) {
     throw new Error("Inscription introuvable ou non autorisée");
+  }
+
+  if (isSessionClosed(inscription.trainingSession.status)) {
+    throw new Error("Impossible de modifier une session clôturée");
   }
 
   return prisma.inscription.update({
@@ -83,6 +101,10 @@ export async function updateAttestationResult(
     inscription.trainingSession.organismeId !== user.organismeId
   ) {
     throw new Error("Inscription introuvable ou non autorisée");
+  }
+
+  if (isSessionClosed(inscription.trainingSession.status)) {
+    throw new Error("Impossible de modifier une session clôturée");
   }
 
   return prisma.inscription.update({

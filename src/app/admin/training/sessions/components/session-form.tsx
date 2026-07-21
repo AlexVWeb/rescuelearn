@@ -64,6 +64,10 @@ export function SessionForm({
 }: SessionFormProps) {
   const router = useRouter();
 
+  const isClosed =
+    sessionItem?.status === SESSION_STATUS.TERMINEE ||
+    sessionItem?.status === SESSION_STATUS.ANNULEE;
+
   const form = useForm<SessionFormValues>({
     resolver: zodResolver(sessionSchema),
     defaultValues: {
@@ -98,15 +102,15 @@ export function SessionForm({
         if (onSuccess) {
           onSuccess(result.id);
         } else {
-          router.refresh();
+          router.push(`/admin/training/sessions/${result.id}`);
         }
       }
     } catch (error) {
-      logger.error("Failed to save session", error);
+      logger.error("Failed to save training session", error);
       toast.error(
         error instanceof Error
           ? error.message
-          : "Erreur lors de l'enregistrement"
+          : "Une erreur est survenue lors de l'enregistrement"
       );
     }
   }
@@ -121,7 +125,11 @@ export function SessionForm({
             <FormItem>
               <FormLabel>Titre (Ex: Session Grand Public)</FormLabel>
               <FormControl>
-                <Input placeholder="Formation d'Avril" {...field} />
+                <Input
+                  placeholder="Formation d'Avril"
+                  {...field}
+                  disabled={isClosed}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -138,6 +146,7 @@ export function SessionForm({
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
+                  disabled={isClosed}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -170,6 +179,7 @@ export function SessionForm({
                     type="number"
                     min={1}
                     {...field}
+                    disabled={isClosed}
                     onChange={(e) =>
                       field.onChange(
                         e.target.value ? Number(e.target.value) : ""
@@ -192,13 +202,13 @@ export function SessionForm({
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
+                  disabled={isClosed}
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
                 <FormLabel>Formation Continue (FC)</FormLabel>
                 <FormDescription>
                   Cochez si cette session est une formation continue annuelle
-                  obligatoire
                 </FormDescription>
               </div>
             </FormItem>
@@ -210,9 +220,13 @@ export function SessionForm({
           name="location"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Lieu de formation</FormLabel>
+              <FormLabel>Lieu</FormLabel>
               <FormControl>
-                <Input placeholder="Salle des fêtes, Paris" {...field} />
+                <Input
+                  placeholder="Adresse ou salle"
+                  {...field}
+                  disabled={isClosed}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -225,9 +239,14 @@ export function SessionForm({
             name="startDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Date de début</FormLabel>
+                <FormLabel>Date de début prévisionnelle</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} value={field.value || ""} />
+                  <Input
+                    type="date"
+                    {...field}
+                    value={field.value || ""}
+                    disabled={isClosed}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -239,9 +258,14 @@ export function SessionForm({
             name="endDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Date de fin</FormLabel>
+                <FormLabel>Date de fin prévisionnelle</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} value={field.value || ""} />
+                  <Input
+                    type="date"
+                    {...field}
+                    value={field.value || ""}
+                    disabled={isClosed}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -266,9 +290,11 @@ export function SessionForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value={SESSION_STATUS.PLANIFIEE}>
-                      Planifiée
-                    </SelectItem>
+                    {sessionItem.status !== SESSION_STATUS.TERMINEE && (
+                      <SelectItem value={SESSION_STATUS.PLANIFIEE}>
+                        Planifiée
+                      </SelectItem>
+                    )}
                     <SelectItem value={SESSION_STATUS.EN_COURS}>
                       En Cours
                     </SelectItem>
@@ -288,7 +314,7 @@ export function SessionForm({
 
         <div className="flex items-center justify-between pt-4">
           <div className="flex gap-2">
-            {sessionItem && (
+            {sessionItem && sessionItem.status !== SESSION_STATUS.TERMINEE && (
               <DeleteSessionButton
                 sessionId={sessionItem.id}
                 sessionTitle={sessionItem.title}

@@ -40,6 +40,7 @@ interface EmargementTableProps {
   slots: Slot[];
   inscriptions: Inscription[];
   loading: boolean;
+  isClosed?: boolean;
   onStatusChange: (
     inscriptionId: string,
     slotId: string,
@@ -53,6 +54,7 @@ export function EmargementTable({
   slots,
   inscriptions,
   loading,
+  isClosed = false,
   onStatusChange,
   onBulkStatusChange,
   onGeneratePin,
@@ -75,6 +77,7 @@ export function EmargementTable({
                     slot={slot}
                     pin={getSlotPin(inscriptions, slot.id)}
                     loading={loading}
+                    isClosed={isClosed}
                     onGeneratePin={onGeneratePin}
                     onBulkStatusChange={onBulkStatusChange}
                   />
@@ -97,6 +100,7 @@ export function EmargementTable({
                       <EmargementCell
                         status={getEmargementStatus(inscription, slot.id)}
                         loading={loading}
+                        isClosed={isClosed}
                         onStatusChange={(status) =>
                           onStatusChange(inscription.id, slot.id, status)
                         }

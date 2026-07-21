@@ -6,14 +6,18 @@ import { EmargementStatus } from "../../../../../types";
 interface EmargementCellProps {
   status: EmargementStatus;
   loading: boolean;
+  isClosed?: boolean;
   onStatusChange: (status: EmargementStatus) => void;
 }
 
 export function EmargementCell({
   status,
   loading,
+  isClosed = false,
   onStatusChange,
 }: EmargementCellProps) {
+  const isDisabled = loading || isClosed;
+
   return (
     <div className="flex gap-1">
       <Button
@@ -26,7 +30,7 @@ export function EmargementCell({
             : "hover:border-green-600 hover:text-green-600"
         )}
         onClick={() => onStatusChange("validé")}
-        disabled={loading}
+        disabled={isDisabled}
         title="Présent"
       >
         <Check className="h-4 w-4" />
@@ -41,7 +45,7 @@ export function EmargementCell({
             : "hover:border-destructive hover:text-destructive"
         )}
         onClick={() => onStatusChange("absent")}
-        disabled={loading}
+        disabled={isDisabled}
         title="Absent"
       >
         <X className="h-4 w-4" />
@@ -56,7 +60,7 @@ export function EmargementCell({
             : "text-muted-foreground hover:bg-secondary/50"
         )}
         onClick={() => onStatusChange("en_attente")}
-        disabled={loading}
+        disabled={isDisabled}
         title="Réinitialiser"
       >
         <Clock className="h-4 w-4" />

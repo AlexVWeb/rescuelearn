@@ -58,6 +58,7 @@ describe("Inscription Actions", () => {
     it("successfully adds a trainee to a session", async () => {
       mockPrisma.trainingSession.findFirst.mockResolvedValue({
         id: "session-1",
+        status: "planifiée",
       });
       mockPrisma.trainee.findFirst.mockResolvedValue({ id: "trainee-1" });
       mockPrisma.inscription.create.mockResolvedValue({ id: "ins-1" });
@@ -68,6 +69,18 @@ describe("Inscription Actions", () => {
       expect(mockPrisma.inscription.create).toHaveBeenCalledWith({
         data: { trainingSessionId: "session-1", traineeId: "trainee-1" },
       });
+    });
+
+    it("throws error if session is closed", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "session-1",
+        status: "terminée",
+      });
+      mockPrisma.trainee.findFirst.mockResolvedValue({ id: "trainee-1" });
+
+      await expect(
+        addTraineeToSession("session-1", "trainee-1")
+      ).rejects.toThrow("Impossible de modifier une session clôturée");
     });
 
     it("throws error if session or trainee is not found", async () => {
@@ -84,7 +97,7 @@ describe("Inscription Actions", () => {
     it("successfully removes a trainee from a session", async () => {
       mockPrisma.inscription.findUnique.mockResolvedValue({
         id: "ins-1",
-        trainingSession: { organismeId: "org-1" },
+        trainingSession: { organismeId: "org-1", status: "planifiée" },
       });
       mockPrisma.inscription.delete.mockResolvedValue({ id: "ins-1" });
 
@@ -96,10 +109,21 @@ describe("Inscription Actions", () => {
       });
     });
 
+    it("throws error if session is closed", async () => {
+      mockPrisma.inscription.findUnique.mockResolvedValue({
+        id: "ins-1",
+        trainingSession: { organismeId: "org-1", status: "terminée" },
+      });
+
+      await expect(removeTraineeFromSession("ins-1")).rejects.toThrow(
+        "Impossible de modifier une session clôturée"
+      );
+    });
+
     it("throws error if inscription not found or unauthorized", async () => {
       mockPrisma.inscription.findUnique.mockResolvedValue({
         id: "ins-1",
-        trainingSession: { organismeId: "org-other" },
+        trainingSession: { organismeId: "org-other", status: "planifiée" },
       });
 
       await expect(removeTraineeFromSession("ins-1")).rejects.toThrow(
@@ -112,7 +136,7 @@ describe("Inscription Actions", () => {
     it("successfully updates inscription status", async () => {
       mockPrisma.inscription.findUnique.mockResolvedValue({
         id: "ins-1",
-        trainingSession: { organismeId: "org-1" },
+        trainingSession: { organismeId: "org-1", status: "planifiée" },
       });
       mockPrisma.inscription.update.mockResolvedValue({
         id: "ins-1",
@@ -131,7 +155,7 @@ describe("Inscription Actions", () => {
     it("throws error if unauthorized", async () => {
       mockPrisma.inscription.findUnique.mockResolvedValue({
         id: "ins-1",
-        trainingSession: { organismeId: "org-other" },
+        trainingSession: { organismeId: "org-other", status: "planifiée" },
       });
 
       await expect(updateInscriptionStatus("ins-1", "présent")).rejects.toThrow(
@@ -144,7 +168,7 @@ describe("Inscription Actions", () => {
     it("successfully updates attestation result", async () => {
       mockPrisma.inscription.findUnique.mockResolvedValue({
         id: "ins-1",
-        trainingSession: { organismeId: "org-1" },
+        trainingSession: { organismeId: "org-1", status: "planifiée" },
       });
       mockPrisma.inscription.update.mockResolvedValue({
         id: "ins-1",
@@ -168,7 +192,7 @@ describe("Inscription Actions", () => {
     it("throws error if unauthorized", async () => {
       mockPrisma.inscription.findUnique.mockResolvedValue({
         id: "ins-1",
-        trainingSession: { organismeId: "org-other" },
+        trainingSession: { organismeId: "org-other", status: "planifiée" },
       });
 
       await expect(updateAttestationResult("ins-1", "acquis")).rejects.toThrow(

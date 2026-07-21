@@ -14,6 +14,7 @@ export interface EmargementTabProps {
   sessionTitle: string;
   sessionLocation?: string | null;
   sessionType?: string;
+  sessionStatus?: string;
   slots: Slot[];
   inscriptions: Inscription[];
 }
@@ -23,9 +24,12 @@ export function EmargementTab({
   sessionTitle,
   sessionLocation,
   sessionType,
+  sessionStatus,
   slots,
   inscriptions,
 }: EmargementTabProps) {
+  const isClosed = sessionStatus === "terminée" || sessionStatus === "annulée";
+
   const {
     loading,
     isAutoRefresh,
@@ -80,16 +84,18 @@ export function EmargementTab({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={handleGenerateSessionPin}
-            disabled={loading}
-          >
-            <RefreshCw
-              className={cn("mr-2 h-4 w-4", loading && "animate-spin")}
-            />
-            Générer PIN global
-          </Button>
+          {!isClosed && (
+            <Button
+              variant="outline"
+              onClick={handleGenerateSessionPin}
+              disabled={loading}
+            >
+              <RefreshCw
+                className={cn("mr-2 h-4 w-4", loading && "animate-spin")}
+              />
+              Générer PIN global
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() =>
@@ -113,6 +119,7 @@ export function EmargementTab({
         slots={slots}
         inscriptions={inscriptions}
         loading={loading}
+        isClosed={isClosed}
         onStatusChange={handleStatusChange}
         onBulkStatusChange={handleBulkStatusChange}
         onGeneratePin={handleGeneratePin}
