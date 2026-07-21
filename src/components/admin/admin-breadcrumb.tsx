@@ -21,29 +21,69 @@ const routeNameMap: Record<string, string> = {
   quiz: "Quiz",
   quizzes: "Quiz",
   questions: "Questions",
+  sessions: "Sessions",
+  stagiaires: "Stagiaires",
+  organisme: "Mon organisme",
+  new: "Nouveau",
+  edit: "Modifier",
+  dashboard: "Tableau de bord",
 };
 
 export function AdminBreadcrumb() {
-  const pathname = usePathname();
-  const segments = pathname.split("/").filter((segment) => segment !== "");
+  const pathname = usePathname() || "";
+  const items: { name: string; href: string }[] = [];
+
+  if (pathname.startsWith("/admin/training")) {
+    // Organisme admin / Trainer space
+    items.push({ name: "Tableau de bord", href: "/admin/training/dashboard" });
+
+    const subPath = pathname.replace(/^\/admin\/training/, "");
+    const segments = subPath.split("/").filter((s) => s !== "");
+
+    // If the first segment is "dashboard", we don't need to add it since we already have the root "Tableau de bord"
+    if (segments.length > 0 && segments[0] !== "dashboard") {
+      let accumulatedPath = "/admin/training";
+      segments.forEach((segment) => {
+        accumulatedPath += `/${segment}`;
+        const name =
+          routeNameMap[segment] ||
+          segment.charAt(0).toUpperCase() + segment.slice(1);
+        items.push({ name, href: accumulatedPath });
+      });
+    }
+  } else if (pathname.startsWith("/admin")) {
+    // Super admin space
+    items.push({ name: "Dashboard", href: "/admin" });
+
+    const subPath = pathname.replace(/^\/admin/, "");
+    const segments = subPath.split("/").filter((s) => s !== "");
+
+    let accumulatedPath = "/admin";
+    segments.forEach((segment) => {
+      accumulatedPath += `/${segment}`;
+      const name =
+        routeNameMap[segment] ||
+        segment.charAt(0).toUpperCase() + segment.slice(1);
+      items.push({ name, href: accumulatedPath });
+    });
+  }
+
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        {segments.map((segment, index) => {
-          const isLast = index === segments.length - 1;
-          const href = `/${segments.slice(0, index + 1).join("/")}`;
-          const name =
-            routeNameMap[segment] ||
-            segment.charAt(0).toUpperCase() + segment.slice(1);
-
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
           return (
-            <React.Fragment key={href}>
+            <React.Fragment key={item.href}>
               <BreadcrumbItem className="hidden md:block">
                 {isLast ? (
-                  <BreadcrumbPage>{name}</BreadcrumbPage>
+                  <BreadcrumbPage>{item.name}</BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink href={href}>{name}</BreadcrumbLink>
+                  <BreadcrumbLink href={item.href}>{item.name}</BreadcrumbLink>
                 )}
               </BreadcrumbItem>
               {!isLast && <BreadcrumbSeparator className="hidden md:block" />}
