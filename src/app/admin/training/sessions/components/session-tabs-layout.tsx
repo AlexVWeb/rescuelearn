@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { SessionStatusBadge } from "./session-status-badge";
 import { MapPin, Users, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -92,11 +93,7 @@ export function SessionTabsLayout({
                 <Users className="h-4 w-4" /> {inscriptions.length} /{" "}
                 {session.maxTrainees} inscrits
               </span>
-              <Badge
-                variant={session.status === "terminée" ? "default" : "outline"}
-              >
-                {session.status}
-              </Badge>
+              <SessionStatusBadge status={session.status} />
             </div>
           )}
           {isNew && (

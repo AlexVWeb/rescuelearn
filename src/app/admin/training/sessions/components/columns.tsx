@@ -8,7 +8,7 @@ import { Pencil, ArrowUpDown, Eye } from "lucide-react";
 import { DeleteSessionButton } from "./delete-session-button";
 import dayjs from "dayjs";
 import Link from "next/link";
-import { SESSION_STATUS } from "../../types";
+import { SessionStatusBadge } from "./session-status-badge";
 
 export const columns: ColumnDef<TrainingSession>[] = [
   {
@@ -40,21 +40,9 @@ export const columns: ColumnDef<TrainingSession>[] = [
   {
     accessorKey: "status",
     header: "Statut",
-    cell: ({ row }) => {
-      const status = row.getValue("status") as string;
-      switch (status) {
-        case SESSION_STATUS.PLANIFIEE:
-          return <Badge variant="secondary">Planifiée</Badge>;
-        case SESSION_STATUS.EN_COURS:
-          return <Badge className="bg-blue-600">En cours</Badge>;
-        case SESSION_STATUS.TERMINEE:
-          return <Badge className="bg-green-600">Terminée</Badge>;
-        case SESSION_STATUS.ANNULEE:
-          return <Badge variant="destructive">Annulée</Badge>;
-        default:
-          return <Badge variant="outline">{status}</Badge>;
-      }
-    },
+    cell: ({ row }) => (
+      <SessionStatusBadge status={row.getValue("status") as string} />
+    ),
   },
   {
     id: "dates",
