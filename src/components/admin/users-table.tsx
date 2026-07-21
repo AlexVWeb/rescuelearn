@@ -1,26 +1,22 @@
 "use client";
 
 import * as React from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import {
-  ChevronDown,
   ChevronFirst,
   ChevronLast,
   ChevronLeft,
   ChevronRight,
   MoreHorizontal,
   ArrowUpDown,
+  Search,
+  SlidersHorizontal,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -51,25 +47,79 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { User } from "@/app/actions/user-actions";
+import { UserRole } from "@/lib/roles";
 
-import { User } from "@/app/actions/user-actions"; // Import Shared Type
-
-// Define Props
 interface UsersTableProps {
   data: User[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
   onDelete: (id: string) => void;
   onEdit: (user: User) => void;
 }
 
-export function UsersTable({ data, onDelete, onEdit }: UsersTableProps) {
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  ADMIN_ORGANISME: "Admin Organisme",
+  FORMATEUR: "Formateur",
+  PLAYER: "Apprenant",
+};
+
+export function UsersTable({ data, meta, onDelete, onEdit }: UsersTableProps) {
   "use no memo";
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = React.useTransition();
+
+  // Local state for search to avoid queries on every keystroke
+  const [searchVal, setSearchVal] = React.useState(
+    searchParams.get("search") || ""
   );
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
+
+  const currentRole = searchParams.get("role") || "all";
+  const currentStatus = searchParams.get("status") || "all";
+  const currentSortBy = searchParams.get("sortBy") || "createdAt";
+  const currentSortOrder =
+    (searchParams.get("sortOrder") as "asc" | "desc") || "desc";
+
+  const updateParams = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    // Default to page 1 on filter/search change unless explicitly overriding page
+    if (!("page" in updates)) {
+      params.delete("page");
+    }
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "all" || value === "") {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`);
+    });
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateParams({ search: searchVal });
+  };
+
+  const handleSort = (field: string) => {
+    let order: "asc" | "desc" = "asc";
+    if (currentSortBy === field && currentSortOrder === "asc") {
+      order = "desc";
+    }
+    updateParams({ sortBy: field, sortOrder: order });
+  };
 
   const columns: ColumnDef<User>[] = [
     {
@@ -91,31 +141,19 @@ export function UsersTable({ data, onDelete, onEdit }: UsersTableProps) {
           aria-label="Select row"
         />
       ),
-      enableSorting: false,
-      enableHiding: false,
     },
     {
       accessorKey: "name",
-      header: ({ column }) => {
+      header: () => {
         return (
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              onClick={() =>
-                column.toggleSorting(column.getIsSorted() === "asc")
-              }
-              className="data-[state=open]:bg-accent -ml-3 h-8"
-            >
-              <span>Name</span>
-              {column.getIsSorted() === "desc" ? (
-                <ChevronDown className="ml-2 h-4 w-4" />
-              ) : column.getIsSorted() === "asc" ? (
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100" />
-              )}
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            onClick={() => handleSort("name")}
+            className="-ml-3 flex h-8 items-center gap-1 font-semibold"
+          >
+            <span>Nom / Email</span>
+            <ArrowUpDown className="h-4 w-4" />
+          </Button>
         );
       },
       cell: ({ row }) => {
@@ -129,7 +167,9 @@ export function UsersTable({ data, onDelete, onEdit }: UsersTableProps) {
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="font-medium">{user.name}</span>
+              <span className="text-sm font-medium">
+                {user.name || "Sans nom"}
+              </span>
               <span className="text-muted-foreground text-xs">
                 {user.email}
               </span>
@@ -140,20 +180,17 @@ export function UsersTable({ data, onDelete, onEdit }: UsersTableProps) {
     },
     {
       accessorKey: "roles",
-      header: "Roles",
+      header: "Rôles",
       cell: ({ row }) => {
-        // Assuming roles is array or string. Adjust based on real data
-        const roles = row.getValue("roles");
-        // Quick normalization for display
-        let roleDisplay = "USER";
-        if (Array.isArray(roles) && roles.length > 0)
-          roleDisplay = roles.join(", ");
-        else if (typeof roles === "string") roleDisplay = roles;
+        const roles = row.getValue("roles") as UserRole[];
+        const displayRoles = Array.isArray(roles)
+          ? roles.map((r) => ROLE_LABELS[r] || r).join(", ")
+          : "Aucun";
 
         return (
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             <Badge variant="secondary" className="text-xs font-normal">
-              {roleDisplay}
+              {displayRoles}
             </Badge>
           </div>
         );
@@ -161,25 +198,44 @@ export function UsersTable({ data, onDelete, onEdit }: UsersTableProps) {
     },
     {
       accessorKey: "emailVerified",
-      header: "Status",
+      header: "Statut",
       cell: ({ row }) => {
-        const isVerified = row.getValue("emailVerified");
+        const isVerified = row.getValue("emailVerified") as boolean;
         return (
           <Badge
             variant={isVerified ? "outline" : "destructive"}
             className="font-normal capitalize"
           >
-            {isVerified ? "Verified" : "Unverified"}
+            {isVerified ? "Vérifié" : "Non vérifié"}
           </Badge>
         );
       },
     },
     {
+      accessorKey: "createdAt",
+      header: () => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => handleSort("createdAt")}
+            className="-ml-3 flex h-8 items-center gap-1 font-semibold"
+          >
+            <span>Date d'inscription</span>
+            <ArrowUpDown className="h-4 w-4" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => {
+        const date = new Date(row.original.createdAt);
+        return (
+          <span className="text-sm">{date.toLocaleDateString("fr-FR")}</span>
+        );
+      },
+    },
+    {
       id: "actions",
-      enableHiding: false,
       cell: ({ row }) => {
         const user = row.original;
-
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -193,17 +249,17 @@ export function UsersTable({ data, onDelete, onEdit }: UsersTableProps) {
               <DropdownMenuItem
                 onClick={() => navigator.clipboard.writeText(user.id)}
               >
-                Copy User ID
+                Copier l'ID utilisateur
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onEdit(user)}>
-                Edit details
+                Modifier les détails
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onDelete(user.id)}
                 className="text-destructive focus:text-destructive"
               >
-                Delete User
+                Supprimer l'utilisateur
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -215,53 +271,98 @@ export function UsersTable({ data, onDelete, onEdit }: UsersTableProps) {
   const table = useReactTable({
     data,
     columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
-    },
+    manualPagination: true,
+    manualSorting: true,
   });
 
   return (
     <div className="space-y-4">
-      {/* Filters & Toolbar could go here */}
-      <div className="flex items-center justify-between">
-        <Input
-          placeholder="Filter names..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("name")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
+      {/* Barre d'outils et de filtrage */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="flex max-w-sm flex-1 items-center gap-2"
+        >
+          <div className="relative flex-1">
+            <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
+            <Input
+              placeholder="Rechercher par nom, email..."
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          <Button type="submit" variant="secondary" size="sm">
+            Rechercher
+          </Button>
+        </form>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Filtre par Rôle */}
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground flex items-center gap-1 text-xs font-medium">
+              <SlidersHorizontal className="h-3 w-3" /> Rôle:
+            </span>
+            <Select
+              value={currentRole}
+              onValueChange={(val) => updateParams({ role: val })}
+            >
+              <SelectTrigger className="h-9 w-[150px]">
+                <SelectValue placeholder="Tous les rôles" />
+              </SelectTrigger>
+              <SelectContent side="top">
+                <SelectItem value="all">Tous les rôles</SelectItem>
+                <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                <SelectItem value="ADMIN_ORGANISME">Admin Organisme</SelectItem>
+                <SelectItem value="FORMATEUR">Formateur</SelectItem>
+                <SelectItem value="PLAYER">Apprenant</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Filtre par Statut */}
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs font-medium">
+              Statut:
+            </span>
+            <Select
+              value={currentStatus}
+              onValueChange={(val) => updateParams({ status: val })}
+            >
+              <SelectTrigger className="h-9 w-[130px]">
+                <SelectValue placeholder="Tous" />
+              </SelectTrigger>
+              <SelectContent side="top">
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="verified">Vérifié</SelectItem>
+                <SelectItem value="unverified">Non vérifié</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-md border">
+      <div className="relative rounded-md border">
+        {isPending && (
+          <div className="bg-background/50 absolute inset-0 z-10 flex items-center justify-center">
+            <div className="border-primary h-6 w-6 animate-spin rounded-full border-b-2"></div>
+          </div>
+        )}
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -288,7 +389,7 @@ export function UsersTable({ data, onDelete, onEdit }: UsersTableProps) {
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  Aucun résultat.
                 </TableCell>
               </TableRow>
             )}
@@ -296,25 +397,22 @@ export function UsersTable({ data, onDelete, onEdit }: UsersTableProps) {
         </Table>
       </div>
 
-      {/* Pagination Controls */}
+      {/* Contrôles de pagination */}
       <div className="flex items-center justify-between px-2">
         <div className="text-muted-foreground flex-1 text-sm">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+          Total : {meta.total} utilisateur(s)
         </div>
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium">Rows per page</p>
+            <p className="text-sm font-medium">Lignes par page</p>
             <Select
-              value={`${table.getState().pagination.pageSize}`}
+              value={`${meta.limit}`}
               onValueChange={(value) => {
-                table.setPageSize(Number(value));
+                updateParams({ limit: value, page: "1" });
               }}
             >
               <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue
-                  placeholder={table.getState().pagination.pageSize}
-                />
+                <SelectValue placeholder={meta.limit} />
               </SelectTrigger>
               <SelectContent side="top">
                 {[10, 20, 30, 40, 50].map((pageSize) => (
@@ -326,44 +424,43 @@ export function UsersTable({ data, onDelete, onEdit }: UsersTableProps) {
             </Select>
           </div>
           <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
+            Page {meta.page} sur {meta.totalPages || 1}
           </div>
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
+              onClick={() => updateParams({ page: "1" })}
+              disabled={meta.page <= 1}
             >
-              <span className="sr-only">Go to first page</span>
+              <span className="sr-only">Première page</span>
               <ChevronFirst className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               className="h-8 w-8 p-0"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
+              onClick={() => updateParams({ page: (meta.page - 1).toString() })}
+              disabled={meta.page <= 1}
             >
-              <span className="sr-only">Go to previous page</span>
+              <span className="sr-only">Page précédente</span>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               className="h-8 w-8 p-0"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
+              onClick={() => updateParams({ page: (meta.page + 1).toString() })}
+              disabled={meta.page >= meta.totalPages}
             >
-              <span className="sr-only">Go to next page</span>
+              <span className="sr-only">Page suivante</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
+              onClick={() => updateParams({ page: meta.totalPages.toString() })}
+              disabled={meta.page >= meta.totalPages}
             >
-              <span className="sr-only">Go to last page</span>
+              <span className="sr-only">Dernière page</span>
               <ChevronLast className="h-4 w-4" />
             </Button>
           </div>

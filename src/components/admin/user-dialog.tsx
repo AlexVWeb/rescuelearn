@@ -133,10 +133,10 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
         onOpenChange(false);
         router.refresh();
       } else {
-        setError(result.error || "Something went wrong");
+        setError(result.error || "Une erreur est survenue");
       }
     } catch {
-      setError("An unexpected error occurred");
+      setError("Une erreur inattendue est survenue");
     } finally {
       setLoading(false);
     }
@@ -146,11 +146,13 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{user ? "Edit User" : "Add User"}</DialogTitle>
+          <DialogTitle>
+            {user ? "Modifier l'utilisateur" : "Ajouter un utilisateur"}
+          </DialogTitle>
           <DialogDescription>
             {user
-              ? "Make changes to the user profile here."
-              : "Add a new user to the system."}
+              ? "Modifiez les informations du profil de l'utilisateur ici."
+              : "Ajoutez un nouvel utilisateur au système."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -160,7 +162,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Nom</FormLabel>
                   <FormControl>
                     <Input placeholder="John Doe" {...field} />
                   </FormControl>
@@ -190,7 +192,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
+                  <FormLabel>Rôle</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
@@ -198,10 +200,11 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
+                        <SelectValue placeholder="Sélectionnez un rôle" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value={UserRole.PLAYER}>Apprenant</SelectItem>
                       <SelectItem value={UserRole.FORMATEUR}>
                         Formateur
                       </SelectItem>
@@ -261,7 +264,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
 
             <DialogFooter>
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : "Save changes"}
+                {loading ? "Enregistrement..." : "Enregistrer"}
               </Button>
             </DialogFooter>
           </form>

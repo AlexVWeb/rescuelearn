@@ -2,6 +2,7 @@
 import { logger } from "@/lib/logger";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { UserRole, hasRole } from "@/lib/roles";
 import { getUserContext } from "@/lib/context";
@@ -22,7 +23,11 @@ export type User = {
 export async function getUsersAction(
   page: number = 1,
   limit: number = 10,
-  search: string = ""
+  search: string = "",
+  role?: string,
+  status?: string,
+  sortBy?: "name" | "email" | "createdAt",
+  sortOrder?: "asc" | "desc"
 ) {
   const caller = await getUserContext();
   if (!hasRole(caller.roles, UserRole.SUPER_ADMIN)) {
@@ -31,14 +36,28 @@ export async function getUsersAction(
 
   const skip = (page - 1) * limit;
 
-  const where = search
-    ? {
-        OR: [
-          { name: { contains: search, mode: "insensitive" as const } },
-          { email: { contains: search, mode: "insensitive" as const } },
-        ],
-      }
-    : {};
+  const where: Prisma.UserWhereInput = {};
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" as const } },
+      { email: { contains: search, mode: "insensitive" as const } },
+    ];
+  }
+
+  if (role && role !== "all") {
+    where.roles = {
+      array_contains: role,
+    };
+  }
+
+  if (status && status !== "all") {
+    where.emailVerified = status === "verified";
+  }
+
+  const orderBy = sortBy
+    ? { [sortBy]: sortOrder || "asc" }
+    : { createdAt: "desc" as const };
 
   try {
     const [users, total] = await Promise.all([
@@ -46,7 +65,7 @@ export async function getUsersAction(
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: "desc" },
+        orderBy,
       }),
       prisma.user.count({ where }),
     ]);
