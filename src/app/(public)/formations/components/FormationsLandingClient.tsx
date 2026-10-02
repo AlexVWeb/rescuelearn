@@ -16,6 +16,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { DemoContactForm } from "./DemoContactForm";
+import { FAQ_ITEMS } from "../content";
 
 // Tabs for interactive feature showcase
 const FEATURES = [
@@ -48,32 +49,6 @@ const FEATURES = [
     icon: Users,
     image: "/base_stagiaire.png",
     alt: "Capture d'écran de l'annuaire et de la fiche individuelle d'un stagiaire dans RescueLearn",
-  },
-];
-
-// FAQ items
-const FAQ_ITEMS = [
-  {
-    question: "Comment fonctionne l'émargement numérique sur RescueLearn ?",
-    answer:
-      "RescueLearn simplifie l'émargement. Lors d'une session de formation, chaque stagiaire peut émarger directement sur tablette, smartphone ou ordinateur en saisissant un code PIN individuel sécurisé ou en signant sur l'écran. La feuille d'émargement PDF est générée instantanément avec les signatures et horodatages.",
-  },
-  {
-    question: "La plateforme aide-t-elle à préparer les audits Qualiopi ?",
-    answer:
-      "Oui, tout à fait. RescueLearn centralise de façon structurée et infalsifiable toutes les pièces administratives requises lors d'un audit de certification (indicateurs de la base stagiaire, feuilles d'émargement signées numériquement, taux d'assiduité, et résultats d'évaluations). Cela vous évite les pertes de documents et facilite grandement la preuve de conformité.",
-  },
-  {
-    question:
-      "Pouvons-nous gérer plusieurs formateurs au sein de notre organisme ?",
-    answer:
-      "Absolument. En tant qu'administrateur de votre organisme sur RescueLearn, vous pouvez inviter vos formateurs, leur attribuer des sessions spécifiques et leur donner accès à la gestion de leurs stagiaires en toute autonomie.",
-  },
-  {
-    question:
-      "Vos documents générés (PDF) sont-ils conformes aux exigences réglementaires ?",
-    answer:
-      "Oui, les attestations de fin de formation et les feuilles d'émargement générées automatiquement contiennent toutes les mentions obligatoires requises par la DGSCGC et les financeurs publics : dates, heures, noms des formateurs, détails des modules de secourisme et signatures sécurisées.",
   },
 ];
 
@@ -120,9 +95,9 @@ export function FormationsLandingClient() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="mt-6 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl md:text-6xl"
             >
-              Gerez vos formations en secourisme <br />
+              Gérez vos formations en secourisme <br />
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                en toute simplicite
+                en toute simplicité
               </span>
             </motion.h1>
 
@@ -132,9 +107,9 @@ export function FormationsLandingClient() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="mx-auto mt-6 max-w-3xl text-lg text-slate-600 sm:text-xl"
             >
-              De la planification des sessions a la signature numerique des
+              De la planification des sessions à la signature numérique des
               stagiaires. Automatisez vos documents administratifs et simplifiez
-              la conformite de vos audits.
+              la conformité de vos audits.
             </motion.p>
 
             <motion.div
@@ -147,14 +122,14 @@ export function FormationsLandingClient() {
                 href="#demo"
                 className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-6 py-3.5 text-base font-semibold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-700 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               >
-                Demander une demo gratuite
+                Demander une démo gratuite
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
               <Link
                 href="/login"
                 className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-base font-semibold text-slate-700 transition-all hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600"
               >
-                Acceder a l&apos;espace
+                Accéder à l&apos;espace
               </Link>
             </motion.div>
           </div>
@@ -169,7 +144,7 @@ export function FormationsLandingClient() {
             <div className="overflow-hidden rounded-xl border border-slate-100 bg-slate-900 shadow-inner">
               <Image
                 src="/dashboard_resculearn.png"
-                alt="Apercu global de la plateforme RescueLearn pour les organismes de formation"
+                alt="Aperçu global de la plateforme RescueLearn pour les organismes de formation"
                 width={1200}
                 height={675}
                 className="w-full object-cover transition-transform duration-700 hover:scale-102"
@@ -183,7 +158,7 @@ export function FormationsLandingClient() {
       {/* Stats Section */}
       <section
         className="border-y border-slate-200 bg-white py-12"
-        aria-label="Statistiques cles"
+        aria-label="Statistiques clés"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-8 text-center sm:grid-cols-3">
@@ -195,7 +170,7 @@ export function FormationsLandingClient() {
                 -75%
               </span>
               <span className="mt-2 text-sm font-medium text-slate-500">
-                De temps administratif passe par session
+                De temps administratif passé par session
               </span>
             </div>
             <div className="flex flex-col items-center">
@@ -206,7 +181,7 @@ export function FormationsLandingClient() {
                 100%
               </span>
               <span className="mt-2 text-sm font-medium text-slate-500">
-                Securise & Conforme aux exigences administratives
+                Sécurisé & conforme aux exigences administratives
               </span>
             </div>
             <div className="flex flex-col items-center">
@@ -217,7 +192,7 @@ export function FormationsLandingClient() {
                 Zero
               </span>
               <span className="mt-2 text-sm font-medium text-slate-500">
-                Papier a imprimer pour l&apos;emargement
+                Papier à imprimer pour l&apos;émargement
               </span>
             </div>
           </div>
@@ -232,10 +207,10 @@ export function FormationsLandingClient() {
               id="showcase-title"
               className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl"
             >
-              Une solution complete pensee pour les formateurs
+              Une solution complète pensée pour les formateurs
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
-              Decouvrez les outils cles pour optimiser, administrer et valoriser
+              Découvrez les outils clés pour optimiser, administrer et valoriser
               vos sessions de formation au secourisme.
             </p>
           </div>
@@ -245,7 +220,7 @@ export function FormationsLandingClient() {
             <div
               className="flex flex-col gap-4 lg:col-span-5"
               role="tablist"
-              aria-label="Fonctionnalites principales"
+              aria-label="Fonctionnalités principales"
             >
               {FEATURES.map((feature) => {
                 const Icon = feature.icon;
@@ -335,8 +310,8 @@ export function FormationsLandingClient() {
               Pourquoi choisir RescueLearn ?
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
-              Assurez un suivi administratif impeccable et offrez a vos
-              stagiaires une experience moderne.
+              Assurez un suivi administratif impeccable et offrez à vos
+              stagiaires une expérience moderne.
             </p>
           </div>
 
@@ -346,11 +321,11 @@ export function FormationsLandingClient() {
               <div className="inline-flex rounded-xl bg-blue-500/10 p-3 text-blue-400">
                 <ShieldCheck className="h-6 w-6" />
               </div>
-              <h3 className="mt-6 text-xl font-bold">Securite & Conformite</h3>
+              <h3 className="mt-6 text-xl font-bold">Sécurité & Conformité</h3>
               <p className="mt-3 text-sm leading-relaxed text-slate-400">
-                Sauvegardes automatiques, acces securises par roles
-                (administrateurs, formateurs), emargements certifies par PIN
-                individuel et tracabilite complete de vos donnees.
+                Sauvegardes automatiques, accès sécurisés par rôles
+                (administrateurs, formateurs), émargements certifiés par PIN
+                individuel et traçabilité complète de vos données.
               </p>
             </div>
 
@@ -360,10 +335,10 @@ export function FormationsLandingClient() {
                 <FileSpreadsheet className="h-6 w-6" />
               </div>
               <h3 className="mt-6 text-xl font-bold">
-                Generation PDF Instantanee
+                Génération PDF instantanée
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-slate-400">
-                Generez des fiches de presence et des attestations de reussite
+                Générez des fiches de présence et des attestations de réussite
                 au format officiel en un clic. Plus besoin de compiler
                 manuellement les signatures.
               </p>
@@ -374,11 +349,11 @@ export function FormationsLandingClient() {
               <div className="inline-flex rounded-xl bg-purple-500/10 p-3 text-purple-400">
                 <Users className="h-6 w-6" />
               </div>
-              <h3 className="mt-6 text-xl font-bold">Suivi et Pedagogie</h3>
+              <h3 className="mt-6 text-xl font-bold">Suivi et Pédagogie</h3>
               <p className="mt-3 text-sm leading-relaxed text-slate-400">
-                Vos stagiaires beneficient d&apos;un acces aux quiz interactifs
-                et scenarios de secourisme en ligne pour ancrer durablement
-                leurs competences et maximiser leur reussite.
+                Vos stagiaires bénéficient d&apos;un accès aux quiz interactifs
+                et scénarios de secourisme en ligne pour ancrer durablement
+                leurs compétences et maximiser leur réussite.
               </p>
             </div>
           </div>
@@ -393,10 +368,10 @@ export function FormationsLandingClient() {
               id="faq-title"
               className="text-3xl font-bold tracking-tight text-slate-900"
             >
-              Questions Frequentes
+              Questions fréquentes
             </h2>
             <p className="mt-4 text-lg text-slate-600">
-              Tout ce que vous devez savoir pour demarrer sereinement.
+              Tout ce que vous devez savoir pour démarrer sereinement.
             </p>
           </div>
 
@@ -419,23 +394,23 @@ export function FormationsLandingClient() {
                       className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
                     />
                   </button>
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div
-                        id={`faq-answer-${index}`}
-                        role="region"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="overflow-hidden"
-                      >
-                        <p className="px-4 pb-4 text-sm leading-relaxed text-slate-600">
-                          {faq.answer}
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {/* Toujours rendu dans le DOM pour rester indexable */}
+                  <motion.div
+                    id={`faq-answer-${index}`}
+                    role="region"
+                    aria-hidden={!isOpen}
+                    initial={false}
+                    animate={{
+                      height: isOpen ? "auto" : 0,
+                      opacity: isOpen ? 1 : 0,
+                    }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden"
+                  >
+                    <p className="px-4 pb-4 text-sm leading-relaxed text-slate-600">
+                      {faq.answer}
+                    </p>
+                  </motion.div>
                 </div>
               );
             })}
@@ -456,11 +431,11 @@ export function FormationsLandingClient() {
                 id="demo-title"
                 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl"
               >
-                Pret a digitaliser votre centre de formation ?
+                Prêt à digitaliser votre centre de formation ?
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-slate-600">
                 Remplissez le formulaire ci-contre pour obtenir une
-                demonstration personnalisee et decouvrir comment RescueLearn
+                démonstration personnalisée et découvrir comment RescueLearn
                 peut simplifier votre gestion quotidienne.
               </p>
               <div className="mt-8 space-y-4">
@@ -469,7 +444,7 @@ export function FormationsLandingClient() {
                     <ShieldCheck className="h-5 w-5" />
                   </div>
                   <span className="text-sm font-semibold text-slate-700">
-                    Demonstration gratuite et sans engagement
+                    Démonstration gratuite et sans engagement
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -477,7 +452,7 @@ export function FormationsLandingClient() {
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <span className="text-sm font-semibold text-slate-700">
-                    Deploiement et accompagnement sur-mesure
+                    Déploiement et accompagnement sur mesure
                   </span>
                 </div>
               </div>

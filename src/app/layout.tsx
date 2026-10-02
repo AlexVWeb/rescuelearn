@@ -4,16 +4,19 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { IS_INDEXABLE, SITE_NAME, SITE_URL } from "@/lib/site";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
   title: {
-    default: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
+    default: "RescueLearn - Plateforme d'Apprentissage du Secourisme",
     template: "%s | RescueLearn",
   },
   description:
-    "RescueLearn est votre plateforme complète pour apprendre, tester et améliorer vos connaissances en secourisme. Quiz interactifs, formations en ligne, et ressources pratiques pour maîtriser les gestes qui sauvent.",
+    "RescueLearn : quiz, scénarios SNV et cartes pour apprendre le secourisme, et logiciel de gestion de formation pour les organismes (émargement, suivi stagiaires).",
   keywords: [
     "secourisme",
     "formation secourisme",
@@ -29,6 +32,8 @@ export const metadata: Metadata = {
     "PSC",
     "PSE1",
     "PSE2",
+    "logiciel gestion formation secourisme",
+    "émargement numérique",
   ],
   authors: [{ name: "RescueLearn Team" }],
   creator: "RescueLearn",
@@ -41,34 +46,29 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    url: "https://rescuelearn.fr",
-    siteName: "RescueLearn",
-    title: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: "RescueLearn - Plateforme d'Apprentissage du Secourisme",
     description:
       "Apprenez, testez et améliorez vos connaissances en secourisme avec RescueLearn.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RescueLearn - Plateforme d&apos;Apprentissage du Secourisme",
+    title: "RescueLearn - Plateforme d'Apprentissage du Secourisme",
     description:
       "Apprenez, testez et améliorez vos connaissances en secourisme avec RescueLearn.",
     creator: "@rescuelearn",
   },
   robots: {
-    index: true,
-    follow: true,
+    index: IS_INDEXABLE,
+    follow: IS_INDEXABLE,
     googleBot: {
-      index: true,
-      follow: true,
+      index: IS_INDEXABLE,
+      follow: IS_INDEXABLE,
       "max-video-preview": -1,
       "max-image-preview": "large",
       "max-snippet": -1,
     },
-  },
-  verification: {
-    google: "votre-code-google",
-    yandex: "votre-code-yandex",
-    yahoo: "votre-code-yahoo",
   },
 };
 

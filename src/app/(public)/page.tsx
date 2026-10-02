@@ -1,11 +1,14 @@
 import { Metadata } from "next";
 import { HomeClient } from "./components/HomeClient";
+import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title:
-    "RescueLearn - Plateforme d'apprentissage du secourisme | Quiz et formations",
+  title: {
+    absolute:
+      "RescueLearn - Plateforme d'apprentissage du secourisme | Quiz et formations",
+  },
   description:
-    "Découvrez RescueLearn, votre plateforme complète pour apprendre, tester et améliorer vos connaissances en secourisme. Quiz interactifs, formations en ligne, scénarios SNV et ressources pratiques pour maîtriser les gestes qui sauvent.",
+    "Apprenez le secourisme avec des quiz, scénarios SNV et cartes interactives. Organismes de formation : gérez sessions, émargement et stagiaires en ligne.",
   keywords:
     "secourisme, formation, quiz, SNV, premiers secours, PSE1, PSE2, apprentissage, formation continue, gestes qui sauvent",
   authors: [{ name: "RescueLearn" }],
@@ -16,7 +19,6 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://rescuelearn.fr"),
   alternates: {
     canonical: "/",
   },
@@ -24,41 +26,55 @@ export const metadata: Metadata = {
     title: "RescueLearn - Plateforme d'apprentissage du secourisme",
     description:
       "Votre plateforme complète pour l'apprentissage du secourisme. Quiz interactifs et scénarios SNV pour maîtriser les gestes qui sauvent.",
-    url: "https://rescuelearn.fr",
+    url: "/",
     siteName: "RescueLearn",
     locale: "fr_FR",
     type: "website",
-    images: [
-      {
-        url: "/rescuelearn_opengraph.png",
-        width: 1200,
-        height: 630,
-        alt: "RescueLearn - Plateforme d'apprentissage du secourisme",
-      },
-    ],
+    images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "RescueLearn - Plateforme d'apprentissage du secourisme",
     description:
       "Votre plateforme complète pour l'apprentissage du secourisme. Quiz interactifs et scénarios SNV.",
-    images: ["/rescuelearn_opengraph.png"],
     creator: "@rescuelearn",
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
+    images: [DEFAULT_OG_IMAGE],
   },
   category: "education",
 };
 
 export default function Home() {
-  return <HomeClient />;
+  // Schema.org structured data for SEO rich results
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${SITE_URL}/#organization`,
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: `${SITE_URL}/icon.png`,
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        name: SITE_NAME,
+        url: SITE_URL,
+        inLanguage: "fr-FR",
+        description:
+          "Plateforme d'apprentissage du secourisme (quiz, scénarios SNV, score de Glasgow, cartes d'apprentissage) et logiciel de gestion de formation pour les organismes.",
+        publisher: { "@id": `${SITE_URL}/#organization` },
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <HomeClient />
+    </>
+  );
 }

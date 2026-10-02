@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AdminBreadcrumb } from "@/components/admin/admin-breadcrumb";
 import { Separator } from "@/components/ui/separator";
@@ -16,6 +17,10 @@ import { prisma } from "@/lib/prisma";
 import { hasRole, UserRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminLayout({
   children,

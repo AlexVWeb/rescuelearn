@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import logoImg from "@/app/icon.png";
 import { auth } from "@/lib/auth";
@@ -13,6 +14,10 @@ import { PlayerSignOutButton } from "./components/PlayerSignOutButton";
 import { isFeatureEnabled, FeatureKey } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function PlayerLayout({
   children,
