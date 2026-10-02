@@ -38,7 +38,7 @@ export const auth = betterAuth({
     enabled: process.env.NODE_ENV === "production",
     window: 60,
     max: 100,
-    storage: "memory",
+    storage: "database",
     customRules: {
       "/sign-in/email": { window: 15 * 60, max: 5 }, // 5 tentatives / 15 min
       "/sign-up/email": { window: 60 * 60, max: 3 }, // 3 inscriptions / heure
