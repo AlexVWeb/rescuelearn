@@ -321,16 +321,14 @@ export async function importSNVScenarioAction(jsonData: unknown) {
         },
       });
 
-      for (const v of victimes) {
-        await tx.sNVVictim.create({
-          data: {
-            description: v.description,
-            correctAnswer: v.correctAnswer,
-            explanation: v.explanation,
-            scenarioId: scenario.id,
-          },
-        });
-      }
+      await tx.sNVVictim.createMany({
+        data: victimes.map((v) => ({
+          description: v.description,
+          correctAnswer: v.correctAnswer,
+          explanation: v.explanation,
+          scenarioId: scenario.id,
+        })),
+      });
     });
 
     revalidatePath("/admin/snv/scenarios");

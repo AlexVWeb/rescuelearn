@@ -203,59 +203,62 @@ export async function importQuizAction(jsonData: unknown) {
   const data = parsed.data;
 
   try {
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Handle Level
-      let levelId: number | null = null;
-      if (data.level) {
-        const existingLevel = await tx.levelQuestion.findFirst({
-          where: { name: data.level },
-        });
-        if (existingLevel) {
-          levelId = existingLevel.id;
-        } else {
-          const newLevel = await tx.levelQuestion.create({
-            data: { name: data.level },
+    await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        // Handle Level
+        let levelId: number | null = null;
+        if (data.level) {
+          const existingLevel = await tx.levelQuestion.findFirst({
+            where: { name: data.level },
           });
-          levelId = newLevel.id;
+          if (existingLevel) {
+            levelId = existingLevel.id;
+          } else {
+            const newLevel = await tx.levelQuestion.create({
+              data: { name: data.level },
+            });
+            levelId = newLevel.id;
+          }
         }
-      }
 
-      // Create Quiz
-      const quiz = await tx.quiz.create({
-        data: {
-          title: data.title,
-          timePerQuestion: data.timePerQuestion,
-          passingScore: data.passingScore,
-          modeRandom: data.modeRandom,
-          levelId: levelId,
-          status: data.status,
-          referencielId: data.referencielId,
-          generatedByAi: data.generatedByAi,
-          aiModel: data.aiModel,
-          aiPrompt: data.aiPrompt,
-        },
-      });
-
-      // Create Questions
-      for (const q of data.questions) {
-        // Map index to letter
-        const letters = ["A", "B", "C", "D"];
-        const correctLetter = letters[q.correctAnswer] || "A";
-
-        await tx.question.create({
+        // Create Quiz
+        const quiz = await tx.quiz.create({
           data: {
-            text: q.question,
-            explanation: q.explanation,
-            correctAnswer: correctLetter,
-            quizId: quiz.id,
-            tags: q.tags,
-            options: {
-              create: q.options.map((opt) => ({ text: opt })),
-            },
+            title: data.title,
+            timePerQuestion: data.timePerQuestion,
+            passingScore: data.passingScore,
+            modeRandom: data.modeRandom,
+            levelId: levelId,
+            status: data.status,
+            referencielId: data.referencielId,
+            generatedByAi: data.generatedByAi,
+            aiModel: data.aiModel,
+            aiPrompt: data.aiPrompt,
           },
         });
-      }
-    });
+
+        // Create Questions in bulk (one round-trip each for questions and options,
+        // instead of one per question, to stay under the transaction timeout)
+        const letters = ["A", "B", "C", "D"];
+        const questions = await tx.question.createManyAndReturn({
+          data: data.questions.map((q) => ({
+            text: q.question,
+            explanation: q.explanation,
+            correctAnswer: letters[q.correctAnswer] || "A",
+            quizId: quiz.id,
+            tags: q.tags,
+          })),
+          select: { id: true },
+        });
+
+        await tx.questionOption.createMany({
+          data: data.questions.flatMap((q, i) =>
+            q.options.map((opt) => ({ text: opt, questionId: questions[i].id }))
+          ),
+        });
+      },
+      { timeout: 15000 }
+    );
 
     revalidatePath("/admin/quiz/quizzes");
     return { success: true };

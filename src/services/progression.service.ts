@@ -368,79 +368,82 @@ export class ProgressionAdminService {
         });
       }
 
-      await prisma.$transaction(async (tx) => {
-        await tx.progressionNode.deleteMany({
-          where: { treeId },
-        });
-
-        for (let i = 0; i < aiResult.nodes.length; i++) {
-          const aiNode = aiResult.nodes[i];
-          const node = await tx.progressionNode.create({
-            data: {
-              treeId,
-              title: aiNode.title,
-              description: aiNode.description,
-              xpReward: aiNode.xpReward || 100,
-              order: i,
-            },
+      await prisma.$transaction(
+        async (tx) => {
+          await tx.progressionNode.deleteMany({
+            where: { treeId },
           });
 
-          if (aiNode.exercises && Array.isArray(aiNode.exercises)) {
-            for (let j = 0; j < aiNode.exercises.length; j++) {
-              const ex = aiNode.exercises[j];
-              let questionId: number | null = null;
-              let learningCardId: number | null = null;
+          for (let i = 0; i < aiResult.nodes.length; i++) {
+            const aiNode = aiResult.nodes[i];
+            const node = await tx.progressionNode.create({
+              data: {
+                treeId,
+                title: aiNode.title,
+                description: aiNode.description,
+                xpReward: aiNode.xpReward || 100,
+                order: i,
+              },
+            });
 
-              if (ex.type === "QUIZ_QUESTION") {
-                const createdQuestion = await tx.question.create({
-                  data: {
-                    quizId: quiz!.id,
-                    text: ex.questionText,
-                    correctAnswer: String(ex.correctAnswer),
-                    explanation: ex.explanation || "",
-                    options: {
-                      create: ex.options.map((opt: string, oIdx: number) => ({
-                        text: opt,
-                        optionId: String(oIdx),
-                      })),
+            if (aiNode.exercises && Array.isArray(aiNode.exercises)) {
+              for (let j = 0; j < aiNode.exercises.length; j++) {
+                const ex = aiNode.exercises[j];
+                let questionId: number | null = null;
+                let learningCardId: number | null = null;
+
+                if (ex.type === "QUIZ_QUESTION") {
+                  const createdQuestion = await tx.question.create({
+                    data: {
+                      quizId: quiz!.id,
+                      text: ex.questionText,
+                      correctAnswer: String(ex.correctAnswer),
+                      explanation: ex.explanation || "",
+                      options: {
+                        create: ex.options.map((opt: string, oIdx: number) => ({
+                          text: opt,
+                          optionId: String(oIdx),
+                        })),
+                      },
                     },
-                  },
-                });
-                questionId = createdQuestion.id;
-              }
+                  });
+                  questionId = createdQuestion.id;
+                }
 
-              if (ex.type === "FLASHCARD") {
-                const createdCard = await tx.learningCard.create({
+                if (ex.type === "FLASHCARD") {
+                  const createdCard = await tx.learningCard.create({
+                    data: {
+                      theme: ex.flashcardTheme || topic,
+                      info: ex.flashcardInfo || "",
+                      reference: ex.flashcardReference || "",
+                      niveau: tree.level,
+                    },
+                  });
+                  learningCardId = createdCard.id;
+                }
+
+                await tx.progressionNodeExercise.create({
                   data: {
-                    theme: ex.flashcardTheme || topic,
-                    info: ex.flashcardInfo || "",
-                    reference: ex.flashcardReference || "",
-                    niveau: tree.level,
+                    nodeId: node.id,
+                    order: j,
+                    type: ex.type,
+                    questionId,
+                    learningCardId,
+                    courseTitle: ex.courseTitle || null,
+                    courseContent:
+                      ex.courseContent ||
+                      ex.explanation ||
+                      ex.description ||
+                      ex.content ||
+                      null,
                   },
                 });
-                learningCardId = createdCard.id;
               }
-
-              await tx.progressionNodeExercise.create({
-                data: {
-                  nodeId: node.id,
-                  order: j,
-                  type: ex.type,
-                  questionId,
-                  learningCardId,
-                  courseTitle: ex.courseTitle || null,
-                  courseContent:
-                    ex.courseContent ||
-                    ex.explanation ||
-                    ex.description ||
-                    ex.content ||
-                    null,
-                },
-              });
             }
           }
-        }
-      });
+        },
+        { timeout: 60000 }
+      );
 
       return aiResult;
     } finally {

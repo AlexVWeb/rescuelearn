@@ -23,7 +23,7 @@ const mockPrisma = vi.hoisted(() => ({
     findUnique: vi.fn(),
   },
   sNVVictim: {
-    create: vi.fn(),
+    createMany: vi.fn(),
   },
 }));
 
@@ -110,7 +110,7 @@ describe("importSNVScenarioAction", () => {
     mockSession({ id: "user-1" });
 
     mockPrisma.sNVScenario.create.mockResolvedValue({ id: 42 });
-    mockPrisma.sNVVictim.create.mockResolvedValue({ id: 100 });
+    mockPrisma.sNVVictim.createMany.mockResolvedValue({ count: 1 });
 
     const payload = {
       title: "Accident bus",
@@ -135,13 +135,15 @@ describe("importSNVScenarioAction", () => {
         description: "Sortie de route d'un bus",
       },
     });
-    expect(mockPrisma.sNVVictim.create).toHaveBeenCalledWith({
-      data: {
-        description: "Victime consciente respirant bien",
-        correctAnswer: 1,
-        explanation: "Tri jaune, blessé stable sans urgence absolue",
-        scenarioId: 42,
-      },
+    expect(mockPrisma.sNVVictim.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          description: "Victime consciente respirant bien",
+          correctAnswer: 1,
+          explanation: "Tri jaune, blessé stable sans urgence absolue",
+          scenarioId: 42,
+        },
+      ],
     });
   });
 
