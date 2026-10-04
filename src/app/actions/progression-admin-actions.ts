@@ -5,6 +5,7 @@ import { hasRole, UserRole } from "@/lib/roles";
 import { logger } from "@/lib/logger";
 import { ProgressionAdminService } from "@/services/progression.service";
 import { z } from "zod";
+import { MAX_TOPICS_PER_GENERATION } from "@/lib/topic-coverage";
 
 // Helper to assert super admin
 async function assertSuperAdmin() {
@@ -153,6 +154,7 @@ const exerciseSaveSchema = z.object({
       options: z.array(z.string()),
       correctAnswer: z.string(),
       explanation: z.string().optional(),
+      topicId: z.string().optional(),
     })
     .optional(),
   _newFlashcard: z
@@ -188,16 +190,21 @@ export async function saveProgressionNodeExercisesAction(
   }
 }
 
-const aiGenSchema = z.object({
-  referencielId: z.number(),
-  topic: z.string().min(1),
-  level: z.string().optional(),
-  structureConfig: z.object({
-    microCourseCount: z.number().min(0).max(10),
-    quizCount: z.number().min(0).max(10),
-    flashcardCount: z.number().min(0).max(10),
-  }),
-});
+const aiGenSchema = z
+  .object({
+    referencielId: z.number(),
+    topic: z.string().optional(),
+    topicIds: z.array(z.string()).max(MAX_TOPICS_PER_GENERATION).optional(),
+    level: z.string().optional(),
+    structureConfig: z.object({
+      microCourseCount: z.number().min(0).max(10),
+      quizCount: z.number().min(0).max(10),
+      flashcardCount: z.number().min(0).max(10),
+    }),
+  })
+  .refine((d) => d.topic?.trim() || d.topicIds?.length, {
+    message: "Sujet ou sujets requis",
+  });
 
 export async function generateProgressionNodeWithAiAction(jsonData: unknown) {
   try {
@@ -241,6 +248,51 @@ export async function generateEntireTreeWithAiAction(jsonData: unknown) {
     return { success: true };
   } catch (error) {
     logger.error("Erreur generateEntireTreeWithAiAction:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Une erreur est survenue.",
+    };
+  }
+}
+
+const treeFromTopicsSchema = z.object({
+  treeId: z.string(),
+  referencielId: z.number(),
+  restart: z.boolean().optional(),
+});
+
+// Prépare la génération du parcours ; la page enchaîne ensuite generateNextTreeNodeAction
+export async function startTreeGenerationFromTopicsAction(jsonData: unknown) {
+  try {
+    await assertSuperAdmin();
+    const parsed = treeFromTopicsSchema.safeParse(jsonData);
+    if (!parsed.success) {
+      return { success: false, error: "Paramètres invalides" };
+    }
+
+    const result = await ProgressionAdminService.startTreeGenerationFromTopics(
+      parsed.data
+    );
+    return { success: true, data: result };
+  } catch (error) {
+    logger.error("Erreur startTreeGenerationFromTopicsAction:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Une erreur est survenue.",
+    };
+  }
+}
+
+// Génère un seul nœud (~40 s) : reste sous la durée max d'une fonction
+export async function generateNextTreeNodeAction(treeId: string) {
+  try {
+    await assertSuperAdmin();
+    const step = await ProgressionAdminService.generateNextTreeNode(treeId);
+    return { success: true, data: step };
+  } catch (error) {
+    logger.error("Erreur generateNextTreeNodeAction:", error);
     return {
       success: false,
       error:

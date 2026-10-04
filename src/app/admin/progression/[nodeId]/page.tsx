@@ -28,7 +28,7 @@ export default async function AdminNodeBuilderPage(props: {
   });
 
   const referenciels = await prisma.referenciel.findMany({
-    select: { id: true, title: true },
+    select: { id: true, title: true, analysisStatus: true },
     orderBy: { title: "asc" },
   });
 

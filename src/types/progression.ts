@@ -3,6 +3,7 @@ export interface NewQuestion {
   options: string[];
   correctAnswer: string;
   explanation?: string;
+  topicId?: string;
 }
 
 export interface NewFlashcard {
@@ -54,6 +55,7 @@ export interface AiGeneratedExerciseForBuilder {
     options: string[];
     correctAnswer: string;
     explanation?: string;
+    topicId?: string;
   };
   _newFlashcard?: {
     theme: string;
@@ -74,6 +76,7 @@ export interface ProgressionExerciseInput {
     options: string[];
     correctAnswer: string;
     explanation?: string;
+    topicId?: string;
   };
   _newFlashcard?: {
     theme: string;

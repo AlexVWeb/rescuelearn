@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,7 +43,14 @@ import {
   deleteProgressionNodeAction,
   reorderProgressionNodesAction,
   generateEntireTreeWithAiAction,
+  startTreeGenerationFromTopicsAction,
+  generateNextTreeNodeAction,
 } from "@/app/actions/progression-admin-actions";
+import { TreeFromTopicsDialog } from "./components/TreeFromTopicsDialog";
+import {
+  TreeGenerationStatus,
+  type TreeGenerationState,
+} from "./components/TreeGenerationStatus";
 import { getReferencielsAction } from "@/app/actions/referenciel-actions";
 import { ProgressionNodeForm } from "./components/ProgressionNodeForm";
 import { Input } from "@/components/ui/input";
@@ -69,14 +76,20 @@ interface Node {
 interface Referenciel {
   id: number;
   title: string;
+  levels: string[];
+  analysisStatus: string;
 }
 
-interface Tree {
+interface Tree extends TreeGenerationState {
   id: string;
   level: string;
   description: string | null;
   nodes: Node[];
 }
+
+// Sujets exploitables dès qu'une analyse a produit des résultats (même partielle)
+const hasTopics = (ref: Referenciel) =>
+  ref.analysisStatus === "DONE" || ref.analysisStatus === "FAILED";
 
 export default function AdminProgressionPage() {
   const [trees, setTrees] = useState<Tree[]>([]);
@@ -90,14 +103,23 @@ export default function AdminProgressionPage() {
   const [aiTopic, setAiTopic] = useState("");
   const [isGeneratingTree, setIsGeneratingTree] = useState(false);
 
+  // Génération depuis les sujets, pilotée nœud par nœud par cette page
+  const [topicsDialogOpen, setTopicsDialogOpen] = useState(false);
+  const [restartDialogOpen, setRestartDialogOpen] = useState(false);
+  const [isStartingFromTopics, setIsStartingFromTopics] = useState(false);
+  const [runningTreeId, setRunningTreeId] = useState<string | null>(null);
+  const [isStopping, setIsStopping] = useState(false);
+  const [lastNodeTitle, setLastNodeTitle] = useState<string | null>(null);
+  const stopRequested = useRef(false);
+
   // Dialog states
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingNode, setEditingNode] = useState<Node | null>(null);
   const [isDeletingOpen, setIsDeletingOpen] = useState(false);
   const [nodeToDelete, setNodeToDelete] = useState<string | null>(null);
 
-  const fetchTrees = async () => {
-    setIsLoading(true);
+  const fetchTrees = async ({ silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
     try {
       const res = await getProgressionTreesAction();
       if (res.success && res.data) {
@@ -124,6 +146,77 @@ export default function AdminProgressionPage() {
 
   const activeTree = trees.find((t) => t.level === selectedLevel);
   const activeNodes = activeTree?.nodes || [];
+  const analysedReferenciels = referenciels.filter(
+    (r) =>
+      hasTopics(r) &&
+      (r.levels.length === 0 || r.levels.includes(selectedLevel))
+  );
+
+  // Quitter la page interrompt la boucle de génération
+  useEffect(() => {
+    if (!runningTreeId) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [runningTreeId]);
+
+  const runGenerationLoop = async (treeId: string) => {
+    stopRequested.current = false;
+    setIsStopping(false);
+    setRunningTreeId(treeId);
+    try {
+      while (!stopRequested.current) {
+        const res = await generateNextTreeNodeAction(treeId);
+        if (!res.success || !res.data) {
+          toast.error(res.error || "Erreur de génération du parcours.");
+          break;
+        }
+        const step = res.data;
+        if (step.nodeTitle) setLastNodeTitle(step.nodeTitle);
+        if (step.error) {
+          toast.error(`Leçon « ${step.nodeTitle} » en échec : ${step.error}`);
+        }
+        await fetchTrees({ silent: true });
+        if (step.status !== "PROCESSING") {
+          if (step.status === "DONE") {
+            toast.success(`Parcours généré : ${step.total} leçons.`);
+          } else {
+            toast.warning("Parcours généré avec des leçons en échec.");
+          }
+          break;
+        }
+      }
+    } finally {
+      setRunningTreeId(null);
+      setIsStopping(false);
+    }
+  };
+
+  const handleStartFromTopics = async (
+    referencielId: number,
+    restart = false
+  ) => {
+    if (!activeTree) return;
+    setIsStartingFromTopics(true);
+    try {
+      const res = await startTreeGenerationFromTopicsAction({
+        treeId: activeTree.id,
+        referencielId,
+        restart,
+      });
+      if (!res.success) {
+        toast.error(res.error || "Impossible de lancer la génération.");
+        return;
+      }
+      setTopicsDialogOpen(false);
+      setRestartDialogOpen(false);
+      setLastNodeTitle(null);
+      await fetchTrees({ silent: true });
+      runGenerationLoop(activeTree.id);
+    } finally {
+      setIsStartingFromTopics(false);
+    }
+  };
 
   const handleCreateNode = async (data: {
     title: string;
@@ -269,8 +362,12 @@ export default function AdminProgressionPage() {
           <Button
             variant="outline"
             className="border-indigo-200 bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100"
-            onClick={() => setAiDialogOpen(true)}
-            disabled={isLoading || !activeTree}
+            onClick={() =>
+              analysedReferenciels.length > 0
+                ? setTopicsDialogOpen(true)
+                : setAiDialogOpen(true)
+            }
+            disabled={isLoading || !activeTree || runningTreeId !== null}
           >
             <Sparkles className="mr-2 h-4 w-4" /> Générer par IA
           </Button>
@@ -317,6 +414,20 @@ export default function AdminProgressionPage() {
               <CardDescription>{activeTree?.description}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {activeTree && (
+                <TreeGenerationStatus
+                  tree={activeTree}
+                  isRunning={runningTreeId === activeTree.id}
+                  isStopping={isStopping}
+                  lastNodeTitle={lastNodeTitle}
+                  onResume={() => runGenerationLoop(activeTree.id)}
+                  onRestart={() => setRestartDialogOpen(true)}
+                  onStop={() => {
+                    stopRequested.current = true;
+                    setIsStopping(true);
+                  }}
+                />
+              )}
               {activeNodes.length === 0 ? (
                 <div className="text-muted-foreground flex flex-col items-center justify-center rounded-xl border border-dashed p-8 text-center">
                   <AlertCircle className="text-muted-foreground/40 mb-2 h-10 w-10" />
@@ -480,6 +591,44 @@ export default function AdminProgressionPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <TreeFromTopicsDialog
+        open={topicsDialogOpen}
+        onOpenChange={setTopicsDialogOpen}
+        level={selectedLevel}
+        referenciels={analysedReferenciels}
+        existingNodeCount={activeNodes.length}
+        isStarting={isStartingFromTopics}
+        onStart={(referencielId) => handleStartFromTopics(referencielId)}
+        onSwitchToFreeMode={() => {
+          setTopicsDialogOpen(false);
+          setAiDialogOpen(true);
+        }}
+      />
+
+      <AlertDialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Recommencer la génération ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Les {activeNodes.length} leçons déjà générées pour {selectedLevel}{" "}
+              seront supprimées et le parcours sera regénéré depuis le début.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                activeTree?.referencielId &&
+                handleStartFromTopics(activeTree.referencielId, true)
+              }
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Recommencer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Dialog for Generating Entire Tree with AI */}
       <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
