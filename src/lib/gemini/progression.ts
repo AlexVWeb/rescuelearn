@@ -1,7 +1,7 @@
 import { Type, Schema } from "@google/genai";
-import { stat, readFile } from "fs/promises";
-import { logger } from "../logger";
 import { getAiClient, retryWithBackoff, GEMINI_MODEL } from "./client";
+import { withPdfPart } from "./pdf-part";
+import { buildTopicsContext, type PromptTopic } from "./topics-context";
 
 export function buildProgressionPrompt(
   topic: string,
@@ -10,7 +10,8 @@ export function buildProgressionPrompt(
     quizCount: number;
     flashcardCount: number;
   },
-  level?: string
+  level?: string,
+  topics?: PromptTopic[]
 ): string {
   const requirements: string[] = [];
   const exerciseCounts: string[] = [];
@@ -57,16 +58,17 @@ CONSIGNES STRICTES :
 3. Remplissage des champs : Pour chaque exercice généré, renseigne UNIQUEMENT les champs correspondant à son type (ex: "courseTitle" et "courseContent" pour un MICRO_COURSE) et laisse absolument tous les autres champs (ex: "explanation", "questionText", "options", etc.) vides ou non définis. Ne mets pas le contenu du cours dans "explanation".
 4. Formats d'exercices :
 ${requirementsList}
-`;
+${topics?.length ? buildTopicsContext(topics, { withTopicId: false }) : ""}`;
 }
 
 export async function generateProgressionNodeFromPdf({
-  pdfPath,
+  pdf,
   topic,
   structureConfig,
   level,
+  topics,
 }: {
-  pdfPath: string;
+  pdf: Uint8Array;
   topic: string;
   structureConfig: {
     microCourseCount: number;
@@ -74,58 +76,16 @@ export async function generateProgressionNodeFromPdf({
     flashcardCount: number;
   };
   level?: string;
+  topics?: PromptTopic[];
 }) {
   const ai = getAiClient();
-  const fileStats = await stat(pdfPath);
-  const fileSizeMB = fileStats.size / (1024 * 1024);
-
-  let pdfContentPart:
-    | Awaited<ReturnType<ReturnType<typeof getAiClient>["files"]["upload"]>>
-    | { inlineData: { data: string; mimeType: string } };
-  let fileUploadName: string | null = null;
-
-  try {
-    if (fileSizeMB >= 15) {
-      logger.info(
-        `PDF is large (${fileSizeMB.toFixed(2)} MB), uploading to Gemini Files API...`
-      );
-      const uploadResult = await ai.files.upload({
-        file: pdfPath,
-        config: {
-          mimeType: "application/pdf",
-        },
-      });
-      if (!uploadResult.name) {
-        throw new Error("Upload failed: file name is undefined");
-      }
-      fileUploadName = uploadResult.name;
-
-      let fileState = uploadResult.state;
-      while (fileState === "PROCESSING") {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const fileInfo = await ai.files.get({ name: uploadResult.name });
-        fileState = fileInfo.state;
-      }
-
-      if (fileState !== "ACTIVE") {
-        throw new Error(`Uploaded file is not active: ${fileState}`);
-      }
-
-      pdfContentPart = uploadResult;
-    } else {
-      logger.info(
-        `PDF is small (${fileSizeMB.toFixed(2)} MB), sending inline...`
-      );
-      const pdfBuffer = await readFile(pdfPath);
-      pdfContentPart = {
-        inlineData: {
-          data: pdfBuffer.toString("base64"),
-          mimeType: "application/pdf",
-        },
-      };
-    }
-
-    const promptText = buildProgressionPrompt(topic, structureConfig, level);
+  return withPdfPart(pdf, async (pdfContentPart) => {
+    const promptText = buildProgressionPrompt(
+      topic,
+      structureConfig,
+      level,
+      topics
+    );
 
     const exerciseProperties: Record<string, Schema> = {
       type: {
@@ -213,16 +173,7 @@ export async function generateProgressionNodeFromPdf({
     }
 
     return JSON.parse(responseText);
-  } finally {
-    if (fileUploadName) {
-      try {
-        logger.info(`Deleting file ${fileUploadName} from Gemini Files API...`);
-        await ai.files.delete({ name: fileUploadName });
-      } catch (err) {
-        logger.error(`Failed to delete uploaded file ${fileUploadName}:`, err);
-      }
-    }
-  }
+  });
 }
 
 export function buildEntireTreePrompt(level: string, topic: string): string {
@@ -245,64 +196,16 @@ Toutes les explications et contenus rédigés doivent être en français.
 }
 
 export async function generateEntireTreeFromPdf({
-  pdfPath,
+  pdf,
   level,
   topic,
 }: {
-  pdfPath: string;
+  pdf: Uint8Array;
   level: string;
   topic: string;
 }) {
   const ai = getAiClient();
-  const fileStats = await stat(pdfPath);
-  const fileSizeMB = fileStats.size / (1024 * 1024);
-
-  let pdfContentPart:
-    | Awaited<ReturnType<ReturnType<typeof getAiClient>["files"]["upload"]>>
-    | { inlineData: { data: string; mimeType: string } };
-  let fileUploadName: string | null = null;
-
-  try {
-    if (fileSizeMB >= 15) {
-      logger.info(
-        `PDF is large (${fileSizeMB.toFixed(2)} MB), uploading to Gemini Files API...`
-      );
-      const uploadResult = await ai.files.upload({
-        file: pdfPath,
-        config: {
-          mimeType: "application/pdf",
-        },
-      });
-      if (!uploadResult.name) {
-        throw new Error("Upload failed: file name is undefined");
-      }
-      fileUploadName = uploadResult.name;
-
-      let fileState = uploadResult.state;
-      while (fileState === "PROCESSING") {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const fileInfo = await ai.files.get({ name: uploadResult.name });
-        fileState = fileInfo.state;
-      }
-
-      if (fileState !== "ACTIVE") {
-        throw new Error(`Uploaded file is not active: ${fileState}`);
-      }
-
-      pdfContentPart = uploadResult;
-    } else {
-      logger.info(
-        `PDF is small (${fileSizeMB.toFixed(2)} MB), sending inline...`
-      );
-      const pdfBuffer = await readFile(pdfPath);
-      pdfContentPart = {
-        inlineData: {
-          data: pdfBuffer.toString("base64"),
-          mimeType: "application/pdf",
-        },
-      };
-    }
-
+  return withPdfPart(pdf, async (pdfContentPart) => {
     const promptText = buildEntireTreePrompt(level, topic);
 
     const response = await retryWithBackoff(() =>
@@ -372,14 +275,5 @@ export async function generateEntireTreeFromPdf({
     }
 
     return JSON.parse(responseText);
-  } finally {
-    if (fileUploadName) {
-      try {
-        logger.info(`Deleting file ${fileUploadName} from Gemini Files API...`);
-        await ai.files.delete({ name: fileUploadName });
-      } catch (err) {
-        logger.error(`Failed to delete uploaded file ${fileUploadName}:`, err);
-      }
-    }
-  }
+  });
 }

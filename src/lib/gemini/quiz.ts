@@ -1,14 +1,15 @@
-import { Type } from "@google/genai";
-import { stat, readFile } from "fs/promises";
-import { logger } from "../logger";
+import { Type, type Schema } from "@google/genai";
 import { getAiClient, retryWithBackoff, GEMINI_MODEL } from "./client";
+import { withPdfPart } from "./pdf-part";
+import { buildTopicsContext, type PromptTopic } from "./topics-context";
 
 export function buildPrompt(
   topic: string,
   questionCount: number,
   level?: string,
   existingQuestions: string[] = [],
-  existingTags: string[] = []
+  existingTags: string[] = [],
+  topics?: PromptTopic[]
 ): string {
   let prompt = `Tu es un expert en secourisme et pédagogie. Tu dois générer un quiz sur le sujet "${topic}" à partir du référentiel PDF fourni.
 Génère exactement ${questionCount} questions.${level ? ` Le niveau ciblé est "${level}".` : ""}
@@ -33,83 +34,69 @@ CONSIGNES STRICTES :
 `;
   }
 
+  if (topics?.length) {
+    prompt += buildTopicsContext(topics, { withTopicId: true });
+  }
+
   return prompt;
 }
 
 export async function generateQuizFromPdf({
-  pdfPath,
+  pdf,
   topic,
   questionCount,
   level,
   existingQuestions = [],
   existingTags = [],
+  topics,
 }: {
-  pdfPath: string;
+  pdf: Uint8Array;
   topic: string;
   questionCount: number;
   level?: string;
   existingQuestions?: string[];
   existingTags?: string[];
+  topics?: PromptTopic[];
 }) {
   const ai = getAiClient();
 
-  const fileStats = await stat(pdfPath);
-  const fileSizeMB = fileStats.size / (1024 * 1024);
-
-  let pdfContentPart:
-    | Awaited<ReturnType<ReturnType<typeof getAiClient>["files"]["upload"]>>
-    | { inlineData: { data: string; mimeType: string } };
-  let fileUploadName: string | null = null;
-
-  try {
-    if (fileSizeMB >= 15) {
-      logger.info(
-        `PDF is large (${fileSizeMB.toFixed(2)} MB), uploading to Gemini Files API...`
-      );
-      const uploadResult = await ai.files.upload({
-        file: pdfPath,
-        config: {
-          mimeType: "application/pdf",
-        },
-      });
-      if (!uploadResult.name) {
-        throw new Error("Upload failed: file name is undefined");
-      }
-      fileUploadName = uploadResult.name;
-
-      // Poll until file is active
-      let fileState = uploadResult.state;
-      while (fileState === "PROCESSING") {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const fileInfo = await ai.files.get({ name: uploadResult.name });
-        fileState = fileInfo.state;
-      }
-
-      if (fileState !== "ACTIVE") {
-        throw new Error(`Uploaded file is not active: ${fileState}`);
-      }
-
-      pdfContentPart = uploadResult;
-    } else {
-      logger.info(
-        `PDF is small (${fileSizeMB.toFixed(2)} MB), sending inline...`
-      );
-      const pdfBuffer = await readFile(pdfPath);
-      pdfContentPart = {
-        inlineData: {
-          data: pdfBuffer.toString("base64"),
-          mimeType: "application/pdf",
-        },
-      };
-    }
-
+  return withPdfPart(pdf, async (pdfContentPart) => {
     const promptText = buildPrompt(
       topic,
       questionCount,
       level,
       existingQuestions,
-      existingTags
+      existingTags,
+      topics
     );
+
+    const questionProperties: Record<string, Schema> = {
+      question: { type: Type.STRING },
+      options: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
+      },
+      correctAnswer: { type: Type.INTEGER },
+      explanation: { type: Type.STRING },
+      tags: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
+      },
+    };
+    const questionRequired = [
+      "question",
+      "options",
+      "correctAnswer",
+      "explanation",
+      "tags",
+    ];
+    if (topics?.length) {
+      questionProperties.topicId = {
+        type: Type.STRING,
+        enum: topics.map((t) => t.id),
+      };
+      questionRequired.push("topicId");
+    }
 
     const response = await retryWithBackoff(() =>
       ai.models.generateContent({
@@ -130,26 +117,8 @@ export async function generateQuizFromPdf({
                 type: Type.ARRAY,
                 items: {
                   type: Type.OBJECT,
-                  properties: {
-                    question: { type: Type.STRING },
-                    options: {
-                      type: Type.ARRAY,
-                      items: { type: Type.STRING },
-                    },
-                    correctAnswer: { type: Type.INTEGER },
-                    explanation: { type: Type.STRING },
-                    tags: {
-                      type: Type.ARRAY,
-                      items: { type: Type.STRING },
-                    },
-                  },
-                  required: [
-                    "question",
-                    "options",
-                    "correctAnswer",
-                    "explanation",
-                    "tags",
-                  ],
+                  properties: questionProperties,
+                  required: questionRequired,
                 },
               },
             },
@@ -171,14 +140,5 @@ export async function generateQuizFromPdf({
     }
 
     return JSON.parse(responseText);
-  } finally {
-    if (fileUploadName) {
-      try {
-        logger.info(`Deleting file ${fileUploadName} from Gemini Files API...`);
-        await ai.files.delete({ name: fileUploadName });
-      } catch (err) {
-        logger.error(`Failed to delete uploaded file ${fileUploadName}:`, err);
-      }
-    }
-  }
+  });
 }
