@@ -13,3 +13,11 @@ export {
   generateProgressionNodeFromPdf,
   generateEntireTreeFromPdf,
 } from "./gemini/progression";
+export {
+  SUGGESTED_FORMATS,
+  buildChapterPlanPrompt,
+  buildTopicsPrompt,
+  analyzeChapterPlan,
+  analyzeChapterTopics,
+} from "./gemini/analysis";
+export type { AnalyzedTopic } from "./gemini/analysis";

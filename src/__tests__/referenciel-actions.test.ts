@@ -33,6 +33,10 @@ vi.mock("@/lib/r2", () => ({
     ),
 }));
 
+vi.mock("@/app/actions/referenciel-topic-actions", () => ({
+  startReferencielAnalysisAction: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
@@ -47,6 +51,7 @@ vi.mock("@/lib/logger", () => ({
 
 import { getUserContext } from "@/lib/context";
 import { uploadFile } from "@/lib/r2";
+import { startReferencielAnalysisAction } from "@/app/actions/referenciel-topic-actions";
 
 process.env.R2_PUBLIC_URL = "https://r2.example.com";
 import {
@@ -151,8 +156,34 @@ describe("referenciel-actions", () => {
           title: "PSE 1",
           yearEdition: 2026,
           pdfUrl: "https://r2.example.com/dev/referenciels/test.pdf",
+          levels: [],
         },
       });
+      expect(startReferencielAnalysisAction).not.toHaveBeenCalled();
+    });
+
+    it("should persist allowed levels and start the analysis when requested", async () => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.referenciel.create.mockResolvedValue({ id: 42 });
+      const formData = new FormData();
+      formData.append("title", "PSE");
+      formData.append("yearEdition", "2026");
+      formData.append(
+        "file",
+        new File(["x"], "pse.pdf", { type: "application/pdf" })
+      );
+      formData.append("levels", "PSE1");
+      formData.append("levels", "PSE2");
+      formData.append("levels", "INCONNU");
+      formData.append("analyze", "on");
+
+      const res = await createReferencielAction(formData);
+
+      expect(res.success).toBe(true);
+      expect(mockPrisma.referenciel.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ levels: ["PSE1", "PSE2"] }),
+      });
+      expect(startReferencielAnalysisAction).toHaveBeenCalledWith(42);
     });
   });
 });

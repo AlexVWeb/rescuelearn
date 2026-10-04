@@ -7,12 +7,20 @@ import { revalidatePath } from "next/cache";
 import { uploadFile } from "@/lib/r2";
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
+import { filterReferencielLevels } from "@/lib/referenciel-levels";
+import { startReferencielAnalysisAction } from "./referenciel-topic-actions";
 
 export type Referenciel = {
   id: number;
   title: string;
   yearEdition: number;
   pdfUrl: string;
+  levels: string[];
+  analysisStatus: "NONE" | "PROCESSING" | "DONE" | "FAILED";
+  analysisError: string | null;
+  analysisDoneChapters: number;
+  analysisTotalChapters: number;
+  _count: { topics: number };
 };
 
 export async function getReferencielsAction(
@@ -40,6 +48,7 @@ export async function getReferencielsAction(
         skip,
         take: limit,
         orderBy: { yearEdition: "desc" },
+        include: { _count: { select: { topics: true } } },
       }),
       prisma.referenciel.count({ where }),
     ]);
@@ -140,6 +149,7 @@ export async function createReferencielAction(formData: FormData) {
     const title = formData.get("title") as string;
     const yearEdition = parseInt(formData.get("yearEdition") as string);
     const file = formData.get("file") as File;
+    const levels = filterReferencielLevels(formData.getAll("levels"));
 
     if (!title || !yearEdition || !file) {
       return { success: false, error: "Missing required fields" };
@@ -147,13 +157,21 @@ export async function createReferencielAction(formData: FormData) {
 
     const pdfUrl = await saveFile(file, title, yearEdition);
 
-    await prisma.referenciel.create({
+    const referenciel = await prisma.referenciel.create({
       data: {
         title,
         yearEdition,
         pdfUrl,
+        levels,
       },
     });
+
+    if (formData.get("analyze") === "on") {
+      const analysis = await startReferencielAnalysisAction(referenciel.id);
+      if (!analysis.success) {
+        logger.error("Failed to start referenciel analysis:", analysis.error);
+      }
+    }
 
     revalidatePath("/admin/referenciels");
     return { success: true };
@@ -177,6 +195,7 @@ export async function updateReferencielAction(id: number, formData: FormData) {
     const data: Prisma.ReferencielUpdateInput = {
       title,
       yearEdition,
+      levels: filterReferencielLevels(formData.getAll("levels")),
     };
 
     if (file && file.size > 0) {
