@@ -238,6 +238,7 @@ const bulkLearningCardsSchema = z.object({
       niveau: z.string().min(1, "Le niveau est requis"),
       info: z.string().min(1, "Les informations sont requises"),
       reference: z.string().min(1, "La référence est requise"),
+      topicId: z.string().optional().nullable(),
     })
   ),
 });
@@ -265,6 +266,7 @@ export async function bulkCreateLearningCardsAction(jsonData: unknown) {
             info: c.info,
             reference: c.reference,
             referencielId: referencielId || null,
+            topicId: c.topicId ?? null,
           },
         })
       )
