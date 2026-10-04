@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { UserRole } from "@/lib/roles";
 
 // --- Mocks ---
 
@@ -15,6 +16,9 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 const mockPrisma = vi.hoisted(() => ({
+  user: {
+    findUnique: vi.fn(),
+  },
   $transaction: vi.fn().mockImplementation((fn) => fn(mockPrisma)),
   sNVScenario: {
     create: vi.fn(),
@@ -48,6 +52,15 @@ import {
   importSNVScenarioAction,
   getPublicScenariosAction,
   getPublicScenarioByIdAction,
+  getScenariosAction,
+  createScenarioAction,
+  updateScenarioAction,
+  deleteScenarioAction,
+  getVictimsAction,
+  createVictimAction,
+  updateVictimAction,
+  deleteVictimAction,
+  getAllScenariosSimpleAction,
 } from "@/app/actions/snv-actions";
 
 describe("importSNVScenarioAction", () => {
@@ -55,7 +68,11 @@ describe("importSNVScenarioAction", () => {
     vi.clearAllMocks();
   });
 
-  const mockSession = (user: { id: string } | null) => {
+  const mockSession = (
+    user: { id: string } | null,
+    roles: string[] = [UserRole.SUPER_ADMIN]
+  ) => {
+    mockPrisma.user.findUnique.mockResolvedValue({ roles });
     if (user) {
       vi.mocked(auth.api.getSession).mockResolvedValue({
         user: {
@@ -82,6 +99,26 @@ describe("importSNVScenarioAction", () => {
       vi.mocked(auth.api.getSession).mockResolvedValue(null);
     }
   };
+
+  it("should forbid every admin SNV action to non SUPER_ADMIN users", async () => {
+    mockSession({ id: "player-1" }, [UserRole.FORMATEUR]);
+    const forbidden = { success: false, error: "Forbidden" };
+
+    expect(await getScenariosAction()).toEqual(forbidden);
+    expect(await createScenarioAction({} as never)).toEqual(forbidden);
+    expect(await updateScenarioAction(1, {} as never)).toEqual(forbidden);
+    expect(await deleteScenarioAction(1)).toEqual(forbidden);
+    expect(await getVictimsAction()).toEqual(forbidden);
+    expect(await createVictimAction({} as never)).toEqual(forbidden);
+    expect(await updateVictimAction(1, {} as never)).toEqual(forbidden);
+    expect(await deleteVictimAction(1)).toEqual(forbidden);
+    expect(await importSNVScenarioAction({})).toEqual(forbidden);
+    expect(await getAllScenariosSimpleAction()).toEqual([]);
+
+    expect(mockPrisma.sNVScenario.create).not.toHaveBeenCalled();
+    expect(mockPrisma.sNVScenario.findMany).not.toHaveBeenCalled();
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
 
   it("should return Unauthorized if session is missing", async () => {
     mockSession(null);

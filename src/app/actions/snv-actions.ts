@@ -1,9 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { checkSuperAdmin } from "@/lib/admin-guard";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 
@@ -33,8 +32,8 @@ export async function getScenariosAction(
   limit: number = 10,
   search: string = ""
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   const skip = (page - 1) * limit;
   const where = search
@@ -81,8 +80,8 @@ export async function createScenarioAction(data: {
   level: string;
   description: string;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.sNVScenario.create({
@@ -104,8 +103,8 @@ export async function updateScenarioAction(
   id: number,
   data: { title: string; level: string; description: string }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.sNVScenario.update({
@@ -125,8 +124,8 @@ export async function updateScenarioAction(
 }
 
 export async function deleteScenarioAction(id: number) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.sNVScenario.delete({
@@ -147,8 +146,8 @@ export async function getVictimsAction(
   limit: number = 10,
   search: string = "" // Search by description
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   const skip = (page - 1) * limit;
   const where = search
@@ -195,8 +194,8 @@ export async function createVictimAction(data: {
   explanation: string;
   scenarioId: number;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.sNVVictim.create({
@@ -224,8 +223,8 @@ export async function updateVictimAction(
     scenarioId: number;
   }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.sNVVictim.update({
@@ -246,8 +245,8 @@ export async function updateVictimAction(
 }
 
 export async function deleteVictimAction(id: number) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.sNVVictim.delete({
@@ -263,8 +262,7 @@ export async function deleteVictimAction(id: number) {
 
 // Helper to get all scenarios for the select input in Victim Dialog
 export async function getAllScenariosSimpleAction() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return [];
+  if (await checkSuperAdmin()) return [];
 
   try {
     return await prisma.sNVScenario.findMany({
@@ -297,8 +295,8 @@ const importSNVScenarioSchema = z.object({
 });
 
 export async function importSNVScenarioAction(jsonData: unknown) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   const parsed = importSNVScenarioSchema.safeParse(jsonData);
   if (!parsed.success) {
