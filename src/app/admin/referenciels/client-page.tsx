@@ -20,6 +20,8 @@ import {
   deleteReferencielAction,
 } from "@/app/actions/referenciel-actions";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { startReferencielAnalysisAction } from "@/app/actions/referenciel-topic-actions";
 
 interface ClientPageProps {
   initialReferenciels: Referenciel[];
@@ -48,6 +50,16 @@ export default function ClientPage({ initialReferenciels }: ClientPageProps) {
   const handleDeleteClick = (id: number) => {
     setIdToDelete(id);
     setDeleteDialogOpen(true);
+  };
+
+  const handleAnalyze = async (id: number) => {
+    const result = await startReferencielAnalysisAction(id);
+    if (result.success) {
+      toast.success("Analyse lancée");
+    } else {
+      toast.error(result.error ?? "Impossible de lancer l'analyse");
+    }
+    router.refresh();
   };
 
   const confirmDelete = async () => {
@@ -80,6 +92,7 @@ export default function ClientPage({ initialReferenciels }: ClientPageProps) {
           data={referenciels}
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
+          onAnalyze={handleAnalyze}
         />
       </div>
 
