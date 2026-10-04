@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +14,22 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, Loader2, Check } from "lucide-react";
 import { generateProgressionNodeWithAiAction } from "@/app/actions/progression-admin-actions";
+import { getReferencielAnalysisAction } from "@/app/actions/referenciel-topic-actions";
+import {
+  TopicPicker,
+  type PickableTopic,
+} from "@/components/admin/topic-picker";
 import { toast } from "sonner";
 
 interface Referenciel {
   id: number;
   title: string;
+  analysisStatus: string;
 }
+
+// Sujets exploitables dès qu'une analyse a produit des résultats (même partielle)
+const hasTopics = (ref?: Referenciel) =>
+  ref?.analysisStatus === "DONE" || ref?.analysisStatus === "FAILED";
 
 import {
   AiGeneratedExercise,
@@ -40,6 +50,9 @@ export function ProgressionAiGenerator({
 }: ProgressionAiGeneratorProps) {
   const [referencielId, setReferencielId] = useState<string>("");
   const [topic, setTopic] = useState("");
+  const [topics, setTopics] = useState<PickableTopic[]>([]);
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
+  const [freeTopicMode, setFreeTopicMode] = useState(false);
   const [level, setLevel] = useState(defaultLevel);
 
   const [microCourseCount, setMicroCourseCount] = useState(1);
@@ -51,10 +64,46 @@ export function ProgressionAiGenerator({
     null
   );
 
+  const shouldLoadTopics = hasTopics(
+    referenciels.find((r) => String(r.id) === referencielId)
+  );
+  const useTopicPicker = topics.length > 0 && !freeTopicMode;
+
+  // Charge les sujets analysés du référentiel choisi
+  useEffect(() => {
+    if (!shouldLoadTopics) return;
+    let cancelled = false;
+    const loadTopics = async () => {
+      const res = await getReferencielAnalysisAction(
+        parseInt(referencielId, 10)
+      );
+      if (!cancelled && res.success) setTopics(res.data.topics);
+    };
+    loadTopics();
+    return () => {
+      cancelled = true;
+    };
+  }, [referencielId, shouldLoadTopics]);
+
+  const handleReferencielChange = (value: string) => {
+    setReferencielId(value);
+    setTopics([]);
+    setSelectedTopicIds([]);
+  };
+
+  const selectedTopics = topics.filter((t) => selectedTopicIds.includes(t.id));
+  const lessonTopic = useTopicPicker
+    ? selectedTopics.map((t) => t.title).join(", ")
+    : topic;
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!referencielId || !topic.trim()) {
-      toast.error("Veuillez sélectionner un référentiel et saisir un sujet.");
+    if (!referencielId || !lessonTopic.trim()) {
+      toast.error(
+        useTopicPicker
+          ? "Veuillez sélectionner un référentiel et au moins un sujet."
+          : "Veuillez sélectionner un référentiel et saisir un sujet."
+      );
       return;
     }
 
@@ -64,7 +113,7 @@ export function ProgressionAiGenerator({
     try {
       const res = await generateProgressionNodeWithAiAction({
         referencielId: parseInt(referencielId, 10),
-        topic,
+        ...(useTopicPicker ? { topicIds: selectedTopicIds } : { topic }),
         level,
         structureConfig: {
           microCourseCount,
@@ -112,6 +161,8 @@ export function ProgressionAiGenerator({
               options: ex.options || [],
               correctAnswer: String(ex.correctAnswer ?? 0),
               explanation: ex.explanation || "",
+              // Rattache la question (et la leçon à l'enregistrement) au sujet
+              topicId: useTopicPicker ? selectedTopicIds[0] : undefined,
             },
           };
         }
@@ -119,7 +170,7 @@ export function ProgressionAiGenerator({
         return {
           type: "FLASHCARD",
           _newFlashcard: {
-            theme: ex.flashcardTheme || topic,
+            theme: ex.flashcardTheme || lessonTopic,
             info: ex.flashcardInfo || "",
             reference: ex.flashcardReference || "",
             niveau: level,
@@ -145,7 +196,10 @@ export function ProgressionAiGenerator({
         <form onSubmit={handleGenerate} className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label htmlFor="ai-ref">Référentiel source</Label>
-            <Select value={referencielId} onValueChange={setReferencielId}>
+            <Select
+              value={referencielId}
+              onValueChange={handleReferencielChange}
+            >
               <SelectTrigger id="ai-ref">
                 <SelectValue placeholder="Sélectionner..." />
               </SelectTrigger>
@@ -175,16 +229,50 @@ export function ProgressionAiGenerator({
             </Select>
           </div>
 
-          <div className="grid gap-2 sm:col-span-2">
-            <Label htmlFor="ai-topic">Sujet de la leçon</Label>
-            <Input
-              id="ai-topic"
-              placeholder="Ex: Pose du garrot tourniquet ou Massage cardiaque"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              required
-            />
-          </div>
+          {useTopicPicker ? (
+            <div className="grid min-w-0 gap-2 sm:col-span-2">
+              <div className="flex items-center justify-between">
+                <Label>Sujets de la leçon</Label>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => setFreeTopicMode(true)}
+                >
+                  Saisir un sujet libre
+                </Button>
+              </div>
+              <TopicPicker
+                topics={topics}
+                selectedIds={selectedTopicIds}
+                onChange={setSelectedTopicIds}
+                max={3}
+                disabled={isLoading}
+              />
+            </div>
+          ) : (
+            <div className="grid gap-2 sm:col-span-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="ai-topic">Sujet de la leçon</Label>
+                {topics.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-xs"
+                    onClick={() => setFreeTopicMode(false)}
+                  >
+                    Choisir parmi les sujets analysés
+                  </Button>
+                )}
+              </div>
+              <Input
+                id="ai-topic"
+                placeholder="Ex: Pose du garrot tourniquet ou Massage cardiaque"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-2 sm:col-span-2">
             <div className="grid gap-2">

@@ -5,15 +5,23 @@ import { prisma } from "@/lib/prisma";
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
 import { generateLearningCardsFromPdf } from "@/lib/gemini";
+import { loadReferencielPdf } from "@/lib/referenciel-pdf";
+import { extractPages } from "@/lib/pdf/document";
+import { mergePageRanges } from "@/lib/pdf/chapters";
+import { MAX_TOPICS_PER_GENERATION } from "@/lib/topic-coverage";
 import { z } from "zod";
-import path from "path";
 
-const generateCardsSchema = z.object({
-  referencielId: z.number(),
-  topic: z.string().min(1, "Le sujet ne peut pas être vide"),
-  cardCount: z.number().min(1).max(30),
-  level: z.string().optional(),
-});
+const generateCardsSchema = z
+  .object({
+    referencielId: z.number(),
+    topic: z.string().optional(),
+    topicIds: z.array(z.string()).max(MAX_TOPICS_PER_GENERATION).optional(),
+    cardCount: z.number().min(1).max(30),
+    level: z.string().optional(),
+  })
+  .refine((d) => d.topic?.trim() || d.topicIds?.length, {
+    message: "Sujet ou sujets requis",
+  });
 
 const generatedCardsSchema = z.object({
   cards: z
@@ -23,6 +31,7 @@ const generatedCardsSchema = z.object({
         niveau: z.string(),
         info: z.string(),
         reference: z.string(),
+        topicId: z.string().optional(),
       })
     )
     .min(1),
@@ -39,10 +48,7 @@ export async function generateLearningCardsWithAiAction(jsonData: unknown) {
     return { success: false, error: "Invalid parameters" };
   }
 
-  const { referencielId, topic, cardCount, level } = parsed.data;
-
-  let pdfPath = "";
-  let tempFileCreated = false;
+  const { referencielId, topicIds, cardCount, level } = parsed.data;
 
   try {
     const referenciel = await prisma.referenciel.findUnique({
@@ -53,33 +59,42 @@ export async function generateLearningCardsWithAiAction(jsonData: unknown) {
       return { success: false, error: "Referenciel introuvable" };
     }
 
-    if (
-      referenciel.pdfUrl.startsWith("http://") ||
-      referenciel.pdfUrl.startsWith("https://")
-    ) {
-      const key = referenciel.pdfUrl.replace(
-        `${process.env.R2_PUBLIC_URL}/`,
-        ""
-      );
-      const { getFile } = await import("@/lib/r2");
-      const { buffer } = await getFile(key, false);
-      const fs = await import("fs/promises");
-      const path = await import("path");
-      const os = await import("os");
-      const tempDir = os.tmpdir();
-      pdfPath = path.join(tempDir, `temp-${Date.now()}-${path.basename(key)}`);
-      await fs.writeFile(pdfPath, buffer);
-      tempFileCreated = true;
-    } else {
-      pdfPath = path.join(process.cwd(), "public", referenciel.pdfUrl);
+    // Génération ciblée : seules les pages des sujets choisis sont envoyées
+    const topics = topicIds?.length
+      ? await prisma.referencielTopic.findMany({
+          where: { id: { in: topicIds }, referencielId },
+          orderBy: { order: "asc" },
+        })
+      : undefined;
+    if (topics && topics.length !== new Set(topicIds).size) {
+      return {
+        success: false,
+        error: "Sujets introuvables pour ce référentiel",
+      };
     }
+
+    const fullPdf = await loadReferencielPdf(referenciel.pdfUrl);
+    const pdf = topics
+      ? await extractPages(fullPdf, mergePageRanges(topics))
+      : fullPdf;
+    const topic =
+      parsed.data.topic?.trim() ||
+      (topics ?? []).map((t) => t.title).join(", ");
 
     // Call Gemini integration
     const result = await generateLearningCardsFromPdf({
-      pdfPath,
+      pdf,
       topic,
       cardCount,
       level,
+      topics: topics?.map((t) => ({
+        id: t.id,
+        title: t.title,
+        summary: t.summary,
+        keyPoints: t.keyPoints,
+        pageStart: t.pageStart,
+        pageEnd: t.pageEnd,
+      })),
     });
 
     // Deep validation of Gemini output
@@ -92,9 +107,19 @@ export async function generateLearningCardsWithAiAction(jsonData: unknown) {
       };
     }
 
+    // Un topicId inventé par l'IA est retiré
+    const allowedTopicIds = new Set(topics?.map((t) => t.id));
     return {
       success: true,
-      data: validatedResult.data,
+      data: {
+        cards: validatedResult.data.cards.map((card) => ({
+          ...card,
+          topicId:
+            card.topicId && allowedTopicIds.has(card.topicId)
+              ? card.topicId
+              : undefined,
+        })),
+      },
     };
   } catch (error) {
     logger.error("Failed to generate learning cards with AI:", error);
@@ -105,14 +130,5 @@ export async function generateLearningCardsWithAiAction(jsonData: unknown) {
           ? error.message
           : "Une erreur est survenue lors de la génération par l'IA.",
     };
-  } finally {
-    if (tempFileCreated && pdfPath) {
-      try {
-        const fs = await import("fs/promises");
-        await fs.unlink(pdfPath);
-      } catch (err) {
-        logger.error("Failed to delete temp file:", err);
-      }
-    }
   }
 }

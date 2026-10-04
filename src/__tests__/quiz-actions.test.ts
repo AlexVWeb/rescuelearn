@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { auth } from "@/lib/auth";
+import { UserRole } from "@/lib/roles";
 
 // --- Mocks ---
 vi.mock("next/headers", () => ({
@@ -19,6 +20,16 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 const mockPrisma = vi.hoisted(() => ({
+  $transaction: vi.fn(),
+  user: {
+    findUnique: vi.fn(),
+  },
+  question: {
+    createManyAndReturn: vi.fn(),
+  },
+  questionOption: {
+    createMany: vi.fn(),
+  },
   quiz: {
     findMany: vi.fn(),
     count: vi.fn(),
@@ -45,6 +56,12 @@ import {
   createQuizAction,
   updateQuizAction,
   deleteQuizAction,
+  importQuizAction,
+  getQuestionsAction,
+  createQuestionAction,
+  updateQuestionAction,
+  deleteQuestionAction,
+  getAllQuizzesSimpleAction,
 } from "@/app/actions/quiz-actions";
 
 describe("quiz-actions", () => {
@@ -52,16 +69,56 @@ describe("quiz-actions", () => {
     vi.clearAllMocks();
   });
 
-  const mockSession = (user: { id: string } | null) => {
+  const mockSession = (
+    user: { id: string } | null,
+    roles: string[] = [UserRole.SUPER_ADMIN]
+  ) => {
     const getSessionMock = auth.api.getSession as unknown as ReturnType<
       typeof vi.fn
     >;
     if (user) {
       getSessionMock.mockResolvedValue({ user });
+      mockPrisma.user.findUnique.mockResolvedValue({ roles });
     } else {
       getSessionMock.mockResolvedValue(null);
     }
   };
+
+  describe("authorization", () => {
+    it("should forbid every quiz action to non SUPER_ADMIN users", async () => {
+      mockSession({ id: "player-1" }, [UserRole.FORMATEUR]);
+      const forbidden = { success: false, error: "Forbidden" };
+
+      expect(await getQuizzesAction()).toEqual(forbidden);
+      expect(await createQuizAction({ title: "Q" } as never)).toEqual(
+        forbidden
+      );
+      expect(await updateQuizAction(1, { title: "Q" } as never)).toEqual(
+        forbidden
+      );
+      expect(await deleteQuizAction(1)).toEqual(forbidden);
+      expect(await importQuizAction({})).toEqual(forbidden);
+      expect(await getQuestionsAction()).toEqual(forbidden);
+      expect(await createQuestionAction({} as never)).toEqual(forbidden);
+      expect(await updateQuestionAction(1, {} as never)).toEqual(forbidden);
+      expect(await deleteQuestionAction(1)).toEqual(forbidden);
+      expect(await getAllQuizzesSimpleAction()).toEqual([]);
+
+      expect(mockPrisma.quiz.create).not.toHaveBeenCalled();
+      expect(mockPrisma.quiz.update).not.toHaveBeenCalled();
+      expect(mockPrisma.quiz.delete).not.toHaveBeenCalled();
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("should forbid users whose account no longer exists", async () => {
+      mockSession({ id: "ghost" });
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      expect(await deleteQuizAction(1)).toEqual({
+        success: false,
+        error: "Forbidden",
+      });
+    });
+  });
 
   describe("getQuizzesAction", () => {
     it("should return Unauthorized if not logged in", async () => {
@@ -181,6 +238,41 @@ describe("quiz-actions", () => {
       expect(res.success).toBe(true);
       expect(mockPrisma.quiz.delete).toHaveBeenCalledWith({
         where: { id: 1 },
+      });
+    });
+  });
+
+  describe("importQuizAction", () => {
+    it("should persist the topicId of each question", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.$transaction.mockImplementation((fn) => fn(mockPrisma));
+      mockPrisma.quiz.create.mockResolvedValue({ id: 7 });
+      mockPrisma.question.createManyAndReturn.mockResolvedValue([
+        { id: 1 },
+        { id: 2 },
+      ]);
+
+      const res = await importQuizAction({
+        title: "Quiz ciblé",
+        referencielId: 1,
+        questions: [
+          {
+            question: "Q1 ?",
+            options: ["A", "B"],
+            correctAnswer: 1,
+            topicId: "t1",
+          },
+          { question: "Q2 ?", options: ["A", "B"], correctAnswer: 0 },
+        ],
+      });
+
+      expect(res.success).toBe(true);
+      expect(mockPrisma.question.createManyAndReturn).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({ text: "Q1 ?", topicId: "t1" }),
+          expect.objectContaining({ text: "Q2 ?", topicId: null }),
+        ],
+        select: { id: true },
       });
     });
   });

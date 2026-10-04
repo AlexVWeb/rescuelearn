@@ -21,6 +21,13 @@ const mockPrisma = vi.hoisted(() => ({
   question: {
     findMany: vi.fn(),
   },
+  referencielTopic: {
+    findMany: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/pdf/document", () => ({
+  extractPages: vi.fn().mockResolvedValue(new Uint8Array([1])),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -41,6 +48,7 @@ vi.mock("@/lib/logger", () => ({
 
 import { getUserContext } from "@/lib/context";
 import { generateQuizFromPdf } from "@/lib/gemini";
+import { extractPages } from "@/lib/pdf/document";
 import { generateQuizWithAiAction } from "@/app/actions/ai-quiz-actions";
 
 describe("generateQuizWithAiAction", () => {
@@ -199,5 +207,122 @@ describe("generateQuizWithAiAction", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Database failure");
+  });
+
+  describe("with topicIds", () => {
+    const topics = [
+      {
+        id: "t1",
+        title: "Garrot",
+        summary: "Pose du garrot.",
+        keyPoints: ["Heure de pose"],
+        pageStart: 45,
+        pageEnd: 46,
+      },
+      {
+        id: "t2",
+        title: "Compression manuelle",
+        summary: "Appui direct.",
+        keyPoints: [],
+        pageStart: 43,
+        pageEnd: 44,
+      },
+    ];
+
+    const aiQuestion = (topicId?: string) => ({
+      question: "Question ?",
+      options: ["A", "B", "C", "D"],
+      correctAnswer: 0,
+      explanation: "Explication.",
+      tags: [],
+      topicId,
+    });
+
+    beforeEach(() => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.referenciel.findUnique.mockResolvedValue({
+        id: 1,
+        title: "PSE",
+        pdfUrl: "https://r2.example.com/dev/referenciels/pse.pdf",
+      });
+      mockPrisma.referencielTopic.findMany.mockResolvedValue(topics);
+      mockPrisma.question.findMany
+        .mockResolvedValueOnce([]) // tags
+        .mockResolvedValueOnce([{ text: "Déjà posée ?" }]); // anti-doublon
+    });
+
+    it("cible les pages et les sujets demandés", async () => {
+      vi.mocked(generateQuizFromPdf).mockResolvedValue({
+        title: "Quiz",
+        questions: [aiQuestion("t1")],
+      });
+
+      const result = await generateQuizWithAiAction({
+        referencielId: 1,
+        topicIds: ["t1", "t2"],
+        questionCount: 5,
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockPrisma.referencielTopic.findMany).toHaveBeenCalledWith({
+        where: { id: { in: ["t1", "t2"] }, referencielId: 1 },
+        orderBy: { order: "asc" },
+      });
+      expect(extractPages).toHaveBeenCalledWith(expect.any(Uint8Array), [
+        { pageStart: 43, pageEnd: 46 },
+      ]);
+      expect(mockPrisma.question.findMany).toHaveBeenLastCalledWith({
+        where: { topicId: { in: ["t1", "t2"] } },
+        select: { text: true },
+      });
+      expect(generateQuizFromPdf).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pdf: new Uint8Array([1]),
+          topic: "Garrot, Compression manuelle",
+          topics,
+          existingQuestions: ["Déjà posée ?"],
+        })
+      );
+      expect(result.data?.questions[0].topicId).toBe("t1");
+    });
+
+    it("refuse des sujets d'un autre référentiel", async () => {
+      mockPrisma.referencielTopic.findMany.mockResolvedValue([topics[0]]);
+
+      const result = await generateQuizWithAiAction({
+        referencielId: 1,
+        topicIds: ["t1", "autre"],
+        questionCount: 5,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Sujets introuvables pour ce référentiel",
+      });
+      expect(generateQuizFromPdf).not.toHaveBeenCalled();
+    });
+
+    it("retire un topicId inconnu renvoyé par l'IA", async () => {
+      vi.mocked(generateQuizFromPdf).mockResolvedValue({
+        title: "Quiz",
+        questions: [aiQuestion("inconnu")],
+      });
+
+      const result = await generateQuizWithAiAction({
+        referencielId: 1,
+        topicIds: ["t1"],
+        questionCount: 5,
+      });
+
+      expect(result.data?.questions[0].topicId).toBeUndefined();
+    });
+
+    it("exige un sujet libre ou des sujets", async () => {
+      const result = await generateQuizWithAiAction({
+        referencielId: 1,
+        questionCount: 5,
+      });
+      expect(result).toEqual({ success: false, error: "Invalid parameters" });
+    });
   });
 });

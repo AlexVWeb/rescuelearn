@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { stat, readFile } from "fs/promises";
 
 // Mock dependencies
 const mockUpload = vi.fn();
@@ -31,11 +30,6 @@ vi.mock("@google/genai", () => {
   };
 });
 
-vi.mock("fs/promises", () => ({
-  stat: vi.fn(),
-  readFile: vi.fn(),
-}));
-
 vi.mock("@/lib/logger", () => ({
   logger: {
     info: vi.fn(),
@@ -46,9 +40,15 @@ vi.mock("@/lib/logger", () => ({
 
 import {
   buildPrompt,
+  buildProgressionPrompt,
+  buildLearningCardPrompt,
+  generateLearningCardsFromPdf,
   generateQuizFromPdf,
   retryWithBackoff,
 } from "@/lib/gemini";
+
+const smallPdf = new Uint8Array(1024);
+const largePdf = new Uint8Array(16 * 1024 * 1024);
 
 describe("gemini business logic", () => {
   const originalEnv = process.env;
@@ -82,6 +82,115 @@ describe("gemini business logic", () => {
       expect(prompt).toContain('Le niveau ciblé est "PSE2"');
       expect(prompt).toContain("Question existante 1 ?");
       expect(prompt).toContain("Neurologie");
+    });
+
+    it("should add a targeted context when topics are provided", () => {
+      const prompt = buildPrompt(
+        "Garrot",
+        5,
+        undefined,
+        [],
+        [],
+        [
+          {
+            id: "t1",
+            title: "Garrot",
+            summary: "Pose du garrot.",
+            keyPoints: ["Au-dessus de la plaie", "Noter l'heure"],
+            pageStart: 45,
+            pageEnd: 46,
+          },
+        ]
+      );
+      expect(prompt).toContain("CONTEXTE CIBLÉ");
+      expect(prompt).toContain(
+        "- [id: t1] Garrot (pages 45-46) : Pose du garrot. Points clés : Au-dessus de la plaie ; Noter l'heure"
+      );
+      expect(prompt).toContain('renseigne "topicId"');
+    });
+
+    it("should not mention topicId without topics", () => {
+      expect(buildPrompt("ACR", 10)).not.toContain("topicId");
+    });
+  });
+
+  describe("buildProgressionPrompt", () => {
+    const structure = { microCourseCount: 1, quizCount: 3, flashcardCount: 1 };
+
+    it("should target the lesson on the given topics without topicId", () => {
+      const prompt = buildProgressionPrompt("Hémorragies", structure, "PSE1", [
+        {
+          id: "t1",
+          title: "Garrot",
+          summary: "Pose du garrot.",
+          keyPoints: ["Heure de pose"],
+          pageStart: 45,
+          pageEnd: 46,
+        },
+      ]);
+      expect(prompt).toContain("CONTEXTE CIBLÉ");
+      expect(prompt).toContain("[id: t1] Garrot (pages 45-46)");
+      expect(prompt).not.toContain("topicId");
+    });
+
+    it("should keep the free-topic prompt unchanged without topics", () => {
+      expect(
+        buildProgressionPrompt("Hémorragies", structure, "PSE1")
+      ).not.toContain("CONTEXTE CIBLÉ");
+    });
+  });
+
+  describe("learning cards", () => {
+    const garrot = {
+      id: "t1",
+      title: "Garrot",
+      summary: "Pose du garrot.",
+      keyPoints: ["Heure de pose"],
+      pageStart: 45,
+      pageEnd: 46,
+    };
+
+    it("should target the cards on the given topics", () => {
+      const prompt = buildLearningCardPrompt("Garrot", 5, "PSE1", [garrot]);
+      expect(prompt).toContain("CONTEXTE CIBLÉ");
+      expect(prompt).toContain("[id: t1] Garrot (pages 45-46)");
+      expect(prompt).toContain('renseigne "topicId"');
+    });
+
+    it("should send the in-memory PDF and constrain topicId", async () => {
+      mockGenerateContent.mockResolvedValue({
+        text: JSON.stringify({ cards: [] }),
+      });
+
+      await generateLearningCardsFromPdf({
+        pdf: smallPdf,
+        topic: "Garrot",
+        cardCount: 5,
+        topics: [garrot],
+      });
+
+      const config = mockGenerateContent.mock.calls[0][0].config;
+      const items = config.responseSchema.properties.cards.items;
+      expect(items.properties.topicId.enum).toEqual(["t1"]);
+      expect(items.required).toContain("topicId");
+      expect(mockUpload).not.toHaveBeenCalled();
+    });
+
+    it("should not require topicId without topics", async () => {
+      mockGenerateContent.mockResolvedValue({
+        text: JSON.stringify({ cards: [] }),
+      });
+
+      await generateLearningCardsFromPdf({
+        pdf: smallPdf,
+        topic: "ACR",
+        cardCount: 5,
+      });
+
+      const items =
+        mockGenerateContent.mock.calls[0][0].config.responseSchema.properties
+          .cards.items;
+      expect(items.properties.topicId).toBeUndefined();
     });
   });
 
@@ -123,7 +232,7 @@ describe("gemini business logic", () => {
       delete process.env.GEMINI_API_KEY;
       await expect(
         generateQuizFromPdf({
-          pdfPath: "dummy.pdf",
+          pdf: smallPdf,
           topic: "ACR",
           questionCount: 10,
         })
@@ -131,8 +240,6 @@ describe("gemini business logic", () => {
     });
 
     it("should process small PDF inline", async () => {
-      vi.mocked(stat).mockResolvedValue({ size: 10 * 1024 * 1024 } as never); // 10MB
-      vi.mocked(readFile).mockResolvedValue(Buffer.from("dummy-pdf-content"));
       mockGenerateContent.mockResolvedValue({
         text: JSON.stringify({
           title: "Quiz ACR",
@@ -144,20 +251,17 @@ describe("gemini business logic", () => {
       });
 
       const result = await generateQuizFromPdf({
-        pdfPath: "dummy.pdf",
+        pdf: smallPdf,
         topic: "ACR",
         questionCount: 5,
       });
 
       expect(result.title).toBe("Quiz ACR");
-      expect(stat).toHaveBeenCalledWith("dummy.pdf");
-      expect(readFile).toHaveBeenCalledWith("dummy.pdf");
       expect(mockUpload).not.toHaveBeenCalled();
       expect(mockGenerateContent).toHaveBeenCalled();
     });
 
     it("should process large PDF using Files API and poll state", async () => {
-      vi.mocked(stat).mockResolvedValue({ size: 20 * 1024 * 1024 } as never); // 20MB
       mockUpload.mockResolvedValue({
         name: "files/abc-123",
         state: "PROCESSING",
@@ -177,7 +281,7 @@ describe("gemini business logic", () => {
       });
 
       const result = await generateQuizFromPdf({
-        pdfPath: "dummy.pdf",
+        pdf: largePdf,
         topic: "ACR",
         questionCount: 10,
         level: "PSE1",
@@ -185,7 +289,7 @@ describe("gemini business logic", () => {
 
       expect(result.title).toBe("Quiz Large PDF");
       expect(mockUpload).toHaveBeenCalledWith({
-        file: "dummy.pdf",
+        file: expect.any(Blob),
         config: { mimeType: "application/pdf" },
       });
       expect(mockGet).toHaveBeenCalledTimes(2);
@@ -194,7 +298,6 @@ describe("gemini business logic", () => {
     });
 
     it("should throw error if large PDF upload state becomes failed", async () => {
-      vi.mocked(stat).mockResolvedValue({ size: 20 * 1024 * 1024 } as never);
       mockUpload.mockResolvedValue({
         name: "files/abc-123",
         state: "PROCESSING",
@@ -204,7 +307,7 @@ describe("gemini business logic", () => {
 
       await expect(
         generateQuizFromPdf({
-          pdfPath: "dummy.pdf",
+          pdf: largePdf,
           topic: "ACR",
           questionCount: 10,
         })
@@ -213,14 +316,40 @@ describe("gemini business logic", () => {
       expect(mockDelete).toHaveBeenCalledWith({ name: "files/abc-123" });
     });
 
+    it("should constrain topicId to the provided topics", async () => {
+      mockGenerateContent.mockResolvedValue({
+        text: JSON.stringify({ title: "Quiz", questions: [] }),
+      });
+
+      await generateQuizFromPdf({
+        pdf: smallPdf,
+        topic: "Garrot",
+        questionCount: 5,
+        topics: [
+          {
+            id: "t1",
+            title: "Garrot",
+            summary: "",
+            keyPoints: [],
+            pageStart: 1,
+            pageEnd: 2,
+          },
+        ],
+      });
+
+      const items =
+        mockGenerateContent.mock.calls[0][0].config.responseSchema.properties
+          .questions.items;
+      expect(items.properties.topicId.enum).toEqual(["t1"]);
+      expect(items.required).toContain("topicId");
+    });
+
     it("should throw error if generateContent returns empty text", async () => {
-      vi.mocked(stat).mockResolvedValue({ size: 2 * 1024 * 1024 } as never);
-      vi.mocked(readFile).mockResolvedValue(Buffer.from("dummy"));
       mockGenerateContent.mockResolvedValue({ text: "" });
 
       await expect(
         generateQuizFromPdf({
-          pdfPath: "dummy.pdf",
+          pdf: smallPdf,
           topic: "ACR",
           questionCount: 10,
         })

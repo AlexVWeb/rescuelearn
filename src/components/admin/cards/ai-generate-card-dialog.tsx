@@ -22,6 +22,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateLearningCardsWithAiAction } from "@/app/actions/ai-learning-card-actions";
 import { bulkCreateLearningCardsAction } from "@/app/actions/learning-card-actions";
+import { getReferencielAnalysisAction } from "@/app/actions/referenciel-topic-actions";
+import {
+  TopicPicker,
+  type PickableTopic,
+} from "@/components/admin/topic-picker";
 import {
   AlertCircle,
   BrainCircuit,
@@ -36,6 +41,7 @@ import { toast } from "sonner";
 interface ReferencielSimple {
   id: number;
   title: string;
+  analysisStatus?: string;
 }
 
 interface GeneratedCard {
@@ -43,22 +49,35 @@ interface GeneratedCard {
   niveau: string;
   info: string;
   reference: string;
+  topicId?: string;
 }
 
 interface AiGenerateCardDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   referenciels: ReferencielSimple[];
+  // Ouverture depuis la page des sujets d'un référentiel
+  initialReferencielId?: number;
+  initialTopicIds?: string[];
 }
+
+// Sujets exploitables dès qu'une analyse a produit des résultats (même partielle)
+const hasTopics = (ref?: ReferencielSimple) =>
+  ref?.analysisStatus === "DONE" || ref?.analysisStatus === "FAILED";
 
 export function AiGenerateCardDialog({
   open,
   onOpenChange,
   referenciels,
+  initialReferencielId,
+  initialTopicIds,
 }: AiGenerateCardDialogProps) {
   const router = useRouter();
   const [selectedReferenciel, setSelectedReferenciel] = useState<string>("");
   const [topic, setTopic] = useState("");
+  const [topics, setTopics] = useState<PickableTopic[]>([]);
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
+  const [freeTopicMode, setFreeTopicMode] = useState(false);
   const [cardCount, setCardCount] = useState<string>("10");
   const [level, setLevel] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -74,11 +93,18 @@ export function AiGenerateCardDialog({
   useEffect(() => {
     if (open) {
       if (referenciels.length > 0 && !selectedReferenciel) {
-        setSelectedReferenciel(referenciels[0].id.toString());
+        const initial =
+          referenciels.find((r) => r.id === initialReferencielId) ??
+          referenciels[0];
+        setSelectedReferenciel(initial.id.toString());
       }
     } else {
       // Reset state on close
       setTopic("");
+      setTopics([]);
+      setSelectedTopicIds([]);
+      setFreeTopicMode(false);
+      setSelectedReferenciel("");
       setLevel("");
       setCardCount("10");
       setError(null);
@@ -86,7 +112,50 @@ export function AiGenerateCardDialog({
       setGeneratedCards([]);
       setSelectedIndices({});
     }
-  }, [open, referenciels, selectedReferenciel]);
+  }, [open, referenciels, selectedReferenciel, initialReferencielId]);
+
+  const shouldLoadTopics = hasTopics(
+    referenciels.find((r) => r.id.toString() === selectedReferenciel)
+  );
+
+  // Charge les sujets analysés du référentiel choisi
+  useEffect(() => {
+    if (!open || !shouldLoadTopics) return;
+    let cancelled = false;
+    const loadTopics = async () => {
+      const res = await getReferencielAnalysisAction(
+        parseInt(selectedReferenciel, 10)
+      );
+      if (cancelled || !res.success) return;
+      setTopics(res.data.topics);
+      // Présélection transmise à l'ouverture (page des sujets)
+      if (selectedReferenciel === String(initialReferencielId)) {
+        setSelectedTopicIds(
+          (initialTopicIds ?? []).filter((id) =>
+            res.data.topics.some((t) => t.id === id)
+          )
+        );
+      }
+    };
+    loadTopics();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    open,
+    selectedReferenciel,
+    shouldLoadTopics,
+    initialReferencielId,
+    initialTopicIds,
+  ]);
+
+  const useTopicPicker = topics.length > 0 && !freeTopicMode;
+
+  const handleReferencielChange = (value: string) => {
+    setSelectedReferenciel(value);
+    setTopics([]);
+    setSelectedTopicIds([]);
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +163,11 @@ export function AiGenerateCardDialog({
       setError("Veuillez sélectionner un référentiel.");
       return;
     }
-    if (!topic.trim()) {
+    if (useTopicPicker && selectedTopicIds.length === 0) {
+      setError("Veuillez sélectionner au moins un sujet.");
+      return;
+    }
+    if (!useTopicPicker && !topic.trim()) {
       setError("Veuillez saisir un sujet.");
       return;
     }
@@ -105,7 +178,7 @@ export function AiGenerateCardDialog({
     try {
       const res = await generateLearningCardsWithAiAction({
         referencielId: parseInt(selectedReferenciel, 10),
-        topic,
+        ...(useTopicPicker ? { topicIds: selectedTopicIds } : { topic }),
         cardCount: parseInt(cardCount, 10),
         level: level.trim() || undefined,
       });
@@ -196,7 +269,7 @@ export function AiGenerateCardDialog({
         }
       >
         {step === "form" ? (
-          <form onSubmit={handleGenerate}>
+          <form onSubmit={handleGenerate} className="min-w-0">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <BrainCircuit className="h-5 w-5 animate-pulse text-blue-600" />
@@ -227,7 +300,7 @@ export function AiGenerateCardDialog({
                 ) : (
                   <Select
                     value={selectedReferenciel}
-                    onValueChange={setSelectedReferenciel}
+                    onValueChange={handleReferencielChange}
                     disabled={isLoading}
                   >
                     <SelectTrigger id="referenciel">
@@ -244,17 +317,50 @@ export function AiGenerateCardDialog({
                 )}
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="topic">Sujet des cartes</Label>
-                <Input
-                  id="topic"
-                  placeholder="Ex: Hémorragies externes, Obstruction des voies aériennes..."
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  disabled={isLoading}
-                  required
-                />
-              </div>
+              {useTopicPicker ? (
+                <div className="grid min-w-0 gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Sujets du référentiel</Label>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-xs"
+                      onClick={() => setFreeTopicMode(true)}
+                    >
+                      Saisir un sujet libre
+                    </Button>
+                  </div>
+                  <TopicPicker
+                    topics={topics}
+                    selectedIds={selectedTopicIds}
+                    onChange={setSelectedTopicIds}
+                    disabled={isLoading}
+                  />
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="topic">Sujet des cartes</Label>
+                    {topics.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 text-xs"
+                        onClick={() => setFreeTopicMode(false)}
+                      >
+                        Choisir parmi les sujets analysés
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    id="topic"
+                    placeholder="Ex: Hémorragies externes, Obstruction des voies aériennes..."
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">

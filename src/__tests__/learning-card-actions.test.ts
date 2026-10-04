@@ -258,5 +258,28 @@ describe("learning-card-actions", () => {
       expect(res.count).toBe(2);
       expect(mockPrisma.learningCard.create).toHaveBeenCalledTimes(2);
     });
+
+    it("should persist the topicId of each card", async () => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.learningCard.create.mockResolvedValue({ id: 1 });
+
+      await bulkCreateLearningCardsAction({
+        referencielId: 5,
+        cards: [
+          {
+            theme: "Hémorragies",
+            niveau: "PSE1",
+            info: "Info",
+            reference: "p.45",
+            topicId: "t1",
+          },
+          { theme: "T", niveau: "PSE1", info: "I", reference: "p.1" },
+        ],
+      });
+
+      expect(
+        mockPrisma.learningCard.create.mock.calls.map((c) => c[0].data.topicId)
+      ).toEqual(["t1", null]);
+    });
   });
 });

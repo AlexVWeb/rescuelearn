@@ -5,12 +5,15 @@ import {
   organization,
   haveIBeenPwned,
 } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
 import { randomUUID } from "crypto";
 
 import { EmailService } from "@/lib/email";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { getBaseUrl } from "@/lib/utils";
+import { isFeatureEnabled, FeatureKey } from "@/lib/features";
+import { getLoginTypeError, LOGIN_TYPE_HEADER } from "@/lib/login-type";
 
 const ac = createAccessControl({
   organization: ["update", "delete"] as const,
@@ -53,6 +56,31 @@ export const auth = betterAuth({
     cookieCache: {
       enabled: true,
       maxAge: 5 * 60, // Cache cookie 5 minutes (évite DB lookup à chaque requête)
+    },
+  },
+
+  databaseHooks: {
+    session: {
+      create: {
+        // Refuse la session si l'onglet de connexion ne correspond pas au compte
+        // (formateur vs élève). Exécuté après la vérification du mot de passe.
+        before: async (session, ctx) => {
+          if (ctx?.path !== "/sign-in/email") return;
+
+          const user = await prisma.user.findUnique({
+            where: { id: session.userId },
+            select: { roles: true },
+          });
+          const error = getLoginTypeError(
+            ctx.headers?.get(LOGIN_TYPE_HEADER),
+            user?.roles,
+            await isFeatureEnabled(FeatureKey.PLAYER_SYSTEM)
+          );
+          if (error) {
+            throw new APIError("FORBIDDEN", { message: error });
+          }
+        },
+      },
     },
   },
 

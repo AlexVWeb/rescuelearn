@@ -2,8 +2,7 @@
 
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { checkSuperAdmin } from "@/lib/admin-guard";
 import { generateSNVScenarioFromPdf } from "@/lib/gemini";
 import { z } from "zod";
 import path from "path";
@@ -31,8 +30,8 @@ const generatedScenarioSchema = z.object({
 });
 
 export async function generateSNVScenarioWithAiAction(jsonData: unknown) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   const parsed = generateScenarioSchema.safeParse(jsonData);
   if (!parsed.success) {

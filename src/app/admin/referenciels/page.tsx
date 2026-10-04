@@ -5,6 +5,9 @@ import {
 import ClientPage from "./client-page";
 import { requireSuperAdmin } from "@/lib/context";
 
+// Les server actions de la page lancent l'analyse IA des référentiels en arrière-plan (after)
+export const maxDuration = 800;
+
 export default async function ReferencielsPage(props: {
   searchParams?: Promise<{ page?: string; search?: string }>;
 }) {

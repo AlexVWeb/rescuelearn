@@ -1,13 +1,17 @@
-import { Type } from "@google/genai";
-import { stat, readFile } from "fs/promises";
-import { logger } from "../logger";
+import { Type, type Schema } from "@google/genai";
 import { getAiClient, retryWithBackoff, GEMINI_MODEL } from "./client";
+import { withPdfPart } from "./pdf-part";
+import { buildTopicsContext, type PromptTopic } from "./topics-context";
 
 export function buildLearningCardPrompt(
   topic: string,
   cardCount: number,
-  level?: string
+  level?: string,
+  topics?: PromptTopic[]
 ): string {
+  const context = topics?.length
+    ? buildTopicsContext(topics, { withTopicId: true, itemLabel: "carte" })
+    : "";
   return `Tu es un expert en secourisme et pédagogie. Tu dois générer des cartes d'apprentissage sur le sujet "${topic}" à partir du référentiel PDF fourni.
 Génère exactement ${cardCount} cartes d'apprentissage.${level ? ` Le niveau ciblé est "${level}".` : ""}
 
@@ -19,73 +23,41 @@ CONSIGNES STRICTES :
    - "niveau" : Le niveau de la carte (Ex: "Grand Public", "PSC1", "PSE1", "PSE2"). Utilise "${level || "Tous publics"}" par défaut.
    - "info" : L'explication pédagogique claire, concise, et synthétique décrivant le geste, la technique ou le point clé de la procédure.
    - "reference" : Référence précise à la page ou section du document (Ex: "Page 45", "Section 3.2").
-`;
+${context}`;
 }
 
 export async function generateLearningCardsFromPdf({
-  pdfPath,
+  pdf,
   topic,
   cardCount,
   level,
+  topics,
 }: {
-  pdfPath: string;
+  pdf: Uint8Array;
   topic: string;
   cardCount: number;
   level?: string;
+  topics?: PromptTopic[];
 }) {
   const ai = getAiClient();
 
-  const fileStats = await stat(pdfPath);
-  const fileSizeMB = fileStats.size / (1024 * 1024);
+  const cardProperties: Record<string, Schema> = {
+    theme: { type: Type.STRING },
+    niveau: { type: Type.STRING },
+    info: { type: Type.STRING },
+    reference: { type: Type.STRING },
+  };
+  const cardRequired = ["theme", "niveau", "info", "reference"];
+  if (topics?.length) {
+    cardProperties.topicId = {
+      type: Type.STRING,
+      enum: topics.map((t) => t.id),
+    };
+    cardRequired.push("topicId");
+  }
 
-  let pdfContentPart:
-    | Awaited<ReturnType<ReturnType<typeof getAiClient>["files"]["upload"]>>
-    | { inlineData: { data: string; mimeType: string } };
-  let fileUploadName: string | null = null;
-
-  try {
-    if (fileSizeMB >= 15) {
-      logger.info(
-        `PDF is large (${fileSizeMB.toFixed(2)} MB), uploading to Gemini Files API...`
-      );
-      const uploadResult = await ai.files.upload({
-        file: pdfPath,
-        config: {
-          mimeType: "application/pdf",
-        },
-      });
-      if (!uploadResult.name) {
-        throw new Error("Upload failed: file name is undefined");
-      }
-      fileUploadName = uploadResult.name;
-
-      // Poll until file is active
-      let fileState = uploadResult.state;
-      while (fileState === "PROCESSING") {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const fileInfo = await ai.files.get({ name: uploadResult.name });
-        fileState = fileInfo.state;
-      }
-
-      if (fileState !== "ACTIVE") {
-        throw new Error(`Uploaded file is not active: ${fileState}`);
-      }
-
-      pdfContentPart = uploadResult;
-    } else {
-      logger.info(
-        `PDF is small (${fileSizeMB.toFixed(2)} MB), sending inline...`
-      );
-      const pdfBuffer = await readFile(pdfPath);
-      pdfContentPart = {
-        inlineData: {
-          data: pdfBuffer.toString("base64"),
-          mimeType: "application/pdf",
-        },
-      };
-    }
-
-    const promptText = buildLearningCardPrompt(topic, cardCount, level);
+  return withPdfPart(pdf, async (pdfContentPart) => {
+    const promptText = buildLearningCardPrompt(topic, cardCount, level, topics);
 
     const response = await retryWithBackoff(() =>
       ai.models.generateContent({
@@ -101,13 +73,8 @@ export async function generateLearningCardsFromPdf({
                 type: Type.ARRAY,
                 items: {
                   type: Type.OBJECT,
-                  properties: {
-                    theme: { type: Type.STRING },
-                    niveau: { type: Type.STRING },
-                    info: { type: Type.STRING },
-                    reference: { type: Type.STRING },
-                  },
-                  required: ["theme", "niveau", "info", "reference"],
+                  properties: cardProperties,
+                  required: cardRequired,
                 },
               },
             },
@@ -123,14 +90,5 @@ export async function generateLearningCardsFromPdf({
     }
 
     return JSON.parse(responseText);
-  } finally {
-    if (fileUploadName) {
-      try {
-        logger.info(`Deleting file ${fileUploadName} from Gemini Files API...`);
-        await ai.files.delete({ name: fileUploadName });
-      } catch (err) {
-        logger.error(`Failed to delete uploaded file ${fileUploadName}:`, err);
-      }
-    }
-  }
+  });
 }

@@ -22,6 +22,7 @@ interface LearningCard {
 interface Referenciel {
   id: number;
   title: string;
+  analysisStatus: string;
 }
 
 import { Exercise } from "@/types/progression";

@@ -29,6 +29,13 @@ vi.mock("@/lib/prisma", () => ({
   prisma: mockPrisma,
 }));
 
+const mockIsFeatureEnabled = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/features", () => ({
+  FeatureKey: { PLAYER_SYSTEM: "PLAYER_SYSTEM" },
+  isFeatureEnabled: (...args: unknown[]) => mockIsFeatureEnabled(...args),
+}));
+
 vi.mock("@/lib/logger", () => ({
   logger: {
     info: vi.fn(),
@@ -43,6 +50,21 @@ import { UserRole } from "@/lib/roles";
 describe("registerPlayerAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsFeatureEnabled.mockResolvedValue(true);
+  });
+
+  it("refuses registration when the player system is disabled", async () => {
+    mockIsFeatureEnabled.mockResolvedValue(false);
+
+    const res = await registerPlayerAction({
+      name: "John Doe",
+      email: "new@example.com",
+      password: "validpassword123",
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.error).toBe("L'espace élève est temporairement désactivé.");
+    expect(mockAuthSignUp).not.toHaveBeenCalled();
   });
 
   it("fails if validation fails (e.g. invalid email or short password)", async () => {

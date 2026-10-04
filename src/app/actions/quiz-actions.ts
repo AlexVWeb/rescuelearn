@@ -3,11 +3,10 @@ import { logger } from "@/lib/logger";
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
+import { checkSuperAdmin } from "@/lib/admin-guard";
 
 // --- Types ---
 
@@ -46,8 +45,8 @@ export async function getQuizzesAction(
   limit: number = 10,
   search: string = ""
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   const skip = (page - 1) * limit;
   const where = search
@@ -95,8 +94,8 @@ export async function createQuizAction(data: {
   modeRandom: boolean;
   status?: "DRAFT" | "PUBLISHED";
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.quiz.create({
@@ -126,8 +125,8 @@ export async function updateQuizAction(
     status?: "DRAFT" | "PUBLISHED";
   }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.quiz.update({
@@ -149,8 +148,8 @@ export async function updateQuizAction(
 }
 
 export async function deleteQuizAction(id: number) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.quiz.delete({
@@ -180,6 +179,7 @@ const importSchema = z.object({
         correctAnswer: z.number(), // Index
         explanation: z.string().optional(),
         tags: z.array(z.string()).optional().default([]),
+        topicId: z.string().optional().nullable(),
       })
     )
     .min(1),
@@ -191,8 +191,8 @@ const importSchema = z.object({
 });
 
 export async function importQuizAction(jsonData: unknown) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   const parsed = importSchema.safeParse(jsonData);
   if (!parsed.success) {
@@ -247,6 +247,7 @@ export async function importQuizAction(jsonData: unknown) {
             correctAnswer: letters[q.correctAnswer] || "A",
             quizId: quiz.id,
             tags: q.tags,
+            topicId: q.topicId ?? null,
           })),
           select: { id: true },
         });
@@ -277,8 +278,8 @@ export async function getQuestionsAction(
   limit: number = 10,
   search: string = ""
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   const skip = (page - 1) * limit;
   const where = search
@@ -327,8 +328,8 @@ export async function createQuestionAction(data: {
   correctAnswer: string;
   options: string[];
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.question.create({
@@ -360,8 +361,8 @@ export async function updateQuestionAction(
     options: string[];
   }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     // Transaction to update question and replace options
@@ -399,8 +400,8 @@ export async function updateQuestionAction(
 }
 
 export async function deleteQuestionAction(id: number) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return { success: false, error: "Unauthorized" };
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
 
   try {
     await prisma.question.delete({
@@ -415,8 +416,7 @@ export async function deleteQuestionAction(id: number) {
 }
 
 export async function getAllQuizzesSimpleAction() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return [];
+  if (await checkSuperAdmin()) return [];
 
   try {
     return await prisma.quiz.findMany({
@@ -437,7 +437,7 @@ export async function getAllReferencielsSimpleAction() {
 
   try {
     return await prisma.referenciel.findMany({
-      select: { id: true, title: true },
+      select: { id: true, title: true, levels: true, analysisStatus: true },
       orderBy: { title: "asc" },
     });
   } catch (error) {

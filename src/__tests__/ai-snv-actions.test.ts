@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { UserRole } from "@/lib/roles";
 
 // --- Mocks ---
 
@@ -26,6 +27,9 @@ vi.mock("@/lib/r2", () => ({
 }));
 
 const mockPrisma = vi.hoisted(() => ({
+  user: {
+    findUnique: vi.fn(),
+  },
   referenciel: {
     findUnique: vi.fn(),
   },
@@ -56,7 +60,11 @@ describe("generateSNVScenarioWithAiAction", () => {
     vi.clearAllMocks();
   });
 
-  const mockSession = (user: { id: string } | null) => {
+  const mockSession = (
+    user: { id: string } | null,
+    roles: string[] = [UserRole.SUPER_ADMIN]
+  ) => {
+    mockPrisma.user.findUnique.mockResolvedValue({ roles });
     if (user) {
       vi.mocked(auth.api.getSession).mockResolvedValue({
         user: {
@@ -95,6 +103,20 @@ describe("generateSNVScenarioWithAiAction", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Unauthorized");
+  });
+
+  it("should return Forbidden and skip Gemini for non SUPER_ADMIN users", async () => {
+    mockSession({ id: "player-1" }, [UserRole.FORMATEUR]);
+
+    const result = await generateSNVScenarioWithAiAction({
+      referencielId: 1,
+      topic: "Accident de train",
+      victimCount: 10,
+    });
+
+    expect(result).toEqual({ success: false, error: "Forbidden" });
+    expect(mockPrisma.referenciel.findUnique).not.toHaveBeenCalled();
+    expect(generateSNVScenarioFromPdf).not.toHaveBeenCalled();
   });
 
   it("should return error if input parameters are invalid", async () => {

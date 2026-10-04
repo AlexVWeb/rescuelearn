@@ -5,15 +5,24 @@ import { prisma } from "@/lib/prisma";
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
 import { generateQuizFromPdf } from "@/lib/gemini";
+import { loadReferencielPdf } from "@/lib/referenciel-pdf";
+import { extractPages } from "@/lib/pdf/document";
+import { mergePageRanges } from "@/lib/pdf/chapters";
+import { MAX_TOPICS_PER_GENERATION } from "@/lib/topic-coverage";
+import { shuffleOptions } from "@/lib/quiz-answers";
 import { z } from "zod";
-import path from "path";
 
-const generateQuizSchema = z.object({
-  referencielId: z.number(),
-  topic: z.string().min(1, "Le sujet ne peut pas être vide"),
-  questionCount: z.number().min(1).max(30),
-  level: z.string().optional(),
-});
+const generateQuizSchema = z
+  .object({
+    referencielId: z.number(),
+    topic: z.string().optional(),
+    topicIds: z.array(z.string()).max(MAX_TOPICS_PER_GENERATION).optional(),
+    questionCount: z.number().min(1).max(30),
+    level: z.string().optional(),
+  })
+  .refine((d) => d.topic?.trim() || d.topicIds?.length, {
+    message: "Sujet ou sujets requis",
+  });
 
 const generatedQuizSchema = z.object({
   title: z.string(),
@@ -29,6 +38,7 @@ const generatedQuizSchema = z.object({
         correctAnswer: z.number(),
         explanation: z.string().optional(),
         tags: z.array(z.string()).optional().default([]),
+        topicId: z.string().optional(),
       })
     )
     .min(1),
@@ -45,10 +55,7 @@ export async function generateQuizWithAiAction(jsonData: unknown) {
     return { success: false, error: "Invalid parameters" };
   }
 
-  const { referencielId, topic, questionCount, level } = parsed.data;
-
-  let pdfPath = "";
-  let tempFileCreated = false;
+  const { referencielId, topicIds, questionCount, level } = parsed.data;
 
   try {
     const referenciel = await prisma.referenciel.findUnique({
@@ -59,26 +66,27 @@ export async function generateQuizWithAiAction(jsonData: unknown) {
       return { success: false, error: "Referenciel introuvable" };
     }
 
-    if (
-      referenciel.pdfUrl.startsWith("http://") ||
-      referenciel.pdfUrl.startsWith("https://")
-    ) {
-      const key = referenciel.pdfUrl.replace(
-        `${process.env.R2_PUBLIC_URL}/`,
-        ""
-      );
-      const { getFile } = await import("@/lib/r2");
-      const { buffer } = await getFile(key, false);
-      const fs = await import("fs/promises");
-      const path = await import("path");
-      const os = await import("os");
-      const tempDir = os.tmpdir();
-      pdfPath = path.join(tempDir, `temp-${Date.now()}-${path.basename(key)}`);
-      await fs.writeFile(pdfPath, buffer);
-      tempFileCreated = true;
-    } else {
-      pdfPath = path.join(process.cwd(), "public", referenciel.pdfUrl);
+    const fullPdf = await loadReferencielPdf(referenciel.pdfUrl);
+
+    // Génération ciblée : seules les pages des sujets choisis sont envoyées
+    const topics = topicIds?.length
+      ? await prisma.referencielTopic.findMany({
+          where: { id: { in: topicIds }, referencielId },
+          orderBy: { order: "asc" },
+        })
+      : undefined;
+    if (topics && topics.length !== new Set(topicIds).size) {
+      return {
+        success: false,
+        error: "Sujets introuvables pour ce référentiel",
+      };
     }
+
+    const pdf = topics
+      ? await extractPages(fullPdf, mergePageRanges(topics))
+      : fullPdf;
+    const topic =
+      parsed.data.topic?.trim() || topics!.map((t) => t.title).join(", ");
 
     // Get all existing tags in DB for injection/reuse
     const questionsForTags = await prisma.question.findMany({
@@ -88,25 +96,31 @@ export async function generateQuizWithAiAction(jsonData: unknown) {
       new Set(questionsForTags.flatMap((q) => q.tags))
     );
 
-    // Get existing questions text for this referenciel to avoid duplicates
+    // Get existing questions text to avoid duplicates (scoped to the topics if any)
     const existingQuestionsFromDb = await prisma.question.findMany({
-      where: {
-        quiz: {
-          referencielId,
-        },
-      },
+      where: topics
+        ? { topicId: { in: topics.map((t) => t.id) } }
+        : { quiz: { referencielId } },
       select: { text: true },
     });
     const existingQuestions = existingQuestionsFromDb.map((q) => q.text);
 
     // Call Gemini integration
     const result = await generateQuizFromPdf({
-      pdfPath,
+      pdf,
       topic,
       questionCount,
       level,
       existingQuestions,
       existingTags,
+      topics: topics?.map((t) => ({
+        id: t.id,
+        title: t.title,
+        summary: t.summary,
+        keyPoints: t.keyPoints,
+        pageStart: t.pageStart,
+        pageEnd: t.pageEnd,
+      })),
     });
 
     // Deep validation of Gemini output
@@ -120,30 +134,17 @@ export async function generateQuizWithAiAction(jsonData: unknown) {
     }
 
     const quizData = validatedResult.data;
+    const allowedTopicIds = new Set(topics?.map((t) => t.id));
 
     // Shuffle options for each question to remove AI position bias
     quizData.questions = quizData.questions.map((q) => {
-      const correctAnswerIndex = q.correctAnswer;
-      const mapped = q.options.map((text, idx) => ({
-        text,
-        isCorrect: idx === correctAnswerIndex,
-      }));
-
-      // Fisher-Yates shuffle
-      for (let i = mapped.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        const temp = mapped[i];
-        mapped[i] = mapped[j];
-        mapped[j] = temp;
-      }
-
-      const shuffledOptions = mapped.map((item) => item.text);
-      const newCorrectAnswerIndex = mapped.findIndex((item) => item.isCorrect);
-
+      const shuffled = shuffleOptions(q.options, q.correctAnswer);
       return {
         ...q,
-        options: shuffledOptions,
-        correctAnswer: newCorrectAnswerIndex,
+        options: shuffled.options,
+        correctAnswer: shuffled.correctIndex,
+        topicId:
+          q.topicId && allowedTopicIds.has(q.topicId) ? q.topicId : undefined,
       };
     });
 
@@ -160,14 +161,5 @@ export async function generateQuizWithAiAction(jsonData: unknown) {
           ? error.message
           : "Une erreur est survenue lors de la génération par l'IA.",
     };
-  } finally {
-    if (tempFileCreated && pdfPath) {
-      try {
-        const fs = await import("fs/promises");
-        await fs.unlink(pdfPath);
-      } catch (err) {
-        logger.error("Failed to delete temp file:", err);
-      }
-    }
   }
 }

@@ -19,6 +19,8 @@ import {
   FileText,
 } from "lucide-react";
 import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,10 +43,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Referenciel } from "@/app/actions/referenciel-actions";
+import { ReferencielAnalysisBadge } from "@/components/admin/referenciel-analysis-badge";
+
+const REFRESH_INTERVAL_MS = 5000;
 
 export const columns = (
   onEdit: (ref: Referenciel) => void,
-  onDelete: (id: number) => void
+  onDelete: (id: number) => void,
+  onAnalyze: (id: number) => void
 ): ColumnDef<Referenciel>[] => [
   {
     id: "select",
@@ -91,6 +97,28 @@ export const columns = (
     ),
   },
   {
+    accessorKey: "levels",
+    header: "Niveaux",
+    cell: ({ row }) => (
+      <div className="text-muted-foreground text-sm">
+        {row.original.levels.join(", ") || "—"}
+      </div>
+    ),
+  },
+  {
+    accessorKey: "analysisStatus",
+    header: "Analyse",
+    cell: ({ row }) => (
+      <ReferencielAnalysisBadge
+        status={row.original.analysisStatus}
+        done={row.original.analysisDoneChapters}
+        total={row.original.analysisTotalChapters}
+        topicCount={row.original._count.topics}
+        error={row.original.analysisError}
+      />
+    ),
+  },
+  {
     accessorKey: "pdfUrl",
     header: "Fichier",
     cell: ({ row }) => {
@@ -131,6 +159,17 @@ export const columns = (
               Modifier
             </DropdownMenuItem>
             <DropdownMenuItem
+              disabled={ref.analysisStatus === "PROCESSING"}
+              onClick={() => onAnalyze(ref.id)}
+            >
+              {ref.analysisStatus === "NONE" ? "Analyser" : "Ré-analyser"}
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/admin/referenciels/${ref.id}/sujets`}>
+                Voir les sujets
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
               onClick={() => onDelete(ref.id)}
               className="text-destructive"
             >
@@ -147,13 +186,25 @@ interface ReferencielsTableProps {
   data: Referenciel[];
   onEdit: (ref: Referenciel) => void;
   onDelete: (id: number) => void;
+  onAnalyze: (id: number) => void;
 }
 
 export function ReferencielsTable({
   data,
   onEdit,
   onDelete,
+  onAnalyze,
 }: ReferencielsTableProps) {
+  const router = useRouter();
+  const hasProcessing = data.some((r) => r.analysisStatus === "PROCESSING");
+
+  // Rafraîchit la progression tant qu'une analyse tourne
+  React.useEffect(() => {
+    if (!hasProcessing) return;
+    const interval = setInterval(() => router.refresh(), REFRESH_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [hasProcessing, router]);
+
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -164,7 +215,7 @@ export function ReferencielsTable({
 
   const table = useReactTable({
     data,
-    columns: columns(onEdit, onDelete),
+    columns: columns(onEdit, onDelete, onAnalyze),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -259,7 +310,7 @@ export function ReferencielsTable({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columns(onEdit, onDelete).length}
+                  colSpan={columns(onEdit, onDelete, onAnalyze).length}
                   className="h-24 text-center"
                 >
                   Aucun résultat.

@@ -18,6 +18,13 @@ const mockPrisma = vi.hoisted(() => ({
   referenciel: {
     findUnique: vi.fn(),
   },
+  referencielTopic: {
+    findMany: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/pdf/document", () => ({
+  extractPages: vi.fn().mockResolvedValue(new Uint8Array([1])),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -38,6 +45,7 @@ vi.mock("@/lib/logger", () => ({
 
 import { getUserContext } from "@/lib/context";
 import { generateLearningCardsFromPdf } from "@/lib/gemini";
+import { extractPages } from "@/lib/pdf/document";
 import { generateLearningCardsWithAiAction } from "@/app/actions/ai-learning-card-actions";
 
 describe("generateLearningCardsWithAiAction", () => {
@@ -175,5 +183,87 @@ describe("generateLearningCardsWithAiAction", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Database failure");
+  });
+
+  describe("with topicIds", () => {
+    const topics = [
+      {
+        id: "t1",
+        title: "Garrot",
+        summary: "Pose du garrot.",
+        keyPoints: ["Heure de pose"],
+        pageStart: 45,
+        pageEnd: 46,
+      },
+      {
+        id: "t2",
+        title: "Compression manuelle",
+        summary: "Appui direct.",
+        keyPoints: [],
+        pageStart: 43,
+        pageEnd: 44,
+      },
+    ];
+    const card = (topicId?: string) => ({
+      theme: "Hémorragies",
+      niveau: "PSE1",
+      info: "Info",
+      reference: "p.45",
+      topicId,
+    });
+
+    beforeEach(() => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.referenciel.findUnique.mockResolvedValue({
+        id: 1,
+        title: "PSE",
+        pdfUrl: "https://r2.example.com/dev/referenciels/pse.pdf",
+      });
+      mockPrisma.referencielTopic.findMany.mockResolvedValue(topics);
+    });
+
+    it("cible les pages des sujets et garde le topicId des cartes", async () => {
+      vi.mocked(generateLearningCardsFromPdf).mockResolvedValue({
+        cards: [card("t1"), card("inconnu")],
+      });
+
+      const result = await generateLearningCardsWithAiAction({
+        referencielId: 1,
+        topicIds: ["t1", "t2"],
+        cardCount: 6,
+      });
+
+      expect(result.success).toBe(true);
+      expect(extractPages).toHaveBeenCalledWith(expect.any(Uint8Array), [
+        { pageStart: 43, pageEnd: 46 },
+      ]);
+      expect(generateLearningCardsFromPdf).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pdf: new Uint8Array([1]),
+          topic: "Garrot, Compression manuelle",
+          topics,
+        })
+      );
+      expect(result.data?.cards.map((c) => c.topicId)).toEqual([
+        "t1",
+        undefined,
+      ]);
+    });
+
+    it("refuse des sujets d'un autre référentiel", async () => {
+      mockPrisma.referencielTopic.findMany.mockResolvedValue([topics[0]]);
+
+      const result = await generateLearningCardsWithAiAction({
+        referencielId: 1,
+        topicIds: ["t1", "autre"],
+        cardCount: 6,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Sujets introuvables pour ce référentiel",
+      });
+      expect(generateLearningCardsFromPdf).not.toHaveBeenCalled();
+    });
   });
 });

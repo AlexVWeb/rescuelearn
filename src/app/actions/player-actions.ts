@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { UserRole } from "@/lib/roles";
 import { headers } from "next/headers";
 import { z } from "zod";
+import { isFeatureEnabled, FeatureKey } from "@/lib/features";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Le nom doit faire au moins 2 caractères."),
@@ -17,6 +18,13 @@ const registerSchema = z.object({
 
 export async function registerPlayerAction(values: unknown) {
   try {
+    if (!(await isFeatureEnabled(FeatureKey.PLAYER_SYSTEM))) {
+      return {
+        success: false,
+        error: "L'espace élève est temporairement désactivé.",
+      };
+    }
+
     const parsed = registerSchema.safeParse(values);
     if (!parsed.success) {
       return { success: false, error: parsed.error.issues[0].message };

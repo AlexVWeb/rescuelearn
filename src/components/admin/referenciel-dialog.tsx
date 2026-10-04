@@ -23,6 +23,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { REFERENCIEL_LEVELS } from "@/lib/referenciel-levels";
 import {
   createReferencielAction,
   updateReferencielAction,
@@ -37,6 +40,7 @@ const referencielSchema = z.object({
     message: "Title must be at least 2 characters.",
   }),
   yearEdition: z.coerce.number().min(1900).max(2100),
+  levels: z.array(z.string()),
 });
 
 interface ReferencielDialogProps {
@@ -53,12 +57,14 @@ export function ReferencielDialog({
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [analyzeAfterImport, setAnalyzeAfterImport] = useState(true);
 
   const form = useForm<z.infer<typeof referencielSchema>>({
     resolver: zodResolver(referencielSchema),
     defaultValues: {
       title: "",
       yearEdition: dayjs().year(),
+      levels: [],
     },
   });
 
@@ -67,14 +73,17 @@ export function ReferencielDialog({
       form.reset({
         title: referenciel.title,
         yearEdition: referenciel.yearEdition,
+        levels: referenciel.levels,
       });
       setFile(null); // Reset file on edit open, user must re-upload if they want to change it
     } else {
       form.reset({
         title: "",
         yearEdition: dayjs().year(),
+        levels: [],
       });
       setFile(null);
+      setAnalyzeAfterImport(true);
     }
   }, [referenciel, form, open]);
 
@@ -84,6 +93,10 @@ export function ReferencielDialog({
       const formData = new FormData();
       formData.append("title", values.title);
       formData.append("yearEdition", values.yearEdition.toString());
+      values.levels.forEach((level) => formData.append("levels", level));
+      if (!referenciel && analyzeAfterImport) {
+        formData.append("analyze", "on");
+      }
 
       if (file) {
         formData.append("file", file);
@@ -161,6 +174,37 @@ export function ReferencielDialog({
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="levels"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Niveaux couverts</FormLabel>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2">
+                    {REFERENCIEL_LEVELS.map((level) => (
+                      <Label
+                        key={level}
+                        className="flex items-center gap-2 font-normal"
+                      >
+                        <Checkbox
+                          checked={field.value.includes(level)}
+                          onCheckedChange={(checked) =>
+                            field.onChange(
+                              checked
+                                ? [...field.value, level]
+                                : field.value.filter((l) => l !== level)
+                            )
+                          }
+                        />
+                        {level}
+                      </Label>
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="space-y-2">
               <FormLabel>Fichier PDF</FormLabel>
               <FileUpload
@@ -169,6 +213,18 @@ export function ReferencielDialog({
                 currentFileUrl={referenciel?.pdfUrl}
               />
             </div>
+
+            {!referenciel && (
+              <Label className="flex items-center gap-2 font-normal">
+                <Checkbox
+                  checked={analyzeAfterImport}
+                  onCheckedChange={(checked) =>
+                    setAnalyzeAfterImport(checked === true)
+                  }
+                />
+                Analyser les sujets après l'import
+              </Label>
+            )}
 
             <DialogFooter>
               <Button type="submit" disabled={isLoading}>
