@@ -2,6 +2,11 @@ import { createAuthClient } from "better-auth/react";
 import { organizationClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL,
+  // Côté navigateur, on cible toujours l'origine courante : sinon une page
+  // servie sur www.* appelle l'apex en cross-origin et le POST est bloqué par CORS.
+  baseURL:
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_APP_URL,
   plugins: [organizationClient()],
 });

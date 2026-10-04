@@ -151,6 +151,16 @@ export default function LoginPage() {
   }
 
   async function onSubmit(values: z.infer<typeof loginSchema>) {
+    try {
+      await submit(values);
+    } catch {
+      // Erreur réseau / CORS : sans ça le bouton reste bloqué en chargement
+      setError("Connexion impossible. Vérifiez votre réseau et réessayez.");
+      setLoading(false);
+    }
+  }
+
+  async function submit(values: z.infer<typeof loginSchema>) {
     setLoading(true);
     setError(null);
 
