@@ -28,6 +28,8 @@ model Question {
   tags                 String[]                  @default([])
   dailyAnswers         DailyQuestionAnswer[]
   progressionExercises ProgressionNodeExercise[]
+  topicId              String?
+  topic                ReferencielTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
 }
 
 model QuestionOption {

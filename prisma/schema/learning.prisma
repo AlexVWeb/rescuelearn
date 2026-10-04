@@ -6,14 +6,59 @@ model LearningCard {
   reference            String
   referencielId        Int?
   referenciel          Referenciel?              @relation(fields: [referencielId], references: [id])
+  topicId              String?
+  topic                ReferencielTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
   progressionExercises ProgressionNodeExercise[]
 }
 
 model Referenciel {
-  id            Int            @id @default(autoincrement())
-  title         String
-  pdfUrl        String
-  yearEdition   Int
-  learningCards LearningCard[]
-  quizzes       Quiz[]
+  id                    Int                @id @default(autoincrement())
+  title                 String
+  pdfUrl                String
+  yearEdition           Int
+  levels                String[]           @default([])
+  analysisStatus        AnalysisStatus     @default(NONE)
+  analysisStartedAt     DateTime?
+  analyzedAt            DateTime?
+  analysisError         String?
+  analysisDoneChapters  Int                @default(0)
+  analysisTotalChapters Int                @default(0)
+  learningCards         LearningCard[]
+  quizzes               Quiz[]
+  topics                ReferencielTopic[]
+  progressionTrees      ProgressionTree[]
+}
+
+enum AnalysisStatus {
+  NONE
+  PROCESSING
+  DONE
+  FAILED
+}
+
+// Sujet pédagogique (≈ fiche technique) extrait d'un référentiel PDF
+model ReferencielTopic {
+  id               String            @id @default(cuid())
+  referencielId    Int
+  referenciel      Referenciel       @relation(fields: [referencielId], references: [id], onDelete: Cascade)
+  slug             String // slugify(chapter + title), stable entre deux analyses
+  chapter          String
+  title            String
+  summary          String            @db.Text
+  keyPoints        String[]          @default([])
+  pageStart        Int // 1-based, pages du PDF complet
+  pageEnd          Int
+  levels           String[]          @default([])
+  order            Int
+  questionCapacity Int               @default(5)
+  suggestedFormats String[]          @default([])
+  validated        Boolean           @default(false)
+  questions        Question[]
+  learningCards    LearningCard[]
+  progressionNodes ProgressionNode[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@unique([referencielId, slug])
+  @@index([referencielId, order])
 }

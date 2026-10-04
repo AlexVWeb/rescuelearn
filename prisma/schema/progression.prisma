@@ -1,11 +1,22 @@
 // Représente un arbre de progression pour un niveau de formation spécifique (GQS, PSC, SST, PSE1, PSE2)
 model ProgressionTree {
-  id          String            @id @default(cuid())
-  level       String            @unique // "GQS" | "PSC" | "SST" | "PSE1" | "PSE2"
-  description String?
-  nodes       ProgressionNode[]
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id            String            @id @default(cuid())
+  level         String            @unique // "GQS" | "PSC" | "SST" | "PSE1" | "PSE2"
+  description   String?
+  nodes         ProgressionNode[]
+  referencielId Int?
+  referenciel   Referenciel?      @relation(fields: [referencielId], references: [id], onDelete: SetNull)
+
+  // Génération du parcours depuis les sujets, pilotée nœud par nœud par la page admin
+  generationStatus    AnalysisStatus @default(NONE)
+  generationPlan      Json? // [{ title, topicIds }] issu de planNodesFromTopics
+  generationDone      Int            @default(0) // index du prochain nœud du plan
+  generationTotal     Int            @default(0)
+  generationError     String?
+  generationStartedAt DateTime?
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 }
 
 // Représente un bloc d'apprentissage (un nœud/cercle sur le parcours)
@@ -22,6 +33,8 @@ model ProgressionNode {
   exercises ProgressionNodeExercise[]
 
   playerProgress PlayerProgress[]
+
+  topics ReferencielTopic[]
 
   @@unique([treeId, order])
 }
