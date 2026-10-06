@@ -105,7 +105,9 @@ export default function LoginClientPage({
     try {
       const { error } = await authClient.signIn.passkey();
       if (error) {
-        if (!("code" in error && error.code === "AUTH_CANCELLED")) {
+        // Annulation par l'utilisateur ou par le relais de l'autofill : silencieux
+        const code = "code" in error ? error.code : undefined;
+        if (code !== "AUTH_CANCELLED" && code !== "ERROR_CEREMONY_ABORTED") {
           setError("Connexion par passkey impossible. Réessayez.");
         }
         setLoading(false);

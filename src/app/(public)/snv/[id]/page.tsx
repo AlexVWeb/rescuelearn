@@ -50,9 +50,7 @@ const SNVGameContent = ({ params }: { params: Promise<PageParams> }) => {
 
   const searchParams = useSearchParams();
   const difficulty = searchParams.get("difficulty") as
-    | "easy"
-    | "medium"
-    | "hard";
+    "easy" | "medium" | "hard";
   const isRandomMode = searchParams.get("random") === "true";
   const timeLimit = searchParams.get("time")
     ? parseInt(searchParams.get("time")!)

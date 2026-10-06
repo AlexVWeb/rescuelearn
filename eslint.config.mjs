@@ -62,6 +62,10 @@ export default [
       "@typescript-eslint/no-explicit-any": "error",
       "react/no-unescaped-entities": "off",
       "react-hooks/purity": "off",
+      // Règles React Compiler devenues bloquantes avec eslint-plugin-react-hooks 7.1 :
+      // 29 occurrences existantes dans 23 fichiers, à corriger dans un chantier dédié.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/immutability": "warn",
       "no-restricted-syntax": [
         "error",
         {

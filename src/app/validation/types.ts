@@ -15,10 +15,6 @@ export interface SessionDetails {
 }
 
 export type ValidationStep =
-  | "enter_pin"
-  | "enter_name"
-  | "enter_dob"
-  | "confirm_trainee"
-  | "success";
+  "enter_pin" | "enter_name" | "enter_dob" | "confirm_trainee" | "success";
 
 export const LETTER_COUNT = 3;

@@ -48,7 +48,9 @@ export function PasskeysCard() {
     setError(
       code === "ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED"
         ? "Cet appareil est déjà enregistré."
-        : "Impossible d'ajouter la passkey. Réessayez."
+        : code === "SESSION_NOT_FRESH"
+          ? "Par sécurité, reconnectez-vous avant d'ajouter une passkey."
+          : "Impossible d'ajouter la passkey. Réessayez."
     );
   };
 

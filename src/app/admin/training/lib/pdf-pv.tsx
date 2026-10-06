@@ -372,8 +372,7 @@ const PvDocument: React.FC<PvPageProps> = (props) => (
 export const PvPDFDownload: React.FC<
   PvPageProps & {
     children?:
-      | React.ReactNode
-      | ((props: { loading: boolean }) => React.ReactNode);
+      React.ReactNode | ((props: { loading: boolean }) => React.ReactNode);
     className?: string;
   }
 > = ({ children, className, ...props }) => (

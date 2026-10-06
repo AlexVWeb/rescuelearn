@@ -42,7 +42,8 @@ export async function GET(
     const { buffer, contentType } = await getFile(key, isExternalTraining);
 
     // 4. Retour du fichier
-    return new NextResponse(buffer, {
+    // Uint8Array : les types Node récents n'acceptent plus Buffer comme BodyInit
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type": contentType || "application/octet-stream",
         "Cache-Control": "private, max-age=3600",

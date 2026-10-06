@@ -47,7 +47,9 @@ export function PlayerPasskeysCard() {
     toast.error(
       code === "ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED"
         ? "Cet appareil est déjà enregistré."
-        : "Impossible d'ajouter la passkey. Réessaie."
+        : code === "SESSION_NOT_FRESH"
+          ? "Par sécurité, reconnecte-toi avant d'ajouter une passkey."
+          : "Impossible d'ajouter la passkey. Réessaie."
     );
   };
 

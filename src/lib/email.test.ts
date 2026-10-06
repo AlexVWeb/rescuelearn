@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import nodemailer from "nodemailer";
+import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
 import { EmailService } from "./email";
 import { logger } from "./logger";
 
@@ -43,7 +43,7 @@ describe("EmailService", () => {
     it("should fallback to console if SMTP fails", async () => {
       const mockTransporter = {
         sendMail: vi.fn().mockRejectedValue(new Error("SMTP Error")),
-      } as unknown as nodemailer.Transporter;
+      } as unknown as Transporter;
       vi.mocked(nodemailer.createTransport).mockReturnValue(mockTransporter);
 
       const result = await EmailService.send({
@@ -69,8 +69,7 @@ describe("EmailService", () => {
 
       expect(result.success).toBe(true);
       const sendMailCall = vi.mocked(nodemailer.createTransport().sendMail);
-      const callArgs = sendMailCall.mock
-        .calls[0][0] as nodemailer.SendMailOptions;
+      const callArgs = sendMailCall.mock.calls[0][0] as SendMailOptions;
 
       expect(callArgs.to).toBe("user@test.com");
       expect(callArgs.subject).toContain("Réinitialisation");
@@ -89,8 +88,7 @@ describe("EmailService", () => {
 
       expect(result.success).toBe(true);
       const sendMailCall = vi.mocked(nodemailer.createTransport().sendMail);
-      const callArgs = sendMailCall.mock
-        .calls[0][0] as nodemailer.SendMailOptions;
+      const callArgs = sendMailCall.mock.calls[0][0] as SendMailOptions;
 
       expect(callArgs.to).toBe("user@test.com");
       expect(callArgs.subject).toContain("Modification de votre mot de passe");
@@ -107,8 +105,7 @@ describe("EmailService", () => {
 
       expect(result.success).toBe(true);
       const sendMailCall = vi.mocked(nodemailer.createTransport().sendMail);
-      const callArgs = sendMailCall.mock
-        .calls[0][0] as nodemailer.SendMailOptions;
+      const callArgs = sendMailCall.mock.calls[0][0] as SendMailOptions;
 
       expect(callArgs.to).toBe("old@test.com");
       expect(callArgs.subject).toContain("Confirmez le changement");
@@ -128,8 +125,7 @@ describe("EmailService", () => {
 
       expect(result.success).toBe(true);
       const sendMailCall = vi.mocked(nodemailer.createTransport().sendMail);
-      const callArgs = sendMailCall.mock
-        .calls[0][0] as nodemailer.SendMailOptions;
+      const callArgs = sendMailCall.mock.calls[0][0] as SendMailOptions;
 
       expect(callArgs.to).toBe("new@test.com");
       expect(callArgs.subject).toContain("Vérifiez votre nouvelle adresse");

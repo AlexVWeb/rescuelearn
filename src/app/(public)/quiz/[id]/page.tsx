@@ -39,9 +39,7 @@ function QuizPageContent({ params }: PageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const difficulty = (searchParams.get("difficulty") || "medium") as
-    | "easy"
-    | "medium"
-    | "hard";
+    "easy" | "medium" | "hard";
   const isRandomMode = searchParams.get("random") === "true";
   const [mounted, setMounted] = useState(false);
   const [quizData, setQuizData] = useState<QuizComponentData | null>(null);

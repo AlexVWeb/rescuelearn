@@ -451,8 +451,7 @@ const MultipleFiseDocument: React.FC<MultipleFiseDocumentProps> = ({
 // ──────────────────────────────────────────────────────────────────────────
 
 type PDFDownloadChildren =
-  | React.ReactNode
-  | ((props: { loading: boolean }) => React.ReactNode);
+  React.ReactNode | ((props: { loading: boolean }) => React.ReactNode);
 
 /**
  * Component to download a single FISE PDF
