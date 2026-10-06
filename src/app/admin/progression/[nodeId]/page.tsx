@@ -18,11 +18,13 @@ export default async function AdminNodeBuilderPage(props: {
 
   // Fetch lists for selectors
   const questions = await prisma.question.findMany({
+    where: { quiz: { archivedAt: null } },
     select: { id: true, text: true },
     orderBy: { id: "desc" },
   });
 
   const cards = await prisma.learningCard.findMany({
+    where: { archivedAt: null },
     select: { id: true, theme: true, info: true },
     orderBy: { id: "desc" },
   });

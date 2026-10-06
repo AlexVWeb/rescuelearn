@@ -6,6 +6,12 @@ import { revalidatePath } from "next/cache";
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
+import {
+  ArchiveFilter,
+  archiveWhere,
+  bulkContentSchema,
+} from "@/lib/content-archive";
 
 const learningCardSchema = z.object({
   theme: z.string().min(1, "Le thème est requis"),
@@ -18,7 +24,8 @@ const learningCardSchema = z.object({
 export async function getAdminLearningCardsAction(
   page: number = 1,
   limit: number = 10,
-  search: string = ""
+  search: string = "",
+  filters: { archived?: ArchiveFilter; referencielId?: number } = {}
 ) {
   const user = await getUserContext();
   if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
@@ -27,15 +34,19 @@ export async function getAdminLearningCardsAction(
 
   const skip = (page - 1) * limit;
 
-  const where = search
-    ? {
-        OR: [
-          { theme: { contains: search, mode: "insensitive" as const } },
-          { info: { contains: search, mode: "insensitive" as const } },
-          { reference: { contains: search, mode: "insensitive" as const } },
-        ],
-      }
-    : {};
+  const where: Prisma.LearningCardWhereInput = {
+    ...archiveWhere(filters.archived ?? "active"),
+    ...(filters.referencielId ? { referencielId: filters.referencielId } : {}),
+    ...(search
+      ? {
+          OR: [
+            { theme: { contains: search, mode: "insensitive" as const } },
+            { info: { contains: search, mode: "insensitive" as const } },
+            { reference: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
 
   try {
     const [cards, total] = await Promise.all([
@@ -79,6 +90,7 @@ export async function getAdminLearningCardsAction(
 export async function getPublicLearningCardsAction() {
   try {
     const cards = await prisma.learningCard.findMany({
+      where: { archivedAt: null },
       orderBy: { theme: "asc" },
       include: {
         referenciel: {
@@ -112,6 +124,7 @@ export async function getPublicLearningCardsAction() {
 export async function getPublicLearningCardsFiltersAction() {
   try {
     const cards = await prisma.learningCard.findMany({
+      where: { archivedAt: null },
       select: {
         theme: true,
         niveau: true,
@@ -226,6 +239,40 @@ export async function deleteLearningCardAction(id: number) {
     return {
       success: false,
       error: "Impossible de supprimer la carte d'apprentissage.",
+    };
+  }
+}
+
+export async function bulkLearningCardsAction(input: unknown) {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
+  const parsed = bulkContentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Paramètres invalides" };
+  }
+  const { ids, action } = parsed.data;
+
+  try {
+    const where = { id: { in: ids } };
+    const { count } =
+      action === "delete"
+        ? await prisma.learningCard.deleteMany({ where })
+        : await prisma.learningCard.updateMany({
+            where,
+            data: { archivedAt: action === "archive" ? new Date() : null },
+          });
+
+    revalidatePath("/admin/cards");
+    revalidatePath("/learning");
+    return { success: true, count };
+  } catch (error) {
+    logger.error("Failed to bulk update learning cards:", error);
+    return {
+      success: false,
+      error: "Impossible de traiter les cartes d'apprentissage.",
     };
   }
 }

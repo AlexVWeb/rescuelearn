@@ -22,6 +22,10 @@ import {
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArchivedBadge } from "@/components/admin/archived-badge";
+import { BulkActionsBar } from "@/components/admin/bulk-actions-bar";
+import type { BulkContentAction } from "@/lib/content-archive";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -46,6 +50,28 @@ export const columns = (
   onDelete: (id: number) => void
 ): ColumnDef<Quiz>[] => [
   {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Tout sélectionner"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Sélectionner la ligne"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
     accessorKey: "title",
     header: ({ column }) => {
       return (
@@ -61,6 +87,17 @@ export const columns = (
     cell: ({ row }) => (
       <div className="font-medium">{row.getValue("title")}</div>
     ),
+  },
+  {
+    id: "referenciel",
+    accessorFn: (quiz) => quiz.referenciel?.title ?? "",
+    header: "Référentiel",
+    cell: ({ row }) =>
+      row.original.referenciel ? (
+        <span className="text-sm">{row.original.referenciel.title}</span>
+      ) : (
+        <span className="text-muted-foreground text-xs italic">Aucun</span>
+      ),
   },
   {
     accessorKey: "timePerQuestion",
@@ -106,7 +143,7 @@ export const columns = (
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
       return (
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-1">
           <span
             className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
               status === "PUBLISHED"
@@ -116,6 +153,7 @@ export const columns = (
           >
             {status === "PUBLISHED" ? "Publié" : "Brouillon"}
           </span>
+          {row.original.archivedAt && <ArchivedBadge />}
         </div>
       );
     },
@@ -156,9 +194,15 @@ interface QuizzesTableProps {
   data: Quiz[];
   onEdit: (quiz: Quiz) => void;
   onDelete: (id: number) => void;
+  onBulkAction: (ids: number[], action: BulkContentAction) => Promise<boolean>;
 }
 
-export function QuizzesTable({ data, onEdit, onDelete }: QuizzesTableProps) {
+export function QuizzesTable({
+  data,
+  onEdit,
+  onDelete,
+  onBulkAction,
+}: QuizzesTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -170,6 +214,7 @@ export function QuizzesTable({ data, onEdit, onDelete }: QuizzesTableProps) {
   const table = useReactTable({
     data,
     columns: columns(onEdit, onDelete),
+    getRowId: (quiz) => String(quiz.id),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -186,8 +231,28 @@ export function QuizzesTable({ data, onEdit, onDelete }: QuizzesTableProps) {
     },
   });
 
+  // Les filtres serveur remplacent les données : la sélection n'a plus de sens
+  React.useEffect(() => {
+    setRowSelection({});
+  }, [data]);
+
+  const selectedIds = table
+    .getSelectedRowModel()
+    .rows.map((row) => row.original.id);
+
+  const handleBulkAction = async (action: BulkContentAction) => {
+    if (await onBulkAction(selectedIds, action)) setRowSelection({});
+  };
+
   return (
     <div className="w-full">
+      <BulkActionsBar
+        count={selectedIds.length}
+        itemLabel="quiz"
+        deleteWarning="Toutes les questions et sessions associées seront également supprimées."
+        onAction={handleBulkAction}
+        onClear={() => setRowSelection({})}
+      />
       <div className="flex items-center py-4">
         <Input
           placeholder="Filtrer par titre..."

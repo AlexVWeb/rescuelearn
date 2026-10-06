@@ -22,6 +22,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Edit, Trash, Search } from "lucide-react";
 import { useTransition } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArchivedBadge } from "@/components/admin/archived-badge";
+import { BulkActionsBar } from "@/components/admin/bulk-actions-bar";
+import type { BulkContentAction } from "@/lib/content-archive";
 
 interface ReferencielSimple {
   id: number;
@@ -36,6 +40,7 @@ interface LearningCardAdmin {
   reference: string;
   referencielId: number | null;
   referenciel?: ReferencielSimple | null;
+  archivedAt: Date | null;
 }
 
 interface CardsTableProps {
@@ -48,9 +53,16 @@ interface CardsTableProps {
   };
   onEdit: (card: LearningCardAdmin) => void;
   onDelete: (id: number) => void;
+  onBulkAction: (ids: number[], action: BulkContentAction) => Promise<boolean>;
 }
 
-export function CardsTable({ data, meta, onEdit, onDelete }: CardsTableProps) {
+export function CardsTable({
+  data,
+  meta,
+  onEdit,
+  onDelete,
+  onBulkAction,
+}: CardsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -79,6 +91,34 @@ export function CardsTable({ data, meta, onEdit, onDelete }: CardsTableProps) {
     });
   };
 
+  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+
+  // Changement de page/filtre ou rafraîchissement : on repart d'une sélection vide
+  // pour ne jamais agir sur des cartes qui ne sont plus affichées.
+  React.useEffect(() => {
+    setSelected(new Set());
+  }, [data]);
+
+  const allSelected = data.length > 0 && data.every((c) => selected.has(c.id));
+  const someSelected = !allSelected && data.some((c) => selected.has(c.id));
+
+  const toggleAll = (checked: boolean) => {
+    setSelected(checked ? new Set(data.map((c) => c.id)) : new Set());
+  };
+
+  const toggleOne = (id: number, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleBulkAction = async (action: BulkContentAction) => {
+    if (await onBulkAction([...selected], action)) setSelected(new Set());
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateParams(1, searchVal);
@@ -105,10 +145,24 @@ export function CardsTable({ data, meta, onEdit, onDelete }: CardsTableProps) {
         </Button>
       </form>
 
+      <BulkActionsBar
+        count={selected.size}
+        itemLabel="carte(s)"
+        onAction={handleBulkAction}
+        onClear={() => setSelected(new Set())}
+      />
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={allSelected || (someSelected && "indeterminate")}
+                  onCheckedChange={(value) => toggleAll(!!value)}
+                  aria-label="Tout sélectionner"
+                />
+              </TableHead>
               <TableHead className="w-[180px]">Thème</TableHead>
               <TableHead className="w-[120px]">Niveau</TableHead>
               <TableHead>Informations</TableHead>
@@ -120,8 +174,23 @@ export function CardsTable({ data, meta, onEdit, onDelete }: CardsTableProps) {
           <TableBody>
             {data.length > 0 ? (
               data.map((card) => (
-                <TableRow key={card.id}>
-                  <TableCell className="font-semibold">{card.theme}</TableCell>
+                <TableRow
+                  key={card.id}
+                  data-state={selected.has(card.id) && "selected"}
+                >
+                  <TableCell>
+                    <Checkbox
+                      checked={selected.has(card.id)}
+                      onCheckedChange={(value) => toggleOne(card.id, !!value)}
+                      aria-label="Sélectionner la carte"
+                    />
+                  </TableCell>
+                  <TableCell className="font-semibold">
+                    <div className="flex flex-col items-start gap-1">
+                      {card.theme}
+                      {card.archivedAt && <ArchivedBadge />}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <span className="inline-flex items-center rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-700/10 ring-inset">
                       {card.niveau}
@@ -170,7 +239,7 @@ export function CardsTable({ data, meta, onEdit, onDelete }: CardsTableProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   Aucune carte d'apprentissage trouvée.
                 </TableCell>
               </TableRow>

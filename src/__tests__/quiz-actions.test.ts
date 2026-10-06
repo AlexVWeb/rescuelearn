@@ -36,6 +36,8 @@ const mockPrisma = vi.hoisted(() => ({
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    updateMany: vi.fn(),
+    deleteMany: vi.fn(),
   },
 }));
 
@@ -62,6 +64,7 @@ import {
   updateQuestionAction,
   deleteQuestionAction,
   getAllQuizzesSimpleAction,
+  bulkQuizzesAction,
 } from "@/app/actions/quiz-actions";
 
 describe("quiz-actions", () => {
@@ -145,6 +148,80 @@ describe("quiz-actions", () => {
       expect(res.success).toBe(true);
       expect(res.data).toHaveLength(1);
       expect(res.data?.[0].title).toBe("Quiz 1");
+      expect(mockPrisma.quiz.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            archivedAt: null,
+            title: { contains: "Quiz", mode: "insensitive" },
+          },
+        })
+      );
+    });
+
+    it("should filter archived quizzes of a referenciel", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.quiz.findMany.mockResolvedValue([]);
+      mockPrisma.quiz.count.mockResolvedValue(0);
+
+      await getQuizzesAction(1, 10, "", {
+        archived: "archived",
+        referencielId: 3,
+      });
+      expect(mockPrisma.quiz.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { archivedAt: { not: null }, referencielId: 3 },
+        })
+      );
+    });
+  });
+
+  describe("bulkQuizzesAction", () => {
+    it("should forbid non SUPER_ADMIN users", async () => {
+      mockSession({ id: "player-1" }, [UserRole.FORMATEUR]);
+      const res = await bulkQuizzesAction({ ids: [1], action: "delete" });
+      expect(res).toEqual({ success: false, error: "Forbidden" });
+      expect(mockPrisma.quiz.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("should reject an empty selection", async () => {
+      mockSession({ id: "user-1" });
+      const res = await bulkQuizzesAction({ ids: [], action: "archive" });
+      expect(res.success).toBe(false);
+      expect(mockPrisma.quiz.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("should archive the selected quizzes", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.quiz.updateMany.mockResolvedValue({ count: 2 });
+
+      const res = await bulkQuizzesAction({ ids: [1, 2], action: "archive" });
+      expect(res).toEqual({ success: true, count: 2 });
+      expect(mockPrisma.quiz.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [1, 2] } },
+        data: { archivedAt: expect.any(Date) },
+      });
+    });
+
+    it("should restore the selected quizzes", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.quiz.updateMany.mockResolvedValue({ count: 1 });
+
+      await bulkQuizzesAction({ ids: [4], action: "restore" });
+      expect(mockPrisma.quiz.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [4] } },
+        data: { archivedAt: null },
+      });
+    });
+
+    it("should delete the selected quizzes", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.quiz.deleteMany.mockResolvedValue({ count: 3 });
+
+      const res = await bulkQuizzesAction({ ids: [1, 2, 3], action: "delete" });
+      expect(res).toEqual({ success: true, count: 3 });
+      expect(mockPrisma.quiz.deleteMany).toHaveBeenCalledWith({
+        where: { id: { in: [1, 2, 3] } },
+      });
     });
   });
 

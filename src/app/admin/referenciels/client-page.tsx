@@ -22,6 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { startReferencielAnalysisAction } from "@/app/actions/referenciel-topic-actions";
+import { ReferencielContentDialog } from "@/components/admin/referenciel-content-dialog";
 
 interface ClientPageProps {
   initialReferenciels: Referenciel[];
@@ -33,6 +34,8 @@ export default function ClientPage({ initialReferenciels }: ClientPageProps) {
   const [selectedReferenciel, setSelectedReferenciel] =
     useState<Referenciel | null>(null);
   const [idToDelete, setIdToDelete] = useState<number | null>(null);
+  const [contentReferenciel, setContentReferenciel] =
+    useState<Referenciel | null>(null);
   const router = useRouter();
 
   const referenciels = initialReferenciels;
@@ -93,6 +96,7 @@ export default function ClientPage({ initialReferenciels }: ClientPageProps) {
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
           onAnalyze={handleAnalyze}
+          onManageContent={setContentReferenciel}
         />
       </div>
 
@@ -100,6 +104,11 @@ export default function ClientPage({ initialReferenciels }: ClientPageProps) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         referenciel={selectedReferenciel}
+      />
+
+      <ReferencielContentDialog
+        referenciel={contentReferenciel}
+        onOpenChange={(open) => !open && setContentReferenciel(null)}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
