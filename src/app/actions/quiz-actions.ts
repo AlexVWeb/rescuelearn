@@ -7,6 +7,11 @@ import { revalidatePath } from "next/cache";
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
 import { checkSuperAdmin } from "@/lib/admin-guard";
+import {
+  ArchiveFilter,
+  archiveWhere,
+  bulkContentSchema,
+} from "@/lib/content-archive";
 
 // --- Types ---
 
@@ -20,6 +25,8 @@ export type Quiz = {
   status: "DRAFT" | "PUBLISHED";
   generatedByAi: boolean;
   referencielId: number | null;
+  referenciel?: { id: number; title: string } | null;
+  archivedAt: Date | null;
 };
 
 export type QuestionOption = {
@@ -43,17 +50,20 @@ export type Question = {
 export async function getQuizzesAction(
   page: number = 1,
   limit: number = 10,
-  search: string = ""
+  search: string = "",
+  filters: { archived?: ArchiveFilter; referencielId?: number } = {}
 ) {
   const authError = await checkSuperAdmin();
   if (authError) return { success: false, error: authError };
 
   const skip = (page - 1) * limit;
-  const where = search
-    ? {
-        title: { contains: search, mode: "insensitive" as const },
-      }
-    : {};
+  const where: Prisma.QuizWhereInput = {
+    ...archiveWhere(filters.archived ?? "active"),
+    ...(filters.referencielId ? { referencielId: filters.referencielId } : {}),
+    ...(search
+      ? { title: { contains: search, mode: "insensitive" as const } }
+      : {}),
+  };
 
   try {
     const [quizzes, total] = await Promise.all([
@@ -66,6 +76,7 @@ export async function getQuizzesAction(
           _count: {
             select: { questions: true },
           },
+          referenciel: { select: { id: true, title: true } },
         },
       }),
       prisma.quiz.count({ where }),
@@ -160,6 +171,31 @@ export async function deleteQuizAction(id: number) {
   } catch (error) {
     logger.error("Failed to delete quiz:", error);
     return { success: false, error: "Failed to delete quiz" };
+  }
+}
+
+export async function bulkQuizzesAction(input: unknown) {
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
+
+  const parsed = bulkContentSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: "Paramètres invalides" };
+  const { ids, action } = parsed.data;
+
+  try {
+    const where = { id: { in: ids } };
+    const { count } =
+      action === "delete"
+        ? await prisma.quiz.deleteMany({ where })
+        : await prisma.quiz.updateMany({
+            where,
+            data: { archivedAt: action === "archive" ? new Date() : null },
+          });
+    revalidatePath("/admin/quiz/quizzes");
+    return { success: true, count };
+  } catch (error) {
+    logger.error("Failed to bulk update quizzes:", error);
+    return { success: false, error: "Impossible de traiter les quiz" };
   }
 }
 

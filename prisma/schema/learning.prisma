@@ -8,6 +8,7 @@ model LearningCard {
   referenciel          Referenciel?              @relation(fields: [referencielId], references: [id])
   topicId              String?
   topic                ReferencielTopic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  archivedAt           DateTime? // Non nul = archivée (ex : référentiel déprécié), masquée côté joueur
   progressionExercises ProgressionNodeExercise[]
 }
 

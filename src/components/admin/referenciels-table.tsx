@@ -50,7 +50,8 @@ const REFRESH_INTERVAL_MS = 5000;
 export const columns = (
   onEdit: (ref: Referenciel) => void,
   onDelete: (id: number) => void,
-  onAnalyze: (id: number) => void
+  onAnalyze: (id: number) => void,
+  onManageContent: (ref: Referenciel) => void
 ): ColumnDef<Referenciel>[] => [
   {
     id: "select",
@@ -169,6 +170,9 @@ export const columns = (
                 Voir les sujets
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onManageContent(ref)}>
+              Archiver / supprimer les contenus…
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onDelete(ref.id)}
               className="text-destructive"
@@ -187,6 +191,7 @@ interface ReferencielsTableProps {
   onEdit: (ref: Referenciel) => void;
   onDelete: (id: number) => void;
   onAnalyze: (id: number) => void;
+  onManageContent: (ref: Referenciel) => void;
 }
 
 export function ReferencielsTable({
@@ -194,6 +199,7 @@ export function ReferencielsTable({
   onEdit,
   onDelete,
   onAnalyze,
+  onManageContent,
 }: ReferencielsTableProps) {
   const router = useRouter();
   const hasProcessing = data.some((r) => r.analysisStatus === "PROCESSING");
@@ -215,7 +221,7 @@ export function ReferencielsTable({
 
   const table = useReactTable({
     data,
-    columns: columns(onEdit, onDelete, onAnalyze),
+    columns: columns(onEdit, onDelete, onAnalyze, onManageContent),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -310,7 +316,9 @@ export function ReferencielsTable({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columns(onEdit, onDelete, onAnalyze).length}
+                  colSpan={
+                    columns(onEdit, onDelete, onAnalyze, onManageContent).length
+                  }
                   className="h-24 text-center"
                 >
                   Aucun résultat.

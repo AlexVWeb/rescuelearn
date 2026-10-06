@@ -9,6 +9,8 @@ import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
 import { filterReferencielLevels } from "@/lib/referenciel-levels";
 import { startReferencielAnalysisAction } from "./referenciel-topic-actions";
+import { BULK_CONTENT_ACTIONS } from "@/lib/content-archive";
+import { z } from "zod";
 
 export type Referenciel = {
   id: number;
@@ -111,6 +113,135 @@ export async function deleteReferencielAction(id: number) {
   } catch (error) {
     logger.error("Failed to delete referenciel:", error);
     return { success: false, error: "Failed to delete referenciel" };
+  }
+}
+
+// Contenus pédagogiques rattachés à un référentiel : quiz liés, et cartes
+// liées directement ou via un de ses sujets.
+function referencielContentWhere(id: number) {
+  return {
+    quiz: { referencielId: id } satisfies Prisma.QuizWhereInput,
+    card: {
+      OR: [{ referencielId: id }, { topic: { referencielId: id } }],
+    } satisfies Prisma.LearningCardWhereInput,
+  };
+}
+
+export type ReferencielContentCounts = {
+  quizzes: { active: number; archived: number };
+  cards: { active: number; archived: number };
+};
+
+export async function getReferencielContentCountsAction(
+  id: number
+): Promise<
+  | { success: true; data: ReferencielContentCounts }
+  | { success: false; error: string }
+> {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
+  const where = referencielContentWhere(id);
+  const archived = { archivedAt: { not: null } };
+  try {
+    const [quizActive, quizArchived, cardActive, cardArchived] =
+      await Promise.all([
+        prisma.quiz.count({ where: { ...where.quiz, archivedAt: null } }),
+        prisma.quiz.count({ where: { ...where.quiz, ...archived } }),
+        prisma.learningCard.count({
+          where: { ...where.card, archivedAt: null },
+        }),
+        prisma.learningCard.count({ where: { ...where.card, ...archived } }),
+      ]);
+    return {
+      success: true,
+      data: {
+        quizzes: { active: quizActive, archived: quizArchived },
+        cards: { active: cardActive, archived: cardArchived },
+      },
+    };
+  } catch (error) {
+    logger.error("Failed to count referenciel content:", error);
+    return { success: false, error: "Impossible de compter les contenus" };
+  }
+}
+
+const referencielContentSchema = z.object({
+  id: z.number().int().positive(),
+  action: z.enum(BULK_CONTENT_ACTIONS),
+  targets: z
+    .array(z.enum(["quizzes", "cards"]))
+    .min(1)
+    .default(["quizzes", "cards"]),
+});
+
+/**
+ * Archive, restaure ou supprime en masse les quiz et cartes d'un référentiel,
+ * typiquement quand une nouvelle version le rend obsolète.
+ */
+export async function bulkReferencielContentAction(input: unknown) {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
+  const parsed = referencielContentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Paramètres invalides" };
+  }
+  const { id, action, targets } = parsed.data;
+  const where = referencielContentWhere(id);
+  const data = { archivedAt: action === "archive" ? new Date() : null };
+  // N'écrase pas la date d'archivage des contenus déjà archivés
+  const stateFilter =
+    action === "archive"
+      ? { archivedAt: null }
+      : action === "restore"
+        ? { archivedAt: { not: null } }
+        : {};
+
+  const withQuizzes = targets.includes("quizzes");
+  const withCards = targets.includes("cards");
+  const ops: Prisma.PrismaPromise<Prisma.BatchPayload>[] = [];
+  if (withQuizzes) {
+    ops.push(
+      action === "delete"
+        ? prisma.quiz.deleteMany({ where: where.quiz })
+        : prisma.quiz.updateMany({
+            where: { ...where.quiz, ...stateFilter },
+            data,
+          })
+    );
+  }
+  if (withCards) {
+    ops.push(
+      action === "delete"
+        ? prisma.learningCard.deleteMany({ where: where.card })
+        : prisma.learningCard.updateMany({
+            where: { ...where.card, ...stateFilter },
+            data,
+          })
+    );
+  }
+
+  try {
+    const results = await prisma.$transaction(ops);
+    const quizzes = withQuizzes ? results[0].count : 0;
+    const cards = withCards ? results[withQuizzes ? 1 : 0].count : 0;
+
+    revalidatePath("/admin/referenciels");
+    revalidatePath("/admin/quiz/quizzes");
+    revalidatePath("/admin/cards");
+    revalidatePath("/learning");
+    return {
+      success: true,
+      data: { quizzes, cards },
+    };
+  } catch (error) {
+    logger.error("Failed to bulk update referenciel content:", error);
+    return { success: false, error: "Impossible de traiter les contenus" };
   }
 }
 

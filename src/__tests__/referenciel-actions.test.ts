@@ -7,6 +7,9 @@ vi.mock("@/lib/context", () => ({
 }));
 
 const mockPrisma = vi.hoisted(() => ({
+  $transaction: vi.fn().mockImplementation((ops) => Promise.all(ops)),
+  quiz: { count: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
+  learningCard: { count: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
   referenciel: {
     findMany: vi.fn(),
     count: vi.fn(),
@@ -59,6 +62,8 @@ import {
   deleteReferencielAction,
   createReferencielAction,
   getPresignedUrlAction,
+  getReferencielContentCountsAction,
+  bulkReferencielContentAction,
 } from "@/app/actions/referenciel-actions";
 
 describe("referenciel-actions", () => {
@@ -77,6 +82,81 @@ describe("referenciel-actions", () => {
       lastName: "User",
     });
   };
+
+  describe("referenciel content bulk actions", () => {
+    const cardWhere = {
+      OR: [{ referencielId: 7 }, { topic: { referencielId: 7 } }],
+    };
+
+    it("should forbid non SUPER_ADMIN users", async () => {
+      mockUser([UserRole.FORMATEUR]);
+      expect(await getReferencielContentCountsAction(7)).toEqual({
+        success: false,
+        error: "Forbidden",
+      });
+      expect(
+        await bulkReferencielContentAction({ id: 7, action: "delete" })
+      ).toEqual({ success: false, error: "Forbidden" });
+      expect(mockPrisma.quiz.deleteMany).not.toHaveBeenCalled();
+      expect(mockPrisma.learningCard.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("should count active and archived content", async () => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.quiz.count.mockResolvedValueOnce(3).mockResolvedValueOnce(1);
+      mockPrisma.learningCard.count
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(0);
+
+      const res = await getReferencielContentCountsAction(7);
+      expect(res).toEqual({
+        success: true,
+        data: {
+          quizzes: { active: 3, archived: 1 },
+          cards: { active: 10, archived: 0 },
+        },
+      });
+      expect(mockPrisma.learningCard.count).toHaveBeenCalledWith({
+        where: { ...cardWhere, archivedAt: null },
+      });
+    });
+
+    it("should archive only active quizzes and cards of the referenciel", async () => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.quiz.updateMany.mockResolvedValue({ count: 2 });
+      mockPrisma.learningCard.updateMany.mockResolvedValue({ count: 8 });
+
+      const res = await bulkReferencielContentAction({
+        id: 7,
+        action: "archive",
+      });
+      expect(res).toEqual({ success: true, data: { quizzes: 2, cards: 8 } });
+      expect(mockPrisma.quiz.updateMany).toHaveBeenCalledWith({
+        where: { referencielId: 7, archivedAt: null },
+        data: { archivedAt: expect.any(Date) },
+      });
+      expect(mockPrisma.learningCard.updateMany).toHaveBeenCalledWith({
+        where: { ...cardWhere, archivedAt: null },
+        data: { archivedAt: expect.any(Date) },
+      });
+    });
+
+    it("should only touch the selected targets", async () => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.learningCard.deleteMany.mockResolvedValue({ count: 4 });
+
+      const res = await bulkReferencielContentAction({
+        id: 7,
+        action: "delete",
+        targets: ["cards"],
+      });
+      expect(res).toEqual({ success: true, data: { quizzes: 0, cards: 4 } });
+      expect(mockPrisma.learningCard.deleteMany).toHaveBeenCalledWith({
+        where: cardWhere,
+      });
+      expect(mockPrisma.quiz.deleteMany).not.toHaveBeenCalled();
+    });
+  });
 
   describe("getReferencielsAction", () => {
     it("should return Forbidden if user is not SUPER_ADMIN", async () => {

@@ -15,7 +15,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { Quiz, deleteQuizAction } from "@/app/actions/quiz-actions";
+import {
+  Quiz,
+  bulkQuizzesAction,
+  deleteQuizAction,
+} from "@/app/actions/quiz-actions";
+import { ContentFilters } from "@/components/admin/content-filters";
+import type { ArchiveFilter, BulkContentAction } from "@/lib/content-archive";
 import { useRouter } from "next/navigation";
 
 import { ImportDialog } from "@/components/admin/quiz/import-dialog";
@@ -26,9 +32,23 @@ import { toast } from "sonner";
 
 interface ClientPageProps {
   initialQuizzes: Quiz[];
+  referenciels: { id: number; title: string }[];
+  archived: ArchiveFilter;
+  referencielId?: number;
 }
 
-export default function QuizClientPage({ initialQuizzes }: ClientPageProps) {
+const BULK_SUCCESS: Record<BulkContentAction, string> = {
+  archive: "archivé(s)",
+  restore: "restauré(s)",
+  delete: "supprimé(s)",
+};
+
+export default function QuizClientPage({
+  initialQuizzes,
+  referenciels,
+  archived,
+  referencielId,
+}: ClientPageProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
@@ -72,6 +92,20 @@ export default function QuizClientPage({ initialQuizzes }: ClientPageProps) {
     }
   };
 
+  const handleBulkAction = async (
+    ids: number[],
+    action: BulkContentAction
+  ): Promise<boolean> => {
+    const result = await bulkQuizzesAction({ ids, action });
+    if (!result.success) {
+      toast.error(result.error || "Impossible de traiter les quiz");
+      return false;
+    }
+    toast.success(`${result.count} quiz ${BULK_SUCCESS[action]}`);
+    router.refresh();
+    return true;
+  };
+
   const handleGenerationSuccess = (data: unknown) => {
     setGeneratedData(data);
     setImportDialogOpen(true);
@@ -111,10 +145,16 @@ export default function QuizClientPage({ initialQuizzes }: ClientPageProps) {
       </div>
 
       <div className="w-full">
+        <ContentFilters
+          archived={archived}
+          referencielId={referencielId}
+          referenciels={referenciels}
+        />
         <QuizzesTable
           data={initialQuizzes}
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
+          onBulkAction={handleBulkAction}
         />
       </div>
 

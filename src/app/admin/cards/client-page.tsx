@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Plus, BrainCircuit } from "lucide-react";
-import { deleteLearningCardAction } from "@/app/actions/learning-card-actions";
+import {
+  bulkLearningCardsAction,
+  deleteLearningCardAction,
+} from "@/app/actions/learning-card-actions";
+import { ContentFilters } from "@/components/admin/content-filters";
+import type { ArchiveFilter, BulkContentAction } from "@/lib/content-archive";
 import { CardsTable } from "@/components/admin/cards/cards-table";
 import { CardDialog } from "@/components/admin/cards/card-dialog";
 import { AiGenerateCardDialog } from "@/components/admin/cards/ai-generate-card-dialog";
@@ -33,7 +38,14 @@ export interface LearningCardAdmin {
   reference: string;
   referencielId: number | null;
   referenciel?: ReferencielSimple | null;
+  archivedAt: Date | null;
 }
+
+const BULK_SUCCESS: Record<BulkContentAction, string> = {
+  archive: "archivée(s)",
+  restore: "restaurée(s)",
+  delete: "supprimée(s)",
+};
 
 interface ClientPageProps {
   initialCards: LearningCardAdmin[];
@@ -44,12 +56,16 @@ interface ClientPageProps {
     limit: number;
     totalPages: number;
   };
+  archived: ArchiveFilter;
+  referencielId?: number;
 }
 
 export default function CardsClientPage({
   initialCards,
   referenciels,
   meta,
+  archived,
+  referencielId,
 }: ClientPageProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
@@ -94,6 +110,20 @@ export default function CardsClientPage({
     }
   };
 
+  const handleBulkAction = async (
+    ids: number[],
+    action: BulkContentAction
+  ): Promise<boolean> => {
+    const result = await bulkLearningCardsAction({ ids, action });
+    if (!result.success) {
+      toast.error(result.error || "Impossible de traiter les cartes");
+      return false;
+    }
+    toast.success(`${result.count} carte(s) ${BULK_SUCCESS[action]}`);
+    router.refresh();
+    return true;
+  };
+
   return (
     <div className="w-full p-8">
       <div className="mb-8 flex items-center justify-between space-y-2">
@@ -119,12 +149,18 @@ export default function CardsClientPage({
         </div>
       </div>
 
-      <div className="w-full">
+      <div className="w-full space-y-4">
+        <ContentFilters
+          archived={archived}
+          referencielId={referencielId}
+          referenciels={referenciels}
+        />
         <CardsTable
           data={initialCards}
           meta={meta}
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
+          onBulkAction={handleBulkAction}
         />
       </div>
 

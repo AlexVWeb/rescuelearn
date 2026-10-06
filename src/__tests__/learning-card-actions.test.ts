@@ -14,6 +14,8 @@ const mockPrisma = vi.hoisted(() => ({
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    updateMany: vi.fn(),
+    deleteMany: vi.fn(),
   },
 }));
 
@@ -42,6 +44,7 @@ import {
   updateLearningCardAction,
   deleteLearningCardAction,
   bulkCreateLearningCardsAction,
+  bulkLearningCardsAction,
 } from "@/app/actions/learning-card-actions";
 
 describe("learning-card-actions", () => {
@@ -219,6 +222,47 @@ describe("learning-card-actions", () => {
       expect(res.success).toBe(true);
       expect(mockPrisma.learningCard.delete).toHaveBeenCalledWith({
         where: { id: 1 },
+      });
+    });
+  });
+
+  describe("bulkLearningCardsAction", () => {
+    it("should return Forbidden if user is not SUPER_ADMIN", async () => {
+      mockUser([UserRole.FORMATEUR]);
+      const res = await bulkLearningCardsAction({ ids: [1], action: "delete" });
+      expect(res).toEqual({ success: false, error: "Forbidden" });
+      expect(mockPrisma.learningCard.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("should reject an invalid action", async () => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      const res = await bulkLearningCardsAction({ ids: [1], action: "drop" });
+      expect(res.success).toBe(false);
+    });
+
+    it("should archive the selected cards", async () => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.learningCard.updateMany.mockResolvedValue({ count: 2 });
+
+      const res = await bulkLearningCardsAction({
+        ids: [5, 6],
+        action: "archive",
+      });
+      expect(res).toEqual({ success: true, count: 2 });
+      expect(mockPrisma.learningCard.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [5, 6] } },
+        data: { archivedAt: expect.any(Date) },
+      });
+    });
+
+    it("should delete the selected cards", async () => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.learningCard.deleteMany.mockResolvedValue({ count: 1 });
+
+      const res = await bulkLearningCardsAction({ ids: [5], action: "delete" });
+      expect(res).toEqual({ success: true, count: 1 });
+      expect(mockPrisma.learningCard.deleteMany).toHaveBeenCalledWith({
+        where: { id: { in: [5] } },
       });
     });
   });
