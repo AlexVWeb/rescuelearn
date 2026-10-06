@@ -2,9 +2,6 @@ import { logger } from "@/lib/logger";
 import axios from "axios";
 import { ApiQuiz, QuizComponentData } from "../interfaces/Quiz";
 
-// Utilisation de la variable d'environnement avec le préfixe NEXT_PUBLIC_
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
 const transformApiQuizToComponentData = (
   apiQuiz: ApiQuiz
 ): QuizComponentData => {
