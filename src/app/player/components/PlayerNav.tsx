@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Trophy, Compass } from "lucide-react";
+import { Trophy, Compass, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function PlayerNav() {
@@ -11,6 +11,7 @@ export function PlayerNav() {
 
   const isDashboard = pathname === "/player";
   const isProgresser = pathname === "/player/progresser";
+  const isProfile = pathname === "/player/profil";
 
   return (
     <nav className="flex items-center gap-2" aria-label="Navigation principale">
@@ -37,6 +38,18 @@ export function PlayerNav() {
       >
         <Compass className="h-4 w-4" />
         Progresser
+      </Link>
+      <Link
+        href="/player/profil"
+        className={cn(
+          "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          isProfile
+            ? "bg-blue-50/50 font-bold text-blue-600"
+            : "text-gray-650 hover:bg-gray-50 hover:text-gray-900"
+        )}
+      >
+        <UserRound className="h-4 w-4" />
+        Mon profil
       </Link>
     </nav>
   );

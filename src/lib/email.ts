@@ -247,45 +247,99 @@ export const EmailService = {
   },
 
   /**
-   * Envoie une alerte de sécurité à l'ancienne adresse email suite à sa modification.
+   * Demande à l'ancienne adresse d'approuver un changement d'adresse e-mail.
+   * Tant que le lien n'est pas cliqué, l'adresse du compte reste inchangée.
    */
-  async sendEmailChangedNotification({
-    oldEmail,
+  async sendEmailChangeConfirmation({
+    to,
     newEmail,
+    confirmUrl,
   }: {
-    oldEmail: string;
+    to: string;
     newEmail: string;
+    confirmUrl: string;
   }) {
     const subject =
-      "Alerte de sécurité : Modification de votre adresse e-mail - RescueLearn";
-    const text = `Bonjour,\n\nNous vous informons que l'adresse e-mail associée à votre compte RescueLearn a été modifiée de ${oldEmail} vers ${newEmail}.\n\nSi vous êtes à l'origine de cette modification, aucune action supplémentaire n'est requise.\n\nSi vous N'ÊTES PAS à l'origine de ce changement, veuillez contacter immédiatement l'assistance ou réinitialiser votre mot de passe.\n\nL'équipe RescueLearn`;
+      "Confirmez le changement de votre adresse e-mail - RescueLearn";
+    const text = `Bonjour,\n\nUne demande de changement d'adresse e-mail a été faite sur votre compte RescueLearn.\n\nNouvelle adresse demandée : ${newEmail}\n\nPour approuver ce changement, cliquez sur le lien suivant :\n${confirmUrl}\n\nUn lien de vérification sera ensuite envoyé à la nouvelle adresse. Votre adresse actuelle reste active tant que les deux étapes ne sont pas terminées.\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail et changez votre mot de passe.\n\nL'équipe RescueLearn`;
 
     const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; max-width: 580px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden;">
-        <div style="background-color: #dc2626; padding: 32px 24px; text-align: center;">
+        <div style="background-color: #2563eb; padding: 32px 24px; text-align: center;">
           <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800;">RescueLearn</h1>
-          <p style="color: #fecaca; margin: 4px 0 0 0; font-size: 14px;">Alerte de sécurité concernant votre compte</p>
+          <p style="color: #bfdbfe; margin: 4px 0 0 0; font-size: 14px;">Sécurité de votre compte</p>
         </div>
         <div style="padding: 40px 32px; background-color: #ffffff;">
-          <h2 style="margin-top: 0; color: #111827; font-size: 18px; font-weight: 700;">Votre adresse e-mail a été modifiée</h2>
+          <h2 style="margin-top: 0; color: #111827; font-size: 18px; font-weight: 700;">Confirmez le changement d'adresse e-mail</h2>
           <p style="font-size: 15px; color: #4b5563;">Bonjour,</p>
           <p style="font-size: 15px; color: #4b5563;">
-            L'adresse e-mail associée à votre compte RescueLearn a été modifiée avec succès.
+            Une demande de changement d'adresse e-mail a été faite sur votre compte RescueLearn.
           </p>
           <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 24px 0;">
-            <p style="margin: 0; font-size: 14px; color: #374151;">Ancienne adresse : <strong>${oldEmail}</strong></p>
+            <p style="margin: 0; font-size: 14px; color: #374151;">Adresse actuelle : <strong>${to}</strong></p>
             <p style="margin: 8px 0 0 0; font-size: 14px; color: #374151;">Nouvelle adresse : <strong>${newEmail}</strong></p>
           </div>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${confirmUrl}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 15px;">
+              Approuver le changement
+            </a>
+          </div>
+          <p style="font-size: 14px; color: #4b5563;">
+            Un lien de vérification sera ensuite envoyé à la nouvelle adresse. Votre adresse actuelle reste active tant que les deux étapes ne sont pas terminées.
+          </p>
           <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #f3f4f6;">
-            <p style="color: #9ca3af; font-size: 13px; margin: 0;">
-              Si vous n'êtes pas à l'origine de ce changement, votre compte a peut-être été compromis. Contactez immédiatement notre support de sécurité.
+            <p style="color: #b91c1c; font-size: 13px; margin: 0;">
+              Si vous n'êtes pas à l'origine de cette demande, ne cliquez pas sur le lien et changez votre mot de passe : quelqu'un d'autre le connaît peut-être.
             </p>
           </div>
         </div>
       </div>
     `;
 
-    return this.send({ to: oldEmail, subject, text, html });
+    return this.send({ to, subject, text, html });
+  },
+
+  /**
+   * Envoie le lien de vérification à la nouvelle adresse, après approbation
+   * par l'ancienne. L'adresse du compte est remplacée au clic.
+   */
+  async sendNewEmailVerification({
+    to,
+    verificationUrl,
+  }: {
+    to: string;
+    verificationUrl: string;
+  }) {
+    const subject = "Vérifiez votre nouvelle adresse e-mail - RescueLearn";
+    const text = `Bonjour,\n\nPour finaliser le changement d'adresse e-mail de votre compte RescueLearn, cliquez sur le lien suivant :\n${verificationUrl}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.\n\nL'équipe RescueLearn`;
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; max-width: 580px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden;">
+        <div style="background-color: #2563eb; padding: 32px 24px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800;">RescueLearn</h1>
+          <p style="color: #bfdbfe; margin: 4px 0 0 0; font-size: 14px;">Sécurité de votre compte</p>
+        </div>
+        <div style="padding: 40px 32px; background-color: #ffffff;">
+          <h2 style="margin-top: 0; color: #111827; font-size: 18px; font-weight: 700;">Vérifiez votre nouvelle adresse e-mail</h2>
+          <p style="font-size: 15px; color: #4b5563;">Bonjour,</p>
+          <p style="font-size: 15px; color: #4b5563;">
+            Dernière étape : confirmez que cette adresse vous appartient pour qu'elle devienne l'adresse de votre compte RescueLearn.
+          </p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${verificationUrl}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 15px;">
+              Vérifier ma nouvelle adresse
+            </a>
+          </div>
+          <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #f3f4f6;">
+            <p style="color: #9ca3af; font-size: 13px; margin: 0;">
+              Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : aucune modification ne sera faite.
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    return this.send({ to, subject, text, html });
   },
 
   /**
