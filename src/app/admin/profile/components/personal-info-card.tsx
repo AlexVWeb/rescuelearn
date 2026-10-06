@@ -5,7 +5,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { ShieldAlert } from "lucide-react";
+import { MailCheck, ShieldAlert } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -42,6 +42,7 @@ export function PersonalInfoCard({ user }: PersonalInfoCardProps) {
   const router = useRouter();
   const [profileError, setProfileError] = useState("");
   const [profileSuccess, setProfileSuccess] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -65,10 +66,18 @@ export function PersonalInfoCard({ user }: PersonalInfoCardProps) {
   const onProfileSubmit = async (data: ProfileValues) => {
     setProfileError("");
     setProfileSuccess(false);
-    const result = await updateProfileAction(data);
+    const result = await updateProfileAction({
+      ...data,
+      profilePath: "/admin/profile",
+    });
     if (result.success) {
       setProfileSuccess(true);
       profileForm.setValue("currentPassword", "");
+      if (result.emailChangePending) {
+        // L'adresse ne change qu'après les deux confirmations par e-mail
+        setPendingEmail(data.email.trim().toLowerCase());
+        profileForm.setValue("email", user.email);
+      }
       router.refresh();
     } else {
       setProfileError(result.error || "Erreur");
@@ -138,9 +147,10 @@ export function PersonalInfoCard({ user }: PersonalInfoCardProps) {
                   <span>Sécurité : Confirmation du mot de passe requis</span>
                 </div>
                 <p>
-                  Pour modifier votre adresse e-mail, veuillez saisir votre mot
-                  de passe actuel. Une alerte de sécurité sera transmise à
-                  l&apos;ancienne adresse ({user.email}).
+                  Pour modifier votre adresse e-mail, saisissez votre mot de
+                  passe actuel. Un lien d&apos;approbation sera envoyé à{" "}
+                  {user.email}, puis un lien de vérification à la nouvelle
+                  adresse. Votre adresse actuelle reste active d&apos;ici là.
                 </p>
                 <FormField
                   control={profileForm.control}
@@ -169,6 +179,20 @@ export function PersonalInfoCard({ user }: PersonalInfoCardProps) {
             )}
             {profileSuccess && (
               <p className="text-sm text-green-600">Profil mis à jour.</p>
+            )}
+            {pendingEmail && !isEmailModified && (
+              <div className="flex gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
+                <MailCheck className="h-4 w-4 shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-medium">
+                    Changement vers {pendingEmail} en attente
+                  </p>
+                  <p>
+                    1. Cliquez sur le lien reçu à {user.email}. 2. Cliquez
+                    ensuite sur celui envoyé à {pendingEmail}.
+                  </p>
+                </div>
+              </div>
             )}
             <Button type="submit" disabled={profileForm.formState.isSubmitting}>
               {profileForm.formState.isSubmitting

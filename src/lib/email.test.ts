@@ -97,11 +97,12 @@ describe("EmailService", () => {
     });
   });
 
-  describe("sendEmailChangedNotification", () => {
-    it("should send email changed security alert to old email", async () => {
-      const result = await EmailService.sendEmailChangedNotification({
-        oldEmail: "old@test.com",
+  describe("sendEmailChangeConfirmation", () => {
+    it("should ask the old email to approve the change", async () => {
+      const result = await EmailService.sendEmailChangeConfirmation({
+        to: "old@test.com",
         newEmail: "new@test.com",
+        confirmUrl: "https://app.test/api/auth/verify-email?token=abc",
       });
 
       expect(result.success).toBe(true);
@@ -110,8 +111,30 @@ describe("EmailService", () => {
         .calls[0][0] as nodemailer.SendMailOptions;
 
       expect(callArgs.to).toBe("old@test.com");
-      expect(callArgs.subject).toContain(
-        "Modification de votre adresse e-mail"
+      expect(callArgs.subject).toContain("Confirmez le changement");
+      expect(callArgs.html).toContain("new@test.com");
+      expect(callArgs.html).toContain(
+        "https://app.test/api/auth/verify-email?token=abc"
+      );
+    });
+  });
+
+  describe("sendNewEmailVerification", () => {
+    it("should send the verification link to the new email", async () => {
+      const result = await EmailService.sendNewEmailVerification({
+        to: "new@test.com",
+        verificationUrl: "https://app.test/api/auth/verify-email?token=xyz",
+      });
+
+      expect(result.success).toBe(true);
+      const sendMailCall = vi.mocked(nodemailer.createTransport().sendMail);
+      const callArgs = sendMailCall.mock
+        .calls[0][0] as nodemailer.SendMailOptions;
+
+      expect(callArgs.to).toBe("new@test.com");
+      expect(callArgs.subject).toContain("Vérifiez votre nouvelle adresse");
+      expect(callArgs.html).toContain(
+        "https://app.test/api/auth/verify-email?token=xyz"
       );
     });
   });

@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "better-auth/crypto";
 import { EmailService } from "@/lib/email";
+import { APIError } from "better-auth/api";
 
 vi.mock("next/headers", () => ({
   headers: vi.fn().mockResolvedValue(new Map()),
@@ -27,7 +28,6 @@ vi.mock("@/lib/logger", () => ({
 
 vi.mock("@/lib/email", () => ({
   EmailService: {
-    sendEmailChangedNotification: vi.fn().mockResolvedValue({ success: true }),
     sendPasswordChangedNotification: vi
       .fn()
       .mockResolvedValue({ success: true }),
@@ -39,6 +39,7 @@ vi.mock("@/lib/auth", () => ({
     api: {
       getSession: vi.fn(),
       requestPasswordReset: vi.fn(),
+      changeEmail: vi.fn(),
     },
   },
 }));
@@ -99,7 +100,8 @@ describe("profile-actions", () => {
         email: "john@example.com",
       });
 
-      expect(res).toEqual({ success: true, emailChanged: false });
+      expect(res).toEqual({ success: true, emailChangePending: false });
+      expect(auth.api.changeEmail).not.toHaveBeenCalled();
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-1" },
         data: {
@@ -154,7 +156,7 @@ describe("profile-actions", () => {
       });
     });
 
-    it("should update email and send notification when current password is correct", async () => {
+    it("should request a confirmed email change instead of updating the email", async () => {
       vi.mocked(auth.api.getSession).mockResolvedValueOnce({
         user: { id: "user-1", email: "old@example.com" },
         session: { id: "sess-1" },
@@ -173,24 +175,78 @@ describe("profile-actions", () => {
       const res = await updateProfileAction({
         firstName: "John",
         lastName: "Doe",
-        email: "new@example.com",
+        email: "New@Example.com",
         currentPassword: "correctpassword",
+        profilePath: "/player/profil",
       });
 
-      expect(res).toEqual({ success: true, emailChanged: true });
+      expect(res).toEqual({ success: true, emailChangePending: true });
+      // L'email n'est jamais écrit directement : seul le nom est mis à jour
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: "user-1" },
         data: {
           firstName: "John",
           lastName: "Doe",
           name: "John Doe",
-          email: "new@example.com",
-          emailVerified: false,
         },
       });
-      expect(EmailService.sendEmailChangedNotification).toHaveBeenCalledWith({
-        oldEmail: "old@example.com",
-        newEmail: "new@example.com",
+      expect(auth.api.changeEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: { newEmail: "new@example.com", callbackURL: "/player/profil" },
+        })
+      );
+    });
+
+    it("should fall back to the admin profile for an unknown callback path", async () => {
+      vi.mocked(auth.api.getSession).mockResolvedValueOnce({
+        user: { id: "user-1", email: "old@example.com" },
+        session: { id: "sess-1" },
+      } as unknown as SessionResult);
+      vi.mocked(prisma.account.findFirst).mockResolvedValueOnce({
+        id: "acc-1",
+        password: "hashed-password",
+      } as unknown as AccountResult);
+      vi.mocked(verifyPassword).mockResolvedValueOnce(true);
+
+      await updateProfileAction({
+        firstName: "John",
+        lastName: "Doe",
+        email: "new@example.com",
+        currentPassword: "correctpassword",
+        profilePath: "https://evil.example" as "/admin/profile",
+      });
+
+      expect(auth.api.changeEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: { newEmail: "new@example.com", callbackURL: "/admin/profile" },
+        })
+      );
+    });
+
+    it("should return an error if the new email is already used", async () => {
+      vi.mocked(auth.api.getSession).mockResolvedValueOnce({
+        user: { id: "user-1", email: "old@example.com" },
+        session: { id: "sess-1" },
+      } as unknown as SessionResult);
+      vi.mocked(prisma.account.findFirst).mockResolvedValueOnce({
+        id: "acc-1",
+        password: "hashed-password",
+      } as unknown as AccountResult);
+      vi.mocked(verifyPassword).mockResolvedValueOnce(true);
+      vi.mocked(auth.api.changeEmail).mockRejectedValueOnce(
+        new APIError("UNPROCESSABLE_ENTITY", { message: "exists" })
+      );
+
+      const res = await updateProfileAction({
+        firstName: "John",
+        lastName: "Doe",
+        email: "taken@example.com",
+        currentPassword: "correctpassword",
+      });
+
+      expect(res).toEqual({
+        success: false,
+        error: "Cet email est déjà utilisé",
       });
     });
   });

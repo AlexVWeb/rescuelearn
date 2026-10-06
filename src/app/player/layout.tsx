@@ -109,14 +109,18 @@ export default async function PlayerLayout({
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+            <Link
+              href="/player/profil"
+              className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+              aria-label="Mon profil"
+            >
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700">
                 <UserIcon className="h-4 w-4" />
               </div>
               <span className="hidden text-sm font-medium text-gray-700 sm:inline-block">
                 {dbUser.name}
               </span>
-            </div>
+            </Link>
 
             {/* Bouton de déconnexion utilisant un composant interactif léger */}
             <PlayerSignOutButton />
