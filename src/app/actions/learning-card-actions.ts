@@ -7,11 +7,8 @@ import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import {
-  ArchiveFilter,
-  archiveWhere,
-  bulkContentSchema,
-} from "@/lib/content-archive";
+import { archiveWhere, bulkContentSchema } from "@/lib/content-archive";
+import type { CardFilters } from "@/lib/card-filters";
 
 const learningCardSchema = z.object({
   theme: z.string().min(1, "Le thème est requis"),
@@ -21,22 +18,19 @@ const learningCardSchema = z.object({
   referencielId: z.number().nullable().optional(),
 });
 
-export async function getAdminLearningCardsAction(
-  page: number = 1,
-  limit: number = 10,
-  search: string = "",
-  filters: { archived?: ArchiveFilter; referencielId?: number } = {}
-) {
-  const user = await getUserContext();
-  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
-    return { success: false, error: "Forbidden" };
-  }
-
-  const skip = (page - 1) * limit;
-
-  const where: Prisma.LearningCardWhereInput = {
+function adminCardsWhere(
+  search: string,
+  filters: Partial<CardFilters>
+): Prisma.LearningCardWhereInput {
+  return {
     ...archiveWhere(filters.archived ?? "active"),
     ...(filters.referencielId ? { referencielId: filters.referencielId } : {}),
+    ...(filters.niveau ? { niveau: filters.niveau } : {}),
+    ...(filters.usage === "progression" && {
+      progressionExercises: { some: {} },
+    }),
+    ...(filters.usage === "library" && { progressionExercises: { none: {} } }),
+    ...(filters.incomplete && { info: "" }),
     ...(search
       ? {
           OR: [
@@ -47,6 +41,48 @@ export async function getAdminLearningCardsAction(
         }
       : {}),
   };
+}
+
+// Plafond aligné sur bulkContentSchema
+const MAX_BULK_IDS = 1000;
+
+/** Identifiants de toutes les cartes filtrées, pour une sélection multi-pages. */
+export async function getAdminLearningCardIdsAction(
+  search: string = "",
+  filters: Partial<CardFilters> = {}
+) {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
+  try {
+    const cards = await prisma.learningCard.findMany({
+      where: adminCardsWhere(search, filters),
+      select: { id: true },
+      orderBy: { id: "desc" },
+      take: MAX_BULK_IDS,
+    });
+    return { success: true, data: cards.map((c) => c.id) };
+  } catch (error) {
+    logger.error("Failed to fetch learning card ids:", error);
+    return { success: false, error: "Impossible de récupérer les cartes." };
+  }
+}
+
+export async function getAdminLearningCardsAction(
+  page: number = 1,
+  limit: number = 10,
+  search: string = "",
+  filters: Partial<CardFilters> = {}
+) {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
+  const skip = (page - 1) * limit;
+  const where = adminCardsWhere(search, filters);
 
   try {
     const [cards, total] = await Promise.all([
@@ -63,6 +99,7 @@ export async function getAdminLearningCardsAction(
               pdfUrl: true,
             },
           },
+          _count: { select: { progressionExercises: true } },
         },
       }),
       prisma.learningCard.count({ where }),
@@ -227,9 +264,13 @@ export async function deleteLearningCardAction(id: number) {
   }
 
   try {
-    await prisma.learningCard.delete({
-      where: { id },
-    });
+    // Les étapes de leçon pointant sur cette carte deviendraient vides
+    await prisma.$transaction([
+      prisma.progressionNodeExercise.deleteMany({
+        where: { learningCardId: id },
+      }),
+      prisma.learningCard.delete({ where: { id } }),
+    ]);
 
     revalidatePath("/admin/cards");
     revalidatePath("/learning");
@@ -257,13 +298,22 @@ export async function bulkLearningCardsAction(input: unknown) {
 
   try {
     const where = { id: { in: ids } };
-    const { count } =
-      action === "delete"
-        ? await prisma.learningCard.deleteMany({ where })
-        : await prisma.learningCard.updateMany({
-            where,
-            data: { archivedAt: action === "archive" ? new Date() : null },
-          });
+    let count: number;
+    if (action === "delete") {
+      // Les étapes de leçon pointant sur ces cartes deviendraient vides
+      const [, deleted] = await prisma.$transaction([
+        prisma.progressionNodeExercise.deleteMany({
+          where: { learningCardId: { in: ids } },
+        }),
+        prisma.learningCard.deleteMany({ where }),
+      ]);
+      count = deleted.count;
+    } else {
+      ({ count } = await prisma.learningCard.updateMany({
+        where,
+        data: { archivedAt: action === "archive" ? new Date() : null },
+      }));
+    }
 
     revalidatePath("/admin/cards");
     revalidatePath("/learning");

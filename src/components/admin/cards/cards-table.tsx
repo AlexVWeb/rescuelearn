@@ -41,6 +41,7 @@ interface LearningCardAdmin {
   referencielId: number | null;
   referenciel?: ReferencielSimple | null;
   archivedAt: Date | null;
+  _count?: { progressionExercises: number };
 }
 
 interface CardsTableProps {
@@ -54,6 +55,8 @@ interface CardsTableProps {
   onEdit: (card: LearningCardAdmin) => void;
   onDelete: (id: number) => void;
   onBulkAction: (ids: number[], action: BulkContentAction) => Promise<boolean>;
+  /** Récupère les ids de toutes les cartes filtrées (toutes pages) */
+  onSelectAllFiltered: () => Promise<number[]>;
 }
 
 export function CardsTable({
@@ -62,6 +65,7 @@ export function CardsTable({
   onEdit,
   onDelete,
   onBulkAction,
+  onSelectAllFiltered,
 }: CardsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -95,9 +99,11 @@ export function CardsTable({
 
   // Changement de page/filtre ou rafraîchissement : on repart d'une sélection vide
   // pour ne jamais agir sur des cartes qui ne sont plus affichées.
-  React.useEffect(() => {
+  const [syncedData, setSyncedData] = React.useState(data);
+  if (syncedData !== data) {
+    setSyncedData(data);
     setSelected(new Set());
-  }, [data]);
+  }
 
   const allSelected = data.length > 0 && data.every((c) => selected.has(c.id));
   const someSelected = !allSelected && data.some((c) => selected.has(c.id));
@@ -113,6 +119,17 @@ export function CardsTable({
       else next.delete(id);
       return next;
     });
+  };
+
+  const [selectingAll, setSelectingAll] = React.useState(false);
+  const selectAllFiltered = async () => {
+    setSelectingAll(true);
+    try {
+      const ids = await onSelectAllFiltered();
+      if (ids.length) setSelected(new Set(ids));
+    } finally {
+      setSelectingAll(false);
+    }
   };
 
   const handleBulkAction = async (action: BulkContentAction) => {
@@ -148,9 +165,25 @@ export function CardsTable({
       <BulkActionsBar
         count={selected.size}
         itemLabel="carte(s)"
+        deleteWarning="Les étapes de leçon qui utilisent ces cartes seront aussi retirées des parcours. Préférez l'archivage pour simplement masquer ces contenus."
         onAction={handleBulkAction}
         onClear={() => setSelected(new Set())}
       />
+      {allSelected && meta.total > selected.size && (
+        <p className="text-muted-foreground text-sm">
+          Les {selected.size} cartes de la page sont sélectionnées.{" "}
+          <button
+            type="button"
+            onClick={selectAllFiltered}
+            disabled={selectingAll}
+            className="font-semibold text-blue-600 hover:underline disabled:opacity-50"
+          >
+            {selectingAll
+              ? "Sélection..."
+              : `Sélectionner les ${meta.total} cartes filtrées`}
+          </button>
+        </p>
+      )}
 
       <div className="rounded-md border">
         <Table>
@@ -168,6 +201,7 @@ export function CardsTable({
               <TableHead>Informations</TableHead>
               <TableHead className="w-[150px]">Référence</TableHead>
               <TableHead className="w-[180px]">Référentiel</TableHead>
+              <TableHead className="w-[80px]">Leçons</TableHead>
               <TableHead className="w-[80px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -196,8 +230,16 @@ export function CardsTable({
                       {card.niveau}
                     </span>
                   </TableCell>
-                  <TableCell className="max-w-[400px] truncate">
-                    {card.info}
+                  <TableCell className="max-w-[400px] min-w-[260px]">
+                    {card.info ? (
+                      <div className="line-clamp-2 whitespace-normal">
+                        {card.info}
+                      </div>
+                    ) : (
+                      <span className="text-xs font-semibold text-red-600">
+                        Contenu vide
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {card.reference}
@@ -211,6 +253,15 @@ export function CardsTable({
                       <span className="text-muted-foreground text-xs italic">
                         Aucun
                       </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {card._count?.progressionExercises ? (
+                      <span className="bg-secondary rounded-md px-2 py-0.5 text-xs font-semibold">
+                        {card._count.progressionExercises}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -239,7 +290,7 @@ export function CardsTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   Aucune carte d'apprentissage trouvée.
                 </TableCell>
               </TableRow>

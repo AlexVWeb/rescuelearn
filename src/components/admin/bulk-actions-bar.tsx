@@ -20,6 +20,8 @@ interface BulkActionsBarProps {
   /** Libellé pluriel des éléments, ex. "quiz" ou "carte(s)" */
   itemLabel: string;
   deleteWarning?: string;
+  /** Actions proposées (toutes par défaut) */
+  actions?: BulkContentAction[];
   onAction: (action: BulkContentAction) => Promise<void>;
   onClear: () => void;
 }
@@ -28,6 +30,7 @@ export function BulkActionsBar({
   count,
   itemLabel,
   deleteWarning,
+  actions = ["archive", "restore", "delete"],
   onAction,
   onClear,
 }: BulkActionsBarProps) {
@@ -61,30 +64,36 @@ export function BulkActionsBar({
         <X className="h-4 w-4" />
       </Button>
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={() => run("archive")}
-        >
-          <Archive className="mr-2 h-4 w-4" /> Archiver
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={() => run("restore")}
-        >
-          <ArchiveRestore className="mr-2 h-4 w-4" /> Restaurer
-        </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          disabled={pending}
-          onClick={() => setConfirmOpen(true)}
-        >
-          <Trash className="mr-2 h-4 w-4" /> Supprimer
-        </Button>
+        {actions.includes("archive") && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={() => run("archive")}
+          >
+            <Archive className="mr-2 h-4 w-4" /> Archiver
+          </Button>
+        )}
+        {actions.includes("restore") && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={() => run("restore")}
+          >
+            <ArchiveRestore className="mr-2 h-4 w-4" /> Restaurer
+          </Button>
+        )}
+        {actions.includes("delete") && (
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={pending}
+            onClick={() => setConfirmOpen(true)}
+          >
+            <Trash className="mr-2 h-4 w-4" /> Supprimer
+          </Button>
+        )}
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

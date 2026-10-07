@@ -30,12 +30,14 @@ model User {
   questionSubscriptionFrequency String? // "daily" | "weekly" | "monthly"
   lastQuestionSentAt            DateTime?
 
-  xp             Int              @default(0)
-  hearts         Int              @default(5)
-  streak         Int              @default(0)
-  lastActiveAt   DateTime?
+  xp              Int       @default(0)
+  hearts          Int       @default(5)
+  heartsUpdatedAt DateTime?
+  streak          Int       @default(0)
+  lastActiveAt    DateTime?
 
-  playerProgress PlayerProgress[]
+  playerProgress      PlayerProgress[]
+  progressionAttempts ProgressionAttempt[]
 }
 
 model Member {

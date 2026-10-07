@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Trophy } from "lucide-react";
+import { Construction, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LeaderboardUser {
@@ -21,14 +21,26 @@ export function LeaderboardWidget({ leaderboard }: LeaderboardWidgetProps) {
       className="space-y-4 rounded-3xl border-2 border-gray-100 bg-white p-6 shadow-sm"
       aria-labelledby="leaderboard-title"
     >
-      <h2
-        id="leaderboard-title"
-        className="flex items-center gap-2 text-sm font-black tracking-wider text-gray-900 uppercase"
+      <div className="flex items-center justify-between gap-2">
+        <h2
+          id="leaderboard-title"
+          className="flex items-center gap-2 text-sm font-black tracking-wider text-gray-900 uppercase"
+        >
+          <Trophy className="h-4 w-4 text-yellow-500" />
+          Classement Ligue
+        </h2>
+        <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black tracking-wider text-amber-700 uppercase">
+          <Construction className="h-3 w-3" />
+          En développement
+        </span>
+      </div>
+      <p className="text-xs font-semibold text-gray-500">
+        Le classement arrive bientôt. Aperçu non représentatif.
+      </p>
+      <div
+        className="pointer-events-none space-y-3 opacity-50 grayscale select-none"
+        aria-hidden="true"
       >
-        <Trophy className="h-4 w-4 text-yellow-500" />
-        Classement Ligue
-      </h2>
-      <div className="space-y-3">
         {leaderboard.map((user, idx) => (
           <div
             key={idx}

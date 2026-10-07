@@ -16,15 +16,24 @@ export default async function AdminNodeBuilderPage(props: {
     redirect("/admin/progression");
   }
 
-  // Fetch lists for selectors
+  // Fetch lists for selectors. Les éléments déjà utilisés par le nœud restent
+  // listés même si leur quiz / fiche est archivé, sinon le select apparaît vide.
+  const usedByNode = { progressionExercises: { some: { nodeId } } };
+
   const questions = await prisma.question.findMany({
-    where: { quiz: { archivedAt: null } },
-    select: { id: true, text: true },
+    where: { OR: [{ quiz: { archivedAt: null } }, usedByNode] },
+    select: {
+      id: true,
+      text: true,
+      correctAnswer: true,
+      quiz: { select: { title: true } },
+      options: { select: { text: true }, orderBy: { id: "asc" } },
+    },
     orderBy: { id: "desc" },
   });
 
   const cards = await prisma.learningCard.findMany({
-    where: { archivedAt: null },
+    where: { OR: [{ archivedAt: null }, usedByNode] },
     select: { id: true, theme: true, info: true },
     orderBy: { id: "desc" },
   });

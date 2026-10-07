@@ -87,14 +87,14 @@ export interface ProgressionExerciseInput {
 }
 
 export interface PlaySessionExercise {
+  id: string;
   type: "MICRO_COURSE" | "QUIZ_QUESTION" | "FLASHCARD" | "MINI_GAME";
   courseTitle?: string | null;
   courseContent?: string | null;
+  // La bonne réponse n'est révélée qu'après validation côté serveur
   question?: {
     text: string;
     options: { id?: string | number; text: string }[];
-    correctAnswerIndex: number;
-    explanation?: string | null;
   } | null;
   flashcard?: {
     theme: string;

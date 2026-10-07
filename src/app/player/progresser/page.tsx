@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { logger } from "@/lib/logger";
+import React, { useState } from "react";
 import { toast } from "sonner";
-import { PlayerStatsBanner } from "../components/PlayerStatsBanner";
+import {
+  PlayerStatsBanner,
+  type LevelProgress,
+} from "../components/PlayerStatsBanner";
 import { PlayerOnboarding } from "../components/PlayerOnboarding";
 import { LearningPath } from "../components/LearningPath";
-import {
-  getPlayerOnboardingStatusAction,
-  savePlayerOnboardingAction,
-} from "@/app/actions/player-actions";
 import { getPlayerProgressionPathAction } from "@/app/actions/progression-player-actions";
 import { useRouter } from "next/navigation";
+import { usePlayerSound } from "../hooks/usePlayerSound";
+import { usePlayerOnboarding } from "../hooks/usePlayerOnboarding";
 
 interface LevelNode {
   id: string;
@@ -24,158 +24,73 @@ interface LevelNode {
   themeColor: string;
 }
 
-export default function ProgresserPage() {
-  const [mounted, setMounted] = useState(false);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
-  const [loadingOnboarding, setLoadingOnboarding] = useState(true);
-  const router = useRouter();
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
-  // Onboarding Wizard States
-  const [experience, setExperience] = useState("");
-  const [objective, setObjective] = useState("");
-  const [expectation, setExpectation] = useState("");
+export default function ProgresserPage() {
+  const router = useRouter();
+  const { soundEnabled, toggleSound, playSound } = usePlayerSound();
 
   // Game States
   const [streak, setStreak] = useState(0);
   const [xp, setXp] = useState(0);
-  const [hearts, setHearts] = useState(5);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [hearts, setHearts] = useState(0);
+  const [nextHeartAt, setNextHeartAt] = useState<string | null>(null);
   const [levels, setLevels] = useState<LevelNode[]>([]);
+  const [levelProgress, setLevelProgress] = useState<LevelProgress | null>(
+    null
+  );
 
-  useEffect(() => {
-    setMounted(true);
-    async function loadStatus() {
-      try {
-        const res = await getPlayerOnboardingStatusAction();
-        if (res.success && res.data) {
-          setOnboardingCompleted(res.data.completed);
-          setExperience(res.data.experience);
-          setObjective(res.data.objective);
-          setExpectation(res.data.expectation);
-
-          if (res.data.completed) {
-            const pathRes = await getPlayerProgressionPathAction();
-            if (pathRes.success && pathRes.data) {
-              // Convert node structure to match visual component props
-              const mappedNodes = pathRes.data.nodes.map((node) => ({
-                id: node.id,
-                title: node.title,
-                subtitle: node.subtitle,
-                description: node.description,
-                type: "quiz" as const, // Default fallback type for LearningPath icons
-                status: node.status,
-                xpReward: node.xpReward,
-                themeColor: node.themeColor,
-              }));
-              setLevels(mappedNodes);
-              setXp(pathRes.data.stats.xp);
-              setHearts(pathRes.data.stats.hearts);
-              setStreak(pathRes.data.stats.streak);
-            }
-          }
-        }
-      } finally {
-        setLoadingOnboarding(false);
-      }
-    }
-    loadStatus();
-  }, []);
-
-  const handleFinishOnboarding = async () => {
-    try {
-      const res = await savePlayerOnboardingAction({
-        experience,
-        objective,
-        expectation,
+  const loadPath = async () => {
+    const pathRes = await getPlayerProgressionPathAction();
+    if (pathRes.success && pathRes.data) {
+      // Convert node structure to match visual component props
+      const mappedNodes = pathRes.data.nodes.map((node) => ({
+        id: node.id,
+        title: node.title,
+        subtitle: node.subtitle,
+        description: node.description,
+        type: "quiz" as const, // Default fallback type for LearningPath icons
+        status: node.status,
+        xpReward: node.xpReward,
+        themeColor: node.themeColor,
+      }));
+      setLevels(mappedNodes);
+      setLevelProgress({
+        level: pathRes.data.level,
+        nextLevel: pathRes.data.nextLevel,
+        completedNodes: mappedNodes.filter((n) => n.status === "completed")
+          .length,
+        totalNodes: mappedNodes.length,
       });
-      if (res.success) {
-        setOnboardingCompleted(true);
-        playSound("success");
-        toast.success("Profil d'apprentissage configuré avec succès !");
-
-        // Load path
-        const pathRes = await getPlayerProgressionPathAction();
-        if (pathRes.success && pathRes.data) {
-          const mappedNodes = pathRes.data.nodes.map((node) => ({
-            id: node.id,
-            title: node.title,
-            subtitle: node.subtitle,
-            description: node.description,
-            type: "quiz" as const,
-            status: node.status,
-            xpReward: node.xpReward,
-            themeColor: node.themeColor,
-          }));
-          setLevels(mappedNodes);
-          setXp(pathRes.data.stats.xp);
-          setHearts(pathRes.data.stats.hearts);
-          setStreak(pathRes.data.stats.streak);
-        }
-      } else {
-        toast.error(
-          res.error || "Une erreur est survenue lors de la configuration."
-        );
-      }
-    } catch (error) {
-      logger.error(
-        "Erreur inattendue durant la configuration de l'onboarding :",
-        error
-      );
-      toast.error("Une erreur inattendue est survenue.");
+      setXp(pathRes.data.stats.xp);
+      setHearts(pathRes.data.stats.hearts);
+      setNextHeartAt(pathRes.data.stats.nextHeartAt);
+      setStreak(pathRes.data.stats.streak);
     }
   };
 
-  const playSound = (type: "click" | "success" | "locked") => {
-    if (!soundEnabled) return;
-    try {
-      const ctx = new (
-        window.AudioContext ||
-        (window as Window & { webkitAudioContext?: typeof AudioContext })
-          .webkitAudioContext
-      )();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+  const onboarding = usePlayerOnboarding({
+    onCompleted: loadPath,
+    onFinishSuccess: () => playSound("success"),
+  });
 
-      if (type === "success") {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        osc.start();
-        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime + 0.1);
-        osc.stop(ctx.currentTime + 0.3);
-      } else if (type === "locked") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(120, ctx.currentTime);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-      } else {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(440, ctx.currentTime);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.08);
-      }
-    } catch (e) {
-      logger.warn("Web Audio failed to load:", e);
-    }
-  };
+  if (onboarding.loadingOnboarding) return null;
 
-  if (!mounted || loadingOnboarding) return null;
-
-  if (!onboardingCompleted) {
+  if (!onboarding.onboardingCompleted) {
     return (
       <PlayerOnboarding
-        experience={experience}
-        setExperience={setExperience}
-        objective={objective}
-        setObjective={setObjective}
-        expectation={expectation}
-        setExpectation={setExpectation}
-        onFinish={handleFinishOnboarding}
+        experience={onboarding.experience}
+        setExperience={onboarding.setExperience}
+        objective={onboarding.objective}
+        setObjective={onboarding.setObjective}
+        expectation={onboarding.expectation}
+        setExpectation={onboarding.setExpectation}
+        onFinish={onboarding.finishOnboarding}
         playSound={playSound}
       />
     );
@@ -184,12 +99,25 @@ export default function ProgresserPage() {
   return (
     <div className="animate-fade-in mx-auto max-w-7xl px-4 py-6 md:py-10">
       <PlayerStatsBanner
+        levelProgress={levelProgress}
         streak={streak}
         xp={xp}
         hearts={hearts}
         soundEnabled={soundEnabled}
-        onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        onToggleSound={toggleSound}
       />
+
+      {hearts <= 0 && (
+        <div
+          role="status"
+          className="mx-auto mb-6 max-w-2xl rounded-3xl border-2 border-rose-100 bg-rose-50 p-4 text-center text-sm font-bold text-rose-800"
+        >
+          💔 Plus de vies !
+          {nextHeartAt
+            ? ` Prochaine vie à ${formatTime(nextHeartAt)}.`
+            : " Reviens un peu plus tard."}
+        </div>
+      )}
 
       <div className="mx-auto max-w-2xl py-4">
         {levels.length === 0 ? (
@@ -210,6 +138,13 @@ export default function ProgresserPage() {
                 playSound("locked");
                 toast.error(
                   "Cette étape est verrouillée ! Terminez l'étape précédente."
+                );
+              } else if (hearts <= 0) {
+                playSound("locked");
+                toast.error(
+                  nextHeartAt
+                    ? `Plus de vies ! Prochaine vie à ${formatTime(nextHeartAt)}.`
+                    : "Plus de vies ! Reviens un peu plus tard."
                 );
               } else {
                 playSound("click");

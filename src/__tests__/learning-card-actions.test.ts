@@ -17,6 +17,9 @@ const mockPrisma = vi.hoisted(() => ({
     updateMany: vi.fn(),
     deleteMany: vi.fn(),
   },
+  progressionNodeExercise: {
+    deleteMany: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -45,6 +48,7 @@ import {
   deleteLearningCardAction,
   bulkCreateLearningCardsAction,
   bulkLearningCardsAction,
+  getAdminLearningCardIdsAction,
 } from "@/app/actions/learning-card-actions";
 
 describe("learning-card-actions", () => {
@@ -91,6 +95,53 @@ describe("learning-card-actions", () => {
       expect(res.success).toBe(true);
       expect(res.data!).toHaveLength(1);
       expect(res.data![0].theme).toBe("Cardio");
+    });
+
+    it("should filter by level, lesson usage and empty content", async () => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.learningCard.findMany.mockResolvedValue([]);
+      mockPrisma.learningCard.count.mockResolvedValue(0);
+
+      await getAdminLearningCardsAction(1, 20, "", {
+        archived: "all",
+        niveau: "GQS",
+        usage: "progression",
+        incomplete: true,
+      });
+      expect(mockPrisma.learningCard.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            niveau: "GQS",
+            progressionExercises: { some: {} },
+            info: "",
+          },
+        })
+      );
+    });
+  });
+
+  describe("getAdminLearningCardIdsAction", () => {
+    it("should return Forbidden if user is not SUPER_ADMIN", async () => {
+      mockUser([UserRole.FORMATEUR]);
+      const res = await getAdminLearningCardIdsAction();
+      expect(res).toEqual({ success: false, error: "Forbidden" });
+    });
+
+    it("should return the ids of every filtered card", async () => {
+      mockUser([UserRole.SUPER_ADMIN]);
+      mockPrisma.learningCard.findMany.mockResolvedValue([
+        { id: 3 },
+        { id: 1 },
+      ]);
+
+      const res = await getAdminLearningCardIdsAction("", { usage: "library" });
+      expect(res).toEqual({ success: true, data: [3, 1] });
+      expect(mockPrisma.learningCard.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { archivedAt: null, progressionExercises: { none: {} } },
+          select: { id: true },
+        })
+      );
     });
   });
 
@@ -223,6 +274,9 @@ describe("learning-card-actions", () => {
       expect(mockPrisma.learningCard.delete).toHaveBeenCalledWith({
         where: { id: 1 },
       });
+      expect(
+        mockPrisma.progressionNodeExercise.deleteMany
+      ).toHaveBeenCalledWith({ where: { learningCardId: 1 } });
     });
   });
 
@@ -264,6 +318,9 @@ describe("learning-card-actions", () => {
       expect(mockPrisma.learningCard.deleteMany).toHaveBeenCalledWith({
         where: { id: { in: [5] } },
       });
+      expect(
+        mockPrisma.progressionNodeExercise.deleteMany
+      ).toHaveBeenCalledWith({ where: { learningCardId: { in: [5] } } });
     });
   });
 

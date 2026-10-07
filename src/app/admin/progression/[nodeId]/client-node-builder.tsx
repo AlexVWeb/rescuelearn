@@ -3,15 +3,13 @@
 import React, { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { LessonExercisesBuilder } from "../components/LessonExercisesBuilder";
+import {
+  LessonExercisesBuilder,
+  type AdminQuestion,
+} from "../components/LessonExercisesBuilder";
 import { ProgressionAiGenerator } from "../components/ProgressionAiGenerator";
 import { saveProgressionNodeExercisesAction } from "@/app/actions/progression-admin-actions";
 import { useRouter } from "next/navigation";
-
-interface Question {
-  id: number;
-  text: string;
-}
 
 interface LearningCard {
   id: number;
@@ -35,7 +33,7 @@ interface ClientNodeBuilderProps {
     tree: { level: string };
     exercises: Exercise[];
   };
-  availableQuestions: Question[];
+  availableQuestions: AdminQuestion[];
   availableLearningCards: LearningCard[];
   referenciels: Referenciel[];
 }
@@ -49,6 +47,15 @@ export default function ClientNodeBuilder({
   const [exercises, setExercises] = useState<Exercise[]>(node.exercises);
   const [key, setKey] = useState(0); // Force re-render of builder when importing
   const router = useRouter();
+
+  // Après sauvegarde + refresh, repartir des exercices persistés (les
+  // _newQuestion sont devenus des questionId) pour éviter de les recréer.
+  const [syncedExercises, setSyncedExercises] = useState(node.exercises);
+  if (syncedExercises !== node.exercises) {
+    setSyncedExercises(node.exercises);
+    setExercises(node.exercises);
+    setKey((prev) => prev + 1);
+  }
 
   const handleSave = async (updatedExercises: Exercise[]) => {
     const res = await saveProgressionNodeExercisesAction(
@@ -98,7 +105,7 @@ export default function ClientNodeBuilder({
 
       <div className="grid gap-8 lg:grid-cols-12">
         {/* Visual builder - left column */}
-        <div className="lg:col-span-7">
+        <div className="min-w-0 lg:col-span-7">
           <LessonExercisesBuilder
             key={key}
             initialExercises={exercises}

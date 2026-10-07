@@ -12,6 +12,11 @@ import {
   archiveWhere,
   bulkContentSchema,
 } from "@/lib/content-archive";
+import {
+  PROGRESSION_BANK_PREFIX,
+  type QuestionFilters,
+  type QuestionSource,
+} from "@/lib/question-filters";
 
 // --- Types ---
 
@@ -40,9 +45,10 @@ export type Question = {
   correctAnswer: string; // "A", "B", "C", "D"
   explanation: string | null;
   quizId: number;
-  quiz?: { title: string };
+  quiz?: { title: string; archivedAt?: Date | null; generatedByAi?: boolean };
   options: QuestionOption[];
   tags: string[];
+  _count?: { progressionExercises: number };
 };
 
 // --- Quiz Actions ---
@@ -184,14 +190,24 @@ export async function bulkQuizzesAction(input: unknown) {
 
   try {
     const where = { id: { in: ids } };
-    const { count } =
-      action === "delete"
-        ? await prisma.quiz.deleteMany({ where })
-        : await prisma.quiz.updateMany({
-            where,
-            data: { archivedAt: action === "archive" ? new Date() : null },
-          });
+    let count: number;
+    if (action === "delete") {
+      // Sans ça, les leçons garderaient des étapes de quiz vides (SetNull)
+      const [, deleted] = await prisma.$transaction([
+        prisma.progressionNodeExercise.deleteMany({
+          where: { question: { quizId: { in: ids } } },
+        }),
+        prisma.quiz.deleteMany({ where }),
+      ]);
+      count = deleted.count;
+    } else {
+      ({ count } = await prisma.quiz.updateMany({
+        where,
+        data: { archivedAt: action === "archive" ? new Date() : null },
+      }));
+    }
     revalidatePath("/admin/quiz/quizzes");
+    revalidatePath("/admin/quiz/questions");
     return { success: true, count };
   } catch (error) {
     logger.error("Failed to bulk update quizzes:", error);
@@ -309,20 +325,38 @@ import { z } from "zod";
 
 // --- Question Actions ---
 
+function questionSourceWhere(
+  source: QuestionSource | undefined
+): Prisma.QuizWhereInput {
+  if (source === "progression") {
+    return { title: { startsWith: PROGRESSION_BANK_PREFIX } };
+  }
+  if (source === "quiz") {
+    return { NOT: { title: { startsWith: PROGRESSION_BANK_PREFIX } } };
+  }
+  if (source === "ai") return { generatedByAi: true };
+  return {};
+}
+
 export async function getQuestionsAction(
   page: number = 1,
   limit: number = 10,
-  search: string = ""
+  search: string = "",
+  filters: Partial<QuestionFilters> = {}
 ) {
   const authError = await checkSuperAdmin();
   if (authError) return { success: false, error: authError };
 
   const skip = (page - 1) * limit;
-  const where = search
-    ? {
-        text: { contains: search, mode: "insensitive" as const },
-      }
-    : {};
+  const where: Prisma.QuestionWhereInput = {
+    ...(search && { text: { contains: search, mode: "insensitive" } }),
+    ...(filters.quizId && { quizId: filters.quizId }),
+    ...(filters.incomplete && { options: { none: {} } }),
+    quiz: {
+      ...questionSourceWhere(filters.source),
+      ...archiveWhere(filters.archived ?? "all"),
+    },
+  };
 
   try {
     const [questions, total] = await Promise.all([
@@ -333,9 +367,10 @@ export async function getQuestionsAction(
         orderBy: { id: "desc" },
         include: {
           quiz: {
-            select: { title: true },
+            select: { title: true, archivedAt: true, generatedByAi: true },
           },
           options: true,
+          _count: { select: { progressionExercises: true } },
         },
       }),
       prisma.question.count({ where }),
@@ -440,9 +475,11 @@ export async function deleteQuestionAction(id: number) {
   if (authError) return { success: false, error: authError };
 
   try {
-    await prisma.question.delete({
-      where: { id },
-    });
+    // Les étapes de leçon pointant sur cette question deviendraient vides
+    await prisma.$transaction([
+      prisma.progressionNodeExercise.deleteMany({ where: { questionId: id } }),
+      prisma.question.delete({ where: { id } }),
+    ]);
     revalidatePath("/admin/quiz/questions");
     return { success: true };
   } catch (error) {
@@ -451,12 +488,44 @@ export async function deleteQuestionAction(id: number) {
   }
 }
 
+const bulkQuestionsSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1).max(1000),
+});
+
+export async function bulkDeleteQuestionsAction(input: unknown) {
+  const authError = await checkSuperAdmin();
+  if (authError) return { success: false, error: authError };
+
+  const parsed = bulkQuestionsSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: "Paramètres invalides" };
+  const { ids } = parsed.data;
+
+  try {
+    // Les étapes de leçon pointant sur ces questions deviendraient vides
+    const [exercises, questions] = await prisma.$transaction([
+      prisma.progressionNodeExercise.deleteMany({
+        where: { questionId: { in: ids } },
+      }),
+      prisma.question.deleteMany({ where: { id: { in: ids } } }),
+    ]);
+    revalidatePath("/admin/quiz/questions");
+    return {
+      success: true,
+      count: questions.count,
+      removedExercises: exercises.count,
+    };
+  } catch (error) {
+    logger.error("Failed to bulk delete questions:", error);
+    return { success: false, error: "Impossible de supprimer les questions" };
+  }
+}
+
 export async function getAllQuizzesSimpleAction() {
   if (await checkSuperAdmin()) return [];
 
   try {
     return await prisma.quiz.findMany({
-      select: { id: true, title: true },
+      select: { id: true, title: true, archivedAt: true },
       orderBy: { title: "asc" },
     });
   } catch (error) {

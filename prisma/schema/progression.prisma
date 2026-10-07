@@ -15,8 +15,8 @@ model ProgressionTree {
   generationError     String?
   generationStartedAt DateTime?
 
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Représente un bloc d'apprentissage (un nœud/cercle sur le parcours)
@@ -33,6 +33,7 @@ model ProgressionNode {
   exercises ProgressionNodeExercise[]
 
   playerProgress PlayerProgress[]
+  attempts       ProgressionAttempt[]
 
   topics ReferencielTopic[]
 
@@ -62,6 +63,8 @@ model ProgressionNodeExercise {
   // Configuration JSON générique pour de futurs mini-jeux (ex: ordonner des gestes)
   gameConfig Json?
 
+  attemptAnswers ProgressionAttemptAnswer[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -84,4 +87,32 @@ model PlayerProgress {
   score       Int? // Pourcentage de réussite ou score obtenu
 
   @@unique([userId, nodeId])
+}
+
+// Tentative d'un joueur sur un bloc : les réponses sont notées côté serveur,
+// le score final en est déduit (le client ne peut pas l'envoyer lui-même).
+model ProgressionAttempt {
+  id          String                     @id @default(cuid())
+  userId      String
+  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nodeId      String
+  node        ProgressionNode            @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  answers     ProgressionAttemptAnswer[]
+  startedAt   DateTime                   @default(now())
+  completedAt DateTime?
+
+  @@index([userId, nodeId])
+}
+
+// Première réponse donnée à une question pendant une tentative (non modifiable)
+model ProgressionAttemptAnswer {
+  id         String                  @id @default(cuid())
+  attemptId  String
+  attempt    ProgressionAttempt      @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise   ProgressionNodeExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  isCorrect  Boolean
+  answeredAt DateTime                @default(now())
+
+  @@unique([attemptId, exerciseId])
 }

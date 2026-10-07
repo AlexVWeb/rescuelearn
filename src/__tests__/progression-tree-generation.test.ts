@@ -50,6 +50,7 @@ vi.mock("@/lib/logger", () => ({
 import { generateProgressionNodeFromPdf } from "@/lib/gemini";
 import { extractPages } from "@/lib/pdf/document";
 import { ProgressionAdminService } from "@/services/progression.service";
+import type { AiGeneratedNode } from "@/types/progression";
 
 const topic = (id: string, chapter: string, order: number, extra = {}) => ({
   id,
@@ -82,7 +83,7 @@ const processingTree = (overrides = {}) => ({
   ...overrides,
 });
 
-const aiLesson = {
+const aiLesson: AiGeneratedNode = {
   title: "Titre IA",
   description: "Description IA",
   exercises: [

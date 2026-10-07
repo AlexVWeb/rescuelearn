@@ -9,6 +9,10 @@
     {
       "path": "/api/cron/cleanup-sessions",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/daily-quiz",
+      "schedule": "0 7 * * *"
     }
   ]
 }

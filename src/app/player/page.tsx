@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 
 import { PlayerStatsBanner } from "./components/PlayerStatsBanner";
@@ -12,16 +11,15 @@ import { MascotWidget } from "./components/MascotWidget";
 import { LeaderboardWidget } from "./components/LeaderboardWidget";
 import { BoutiqueWidget } from "./components/BoutiqueWidget";
 import { SubscriptionWidget } from "./components/SubscriptionWidget";
+import { InDevelopmentBadge } from "./components/InDevelopmentBadge";
 import {
-  getPlayerOnboardingStatusAction,
-  savePlayerOnboardingAction,
-  resetPlayerOnboardingAction,
-} from "@/app/actions/player-actions";
+  getPlayerStatsAction,
+  getProgressionStatsAction,
+} from "@/app/actions/progression-player-actions";
 import { useSearchParams } from "next/navigation";
 import {
   getQuestionForPlayerAction,
   submitDailyQuestionAnswerAction,
-  getDailyQuestionStatsAction,
 } from "@/app/actions/player-quiz-actions";
 import { DailyStatsWidget } from "./components/DailyStatsWidget";
 import {
@@ -33,33 +31,30 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2, Mail } from "lucide-react";
-
-interface LevelNode {
-  id: string;
-  title: string;
-  subtitle: string;
-  description: string;
-  type: "quiz" | "snv" | "card";
-  status: "completed" | "current" | "locked";
-  xpReward: number;
-  themeColor: string;
-}
+import { usePlayerSound } from "./hooks/usePlayerSound";
+import { usePlayerOnboarding } from "./hooks/usePlayerOnboarding";
 
 export default function PlayerPage() {
-  const [mounted, setMounted] = useState(false);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
-  const [loadingOnboarding, setLoadingOnboarding] = useState(true);
-
-  // Onboarding Wizard States
-  const [experience, setExperience] = useState("");
-  const [objective, setObjective] = useState("");
-  const [expectation, setExpectation] = useState("");
+  const { soundEnabled, toggleSound, playSound } = usePlayerSound();
 
   // Game States
-  const [streak] = useState(5);
-  const [xp] = useState(1250);
-  const [hearts] = useState(5);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [playerStats, setPlayerStats] = useState({
+    xp: 0,
+    hearts: 0,
+    streak: 0,
+  });
+
+  const fetchPlayerStats = async () => {
+    const res = await getPlayerStatsAction();
+    if (res.success && res.data) {
+      setPlayerStats(res.data);
+    }
+  };
+
+  const onboarding = usePlayerOnboarding({
+    onCompleted: fetchPlayerStats,
+    onFinishSuccess: () => playSound("success"),
+  });
 
   // Daily Question Modal States
   const searchParams = useSearchParams();
@@ -106,25 +101,17 @@ export default function PlayerPage() {
     }
   };
 
-  interface DailyStats {
-    total: number;
-    correct: number;
-    successRate: number;
-    tagStats: {
-      tag: string;
-      total: number;
-      correct: number;
-      rate: number;
-    }[];
-  }
+  type ProgressionStats = NonNullable<
+    Awaited<ReturnType<typeof getProgressionStatsAction>>["data"]
+  >;
 
-  const [stats, setStats] = useState<DailyStats | null>(null);
+  const [stats, setStats] = useState<ProgressionStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
   const fetchStats = async () => {
     setStatsLoading(true);
     try {
-      const res = await getDailyQuestionStatsAction();
+      const res = await getProgressionStatsAction();
       if (res.success && res.data) {
         setStats(res.data);
       }
@@ -151,7 +138,6 @@ export default function PlayerPage() {
         } else if (!res.data.isCorrect && !res.data.alreadyAnswered) {
           toast.error("Mauvaise réponse. Révisez le concept !");
         }
-        fetchStats();
       } else {
         toast.error(res.error || "Erreur lors de la validation.");
       }
@@ -163,8 +149,6 @@ export default function PlayerPage() {
   };
 
   useEffect(() => {
-    if (!mounted) return;
-
     const questionIdParam = searchParams.get("dailyQuestionId");
     if (questionIdParam) {
       const qId = parseInt(questionIdParam, 10);
@@ -172,175 +156,19 @@ export default function PlayerPage() {
         loadDailyQuestion(qId);
       }
     }
-  }, [searchParams, mounted]);
+  }, [searchParams]);
 
-  // Load onboarding state and protect against SSR hydration mismatch
   useEffect(() => {
-    setMounted(true);
-    async function loadStatus() {
-      try {
-        const res = await getPlayerOnboardingStatusAction();
-        if (res.success && res.data) {
-          setOnboardingCompleted(res.data.completed);
-          setExperience(res.data.experience);
-          setObjective(res.data.objective);
-          setExpectation(res.data.expectation);
-        }
-      } finally {
-        setLoadingOnboarding(false);
-      }
-    }
-    loadStatus();
     fetchStats();
   }, []);
 
-  const handleFinishOnboarding = async () => {
-    try {
-      const res = await savePlayerOnboardingAction({
-        experience,
-        objective,
-        expectation,
-      });
-      if (res.success) {
-        setOnboardingCompleted(true);
-        playSound("success");
-        toast.success("Profil d'apprentissage configuré avec succès !");
-      } else {
-        toast.error(
-          res.error || "Une erreur est survenue lors de la configuration."
-        );
-      }
-    } catch (error) {
-      logger.error(
-        "Erreur inattendue durant la configuration de l'onboarding :",
-        error
-      );
-      toast.error("Une erreur inattendue est survenue.");
-    }
-  };
-
-  const resetOnboarding = async () => {
-    const res = await resetPlayerOnboardingAction();
-    if (res.success) {
-      setOnboardingCompleted(false);
-      setExperience("");
-      setObjective("");
-      setExpectation("");
-    }
-  };
-
-  const playSound = (type: "click" | "success" | "locked") => {
-    if (!soundEnabled) return;
-    try {
-      const ctx = new (
-        window.AudioContext ||
-        (window as Window & { webkitAudioContext?: typeof AudioContext })
-          .webkitAudioContext
-      )();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      if (type === "success") {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(523.25, ctx.currentTime);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        osc.start();
-        osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime + 0.1);
-        osc.stop(ctx.currentTime + 0.3);
-      } else if (type === "locked") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(120, ctx.currentTime);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-      } else {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(440, ctx.currentTime);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.08);
-      }
-    } catch (e) {
-      logger.warn("Web Audio failed to load:", e);
-    }
-  };
-
-  const levels: LevelNode[] = [
-    {
-      id: "1",
-      title: "Hémorragies Externes",
-      subtitle: "Niveau 1 - Quiz",
-      description: "Compresser et alerter face à un saignement important.",
-      type: "quiz",
-      status: "completed",
-      xpReward: 100,
-      themeColor:
-        "from-green-400 to-green-500 border-green-600 shadow-green-200",
-    },
-    {
-      id: "2",
-      title: "Le Garrot de Secours",
-      subtitle: "Niveau 2 - Fiche Mémo",
-      description: "Apprends à poser un garrot tourniquet de manière conforme.",
-      type: "card",
-      status: "completed",
-      xpReward: 50,
-      themeColor: "from-blue-400 to-blue-500 border-blue-600 shadow-blue-200",
-    },
-    {
-      id: "3",
-      title: "Victime Inconsciente",
-      subtitle: "Niveau 3 - Scénario SNV",
-      description: "Libération des Voies Aériennes (LVA) et PLS.",
-      type: "snv",
-      status: "current",
-      xpReward: 150,
-      themeColor:
-        "from-amber-400 to-amber-500 border-amber-600 shadow-amber-200",
-    },
-    {
-      id: "4",
-      title: "Arrêt Cardiaque",
-      subtitle: "Niveau 4 - Quiz",
-      description: "Massage cardiaque et utilisation du DAE.",
-      type: "quiz",
-      status: "locked",
-      xpReward: 200,
-      themeColor:
-        "from-purple-400 to-purple-500 border-purple-600 shadow-purple-200",
-    },
-    {
-      id: "5",
-      title: "Obstructions Aiguës",
-      subtitle: "Niveau 5 - Scénario SNV",
-      description: "Claques dans le dos et compressions abdominales.",
-      type: "snv",
-      status: "locked",
-      xpReward: 150,
-      themeColor: "from-rose-400 to-rose-500 border-rose-600 shadow-rose-200",
-    },
-    {
-      id: "6",
-      title: "Malaises & Alertes",
-      subtitle: "Niveau 6 - Fiche Mémo",
-      description: "Reconnaître l'AVC, l'infarctus et transmettre l'alerte.",
-      type: "card",
-      status: "locked",
-      xpReward: 50,
-      themeColor: "from-cyan-400 to-cyan-500 border-cyan-600 shadow-cyan-200",
-    },
-  ];
-
   const leaderboard = [
     { name: "Thomas (Formateur)", xp: 1850, avatar: "👨‍🏫", current: false },
-    { name: "Toi", xp: 1250, avatar: "⚡", current: true },
+    { name: "Toi", xp: playerStats.xp, avatar: "⚡", current: true },
     { name: "Sarah B.", xp: 980, avatar: "👩‍⚕️", current: false },
     { name: "Lucas M.", xp: 850, avatar: "👷", current: false },
     { name: "Camille D.", xp: 620, avatar: "👩‍🚒", current: false },
-  ];
+  ].sort((a, b) => b.xp - a.xp);
 
   const dailyQuests = [
     {
@@ -359,18 +187,18 @@ export default function PlayerPage() {
     { text: "Réviser 5 cartes mémo", progress: 2, target: 5, xp: 50 },
   ];
 
-  if (!mounted || loadingOnboarding) return null;
+  if (onboarding.loadingOnboarding) return null;
 
-  if (!onboardingCompleted) {
+  if (!onboarding.onboardingCompleted) {
     return (
       <PlayerOnboarding
-        experience={experience}
-        setExperience={setExperience}
-        objective={objective}
-        setObjective={setObjective}
-        expectation={expectation}
-        setExpectation={setExpectation}
-        onFinish={handleFinishOnboarding}
+        experience={onboarding.experience}
+        setExperience={onboarding.setExperience}
+        objective={onboarding.objective}
+        setObjective={onboarding.setObjective}
+        expectation={onboarding.expectation}
+        setExpectation={onboarding.setExpectation}
+        onFinish={onboarding.finishOnboarding}
         playSound={playSound}
       />
     );
@@ -379,18 +207,19 @@ export default function PlayerPage() {
   return (
     <div className="animate-fade-in mx-auto max-w-7xl px-4 py-6 md:py-10">
       <PlayerStatsBanner
-        streak={streak}
-        xp={xp}
-        hearts={hearts}
+        levelProgress={stats}
+        streak={playerStats.streak}
+        xp={playerStats.xp}
+        hearts={playerStats.hearts}
         soundEnabled={soundEnabled}
-        onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        onToggleSound={toggleSound}
       />
 
       <div className="grid gap-8 lg:grid-cols-12">
         {/* Column 1: Mascot, Stats, Quests, Subscription */}
         <div className="space-y-6 lg:col-span-8">
           <div className="grid gap-6 md:grid-cols-2">
-            <MascotWidget onResetOnboarding={resetOnboarding} />
+            <MascotWidget onResetOnboarding={onboarding.resetOnboarding} />
             <DailyStatsWidget stats={stats} loading={statsLoading} />
           </div>
 
@@ -405,8 +234,12 @@ export default function PlayerPage() {
               >
                 <Trophy className="h-4 w-4 text-yellow-500" />
                 Défis quotidiens
+                <InDevelopmentBadge />
               </h2>
-              <div className="space-y-4">
+              <div
+                className="pointer-events-none space-y-4 opacity-50 select-none"
+                aria-hidden="true"
+              >
                 {dailyQuests.map((quest, i) => (
                   <div key={i} className="space-y-2">
                     <div className="flex items-start justify-between gap-3">
@@ -554,7 +387,7 @@ export default function PlayerPage() {
                     "animate-fade-in rounded-2xl border p-4 transition-all duration-350",
                     dailyFeedback.isCorrect
                       ? "border-emerald-100 bg-emerald-50/50 text-emerald-800"
-                      : "text-rose-850 border-rose-100 bg-rose-50/50"
+                      : "border-rose-100 bg-rose-50/50 text-rose-800"
                   )}
                 >
                   <p className="mb-1 text-xs font-black tracking-wider uppercase">

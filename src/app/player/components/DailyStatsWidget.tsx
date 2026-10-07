@@ -1,37 +1,21 @@
 "use client";
 
 import React from "react";
-import { BarChart3, HelpCircle } from "lucide-react";
+import Link from "next/link";
+import { BarChart3, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface TagStat {
-  tag: string;
-  total: number;
-  correct: number;
-  rate: number;
-}
+import type { ProgressionStats } from "@/lib/progression/player-stats";
 
 interface DailyStatsWidgetProps {
-  stats: {
-    total: number;
-    correct: number;
-    successRate: number;
-    tagStats: TagStat[];
-  } | null;
+  stats: (ProgressionStats & { level: string }) | null;
   loading: boolean;
 }
 
-const TAG_LABELS: Record<string, string> = {
-  hemorragie: "🚑 Hémorragies",
-  inconscient: "🛌 Victime Ininconsciente",
-  "arret cardiaque": "❤️ Arrêt Cardiaque",
-  obstruction: "💨 Obstruction Voies Aériennes",
-  malaise: "🧠 AVC & Malaises",
-};
-
-function formatTag(tag: string): string {
-  const normalized = tag.toLowerCase().trim();
-  return TAG_LABELS[normalized] || `🏷️ ${tag}`;
+function scoreColor(score: number, kind: "text" | "bg") {
+  if (score >= 75)
+    return kind === "text" ? "text-emerald-500" : "bg-emerald-500";
+  if (score >= 50) return kind === "text" ? "text-amber-500" : "bg-amber-500";
+  return kind === "text" ? "text-rose-500" : "bg-rose-500";
 }
 
 export function DailyStatsWidget({ stats, loading }: DailyStatsWidgetProps) {
@@ -43,7 +27,7 @@ export function DailyStatsWidget({ stats, loading }: DailyStatsWidgetProps) {
     );
   }
 
-  if (!stats || stats.total === 0) {
+  if (!stats || stats.completedNodes === 0) {
     return (
       <section className="rounded-3xl border-2 border-slate-100 bg-white p-6 shadow-sm">
         <h2 className="flex items-center gap-2 text-sm font-black tracking-wider text-slate-800 uppercase">
@@ -51,18 +35,25 @@ export function DailyStatsWidget({ stats, loading }: DailyStatsWidgetProps) {
           Mes Statistiques
         </h2>
         <div className="mt-4 flex flex-col items-center justify-center py-6 text-center">
-          <HelpCircle className="text-slate-350 mb-2 h-10 w-10" />
+          <Map className="mb-2 h-10 w-10 text-slate-300" />
           <p className="text-xs font-bold text-slate-500">
-            Aucun défi quotidien complété pour le moment.
+            Aucune leçon terminée pour le moment.
           </p>
-          <p className="mt-1 text-[10px] text-slate-400">
-            Réponds aux questions reçues par e-mail pour voir tes statistiques
-            ici !
-          </p>
+          <Link
+            href="/player/progresser"
+            className="mt-3 rounded-xl bg-blue-500 px-4 py-2 text-[10px] font-black tracking-wider text-white uppercase transition-colors hover:bg-blue-600"
+          >
+            Commencer mon parcours
+          </Link>
         </div>
       </section>
     );
   }
+
+  const pathRate =
+    stats.totalNodes > 0
+      ? Math.round((stats.completedNodes / stats.totalNodes) * 100)
+      : 0;
 
   return (
     <section className="relative overflow-hidden rounded-3xl border-2 border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md">
@@ -73,71 +64,71 @@ export function DailyStatsWidget({ stats, loading }: DailyStatsWidgetProps) {
         Mes Statistiques
       </h2>
 
-      <div className="mt-5 grid grid-cols-2 gap-4 border-b border-slate-100 pb-5">
+      <div className="mt-5 grid grid-cols-2 gap-4">
         <div className="flex flex-col items-center justify-center border-r border-slate-100 pr-2">
           <span className="text-2xl font-black text-slate-800">
-            {stats.total}
+            {stats.completedNodes}
+            <span className="text-base text-slate-400">
+              /{stats.totalNodes}
+            </span>
           </span>
           <span className="mt-1 text-center text-[10px] font-black tracking-wider text-slate-400 uppercase">
-            Défis Relevés
+            Leçons terminées
           </span>
         </div>
         <div className="flex flex-col items-center justify-center pl-2">
-          <div className="flex items-center gap-1.5">
-            <span
-              className={cn(
-                "text-2xl font-black",
-                stats.successRate >= 75
-                  ? "text-emerald-500"
-                  : stats.successRate >= 50
-                    ? "text-amber-500"
-                    : "text-rose-500"
-              )}
-            >
-              {stats.successRate}%
-            </span>
-          </div>
-          <span className="mt-1 text-center text-[10px] font-black tracking-wider text-slate-400 uppercase">
-            Taux de Réussite
+          <span
+            className={cn(
+              "text-2xl font-black",
+              stats.averageScore === null
+                ? "text-slate-400"
+                : scoreColor(stats.averageScore, "text")
+            )}
+          >
+            {stats.averageScore === null ? "—" : `${stats.averageScore}%`}
           </span>
+          <span className="mt-1 text-center text-[10px] font-black tracking-wider text-slate-400 uppercase">
+            Score moyen
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-1.5 border-b border-slate-100 pb-5">
+        <div className="flex items-center justify-between text-[10px] font-black tracking-wider text-slate-400 uppercase">
+          <span>Parcours {stats.level}</span>
+          <span>{pathRate}%</span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            style={{ width: `${pathRate}%` }}
+            className="h-full rounded-full bg-blue-500 transition-all duration-500"
+          />
         </div>
       </div>
 
       <div className="mt-5 space-y-4">
         <h3 className="text-[10px] font-black tracking-wider text-slate-400 uppercase">
-          Maîtrise par geste
+          Dernières leçons
         </h3>
         <div className="space-y-3">
-          {stats.tagStats.map((tagStat) => (
-            <div key={tagStat.tag} className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-700">
-                  {formatTag(tagStat.tag)}
+          {stats.lessons.map((lesson) => (
+            <div key={lesson.nodeId} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="truncate font-bold text-slate-700">
+                  {lesson.title}
                 </span>
                 <span className="font-black text-slate-500">
-                  {tagStat.rate}%
+                  {lesson.score === null ? "—" : `${lesson.score}%`}
                 </span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                 <div
-                  style={{ width: `${tagStat.rate}%` }}
+                  style={{ width: `${lesson.score ?? 0}%` }}
                   className={cn(
                     "h-full rounded-full transition-all duration-500",
-                    tagStat.rate >= 75
-                      ? "bg-emerald-500"
-                      : tagStat.rate >= 50
-                        ? "bg-amber-500"
-                        : "bg-rose-500"
+                    lesson.score !== null && scoreColor(lesson.score, "bg")
                   )}
                 />
-              </div>
-              <div className="flex justify-between text-[9px] font-bold text-slate-400">
-                <span>
-                  {tagStat.correct} correct{tagStat.correct > 1 ? "s" : ""}
-                </span>
-                <span>
-                  {tagStat.total} essai{tagStat.total > 1 ? "s" : ""}
-                </span>
               </div>
             </div>
           ))}
