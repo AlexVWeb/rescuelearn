@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
 import { FeatureKey, ALL_FEATURES } from "@/types/features";
+import {
+  buildPlayerModulesState,
+  type PlayerModulesState,
+} from "@/types/player-modules";
 export { FeatureKey, ALL_FEATURES };
 
 export async function getFeaturesState(): Promise<Record<FeatureKey, boolean>> {
@@ -36,4 +40,22 @@ export async function getFeaturesState(): Promise<Record<FeatureKey, boolean>> {
 export async function isFeatureEnabled(key: FeatureKey): Promise<boolean> {
   const state = await getFeaturesState();
   return state[key] ?? true;
+}
+
+export async function getPlayerModulesState(): Promise<PlayerModulesState> {
+  const getCachedModules = unstable_cache(
+    async () => {
+      const settings = await prisma.systemSetting.findMany({
+        where: { key: { startsWith: "MODULE_" } },
+      });
+      return buildPlayerModulesState(settings);
+    },
+    ["player-modules"],
+    {
+      tags: ["system-features"],
+      revalidate: 60,
+    }
+  );
+
+  return getCachedModules();
 }

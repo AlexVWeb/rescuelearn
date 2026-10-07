@@ -11,7 +11,12 @@ import Link from "next/link";
 import { User as UserIcon } from "lucide-react";
 import { PlayerNav } from "./components/PlayerNav";
 import { PlayerSignOutButton } from "./components/PlayerSignOutButton";
-import { isFeatureEnabled, FeatureKey } from "@/lib/features";
+import {
+  isFeatureEnabled,
+  FeatureKey,
+  getPlayerModulesState,
+} from "@/lib/features";
+import { PlayerModulesProvider } from "./components/PlayerModulesProvider";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +83,8 @@ export default async function PlayerLayout({
     redirect(`/verify-email?email=${encodeURIComponent(dbUser.email)}`);
   }
 
+  const modules = await getPlayerModulesState();
+
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
       {/* Header / Navbar */}
@@ -131,7 +138,9 @@ export default async function PlayerLayout({
       {/* Main Content Area */}
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {children}
+          <PlayerModulesProvider modules={modules}>
+            {children}
+          </PlayerModulesProvider>
         </div>
       </main>
     </div>

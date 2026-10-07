@@ -33,9 +33,19 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2, Mail } from "lucide-react";
 import { usePlayerSound } from "./hooks/usePlayerSound";
 import { usePlayerOnboarding } from "./hooks/usePlayerOnboarding";
+import { usePlayerModules } from "./components/PlayerModulesProvider";
+import { PlayerModuleKey } from "@/types/player-modules";
 
 export default function PlayerPage() {
   const { soundEnabled, toggleSound, playSound } = usePlayerSound();
+  const modules = usePlayerModules();
+  const showMascot = modules[PlayerModuleKey.MASCOT];
+  const showDailyStats = modules[PlayerModuleKey.DAILY_STATS];
+  const showDailyQuests = modules[PlayerModuleKey.DAILY_QUESTS];
+  const showSubscription = modules[PlayerModuleKey.SUBSCRIPTION];
+  const showLeaderboard = modules[PlayerModuleKey.LEADERBOARD];
+  const showBoutique = modules[PlayerModuleKey.BOUTIQUE];
+  const showAside = showLeaderboard || showBoutique;
 
   // Game States
   const [playerStats, setPlayerStats] = useState({
@@ -217,76 +227,95 @@ export default function PlayerPage() {
 
       <div className="grid gap-8 lg:grid-cols-12">
         {/* Column 1: Mascot, Stats, Quests, Subscription */}
-        <div className="space-y-6 lg:col-span-8">
-          <div className="grid gap-6 md:grid-cols-2">
-            <MascotWidget onResetOnboarding={onboarding.resetOnboarding} />
-            <DailyStatsWidget stats={stats} loading={statsLoading} />
-          </div>
+        <div
+          className={cn(
+            "space-y-6",
+            showAside ? "lg:col-span-8" : "lg:col-span-12"
+          )}
+        >
+          {(showMascot || showDailyStats) && (
+            <div className="grid gap-6 md:grid-cols-2">
+              {showMascot && (
+                <MascotWidget onResetOnboarding={onboarding.resetOnboarding} />
+              )}
+              {showDailyStats && (
+                <DailyStatsWidget stats={stats} loading={statsLoading} />
+              )}
+            </div>
+          )}
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <section
-              className="space-y-4 rounded-3xl border-2 border-gray-100 bg-white p-6 shadow-sm"
-              aria-labelledby="quests-title-left"
-            >
-              <h2
-                id="quests-title-left"
-                className="flex items-center gap-2 text-sm font-black tracking-wider text-gray-900 uppercase"
-              >
-                <Trophy className="h-4 w-4 text-yellow-500" />
-                Défis quotidiens
-                <InDevelopmentBadge />
-              </h2>
-              <div
-                className="pointer-events-none space-y-4 opacity-50 select-none"
-                aria-hidden="true"
-              >
-                {dailyQuests.map((quest, i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <span
-                        className={cn(
-                          "text-xs font-bold",
-                          quest.completed
-                            ? "text-gray-400 line-through"
-                            : "text-gray-700"
-                        )}
-                      >
-                        {quest.text}
-                      </span>
-                      <span className="shrink-0 text-[10px] font-black text-yellow-600">
-                        +{quest.xp} XP
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                        <div
-                          style={{
-                            width: `${(quest.progress / quest.target) * 100}%`,
-                          }}
-                          className={cn(
-                            "h-full rounded-full transition-all duration-300",
-                            quest.completed ? "bg-emerald-500" : "bg-blue-600"
-                          )}
-                        />
+          {(showDailyQuests || showSubscription) && (
+            <div className="grid gap-6 md:grid-cols-2">
+              {showDailyQuests && (
+                <section
+                  className="space-y-4 rounded-3xl border-2 border-gray-100 bg-white p-6 shadow-sm"
+                  aria-labelledby="quests-title-left"
+                >
+                  <h2
+                    id="quests-title-left"
+                    className="flex items-center gap-2 text-sm font-black tracking-wider text-gray-900 uppercase"
+                  >
+                    <Trophy className="h-4 w-4 text-yellow-500" />
+                    Défis quotidiens
+                    <InDevelopmentBadge />
+                  </h2>
+                  <div
+                    className="pointer-events-none space-y-4 opacity-50 select-none"
+                    aria-hidden="true"
+                  >
+                    {dailyQuests.map((quest, i) => (
+                      <div key={i} className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <span
+                            className={cn(
+                              "text-xs font-bold",
+                              quest.completed
+                                ? "text-gray-400 line-through"
+                                : "text-gray-700"
+                            )}
+                          >
+                            {quest.text}
+                          </span>
+                          <span className="shrink-0 text-[10px] font-black text-yellow-600">
+                            +{quest.xp} XP
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                            <div
+                              style={{
+                                width: `${(quest.progress / quest.target) * 100}%`,
+                              }}
+                              className={cn(
+                                "h-full rounded-full transition-all duration-300",
+                                quest.completed
+                                  ? "bg-emerald-500"
+                                  : "bg-blue-600"
+                              )}
+                            />
+                          </div>
+                          <span className="shrink-0 text-[10px] font-bold text-gray-500">
+                            {quest.progress}/{quest.target}
+                          </span>
+                        </div>
                       </div>
-                      <span className="shrink-0 text-[10px] font-bold text-gray-500">
-                        {quest.progress}/{quest.target}
-                      </span>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </section>
+                </section>
+              )}
 
-            <SubscriptionWidget playSound={playSound} />
-          </div>
+              {showSubscription && <SubscriptionWidget playSound={playSound} />}
+            </div>
+          )}
         </div>
 
         {/* Column 2: Leaderboard & Boutique */}
-        <aside className="space-y-6 lg:col-span-4">
-          <LeaderboardWidget leaderboard={leaderboard} />
-          <BoutiqueWidget />
-        </aside>
+        {showAside && (
+          <aside className="space-y-6 lg:col-span-4">
+            {showLeaderboard && <LeaderboardWidget leaderboard={leaderboard} />}
+            {showBoutique && <BoutiqueWidget />}
+          </aside>
+        )}
       </div>
 
       <Dialog
