@@ -2,7 +2,7 @@
 import { logger } from "@/lib/logger";
 
 import dayjs from "dayjs";
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -54,32 +54,28 @@ export function SlotsTab({
 }: SlotsTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [suggestion, setSuggestion] = useState<SlotSuggestion | null>(null);
 
   const isClosed = sessionStatus === "terminée" || sessionStatus === "annulée";
 
-  const [newSlot, setNewSlot] = useState({
+  const [slotDraft, setNewSlot] = useState({
     label: "",
     date: "",
     startTime: "",
     endTime: "",
   });
 
-  // Mettre à jour la suggestion quand les slots changent
-  useEffect(() => {
-    if (isClosed) return;
-    const nextSuggestion = getNextSlotSuggestion(
-      slots,
-      sessionStartDate,
-      sessionEndDate
-    );
-    setSuggestion(nextSuggestion);
-    // On n'écrase pas les champs si l'utilisateur a commencé à saisir,
-    // sauf si c'est le premier chargement ou après un ajout réussi
-    if (!newSlot.label && nextSuggestion) {
-      setNewSlot(nextSuggestion);
-    }
-  }, [slots, sessionStartDate, sessionEndDate, newSlot.label, isClosed]);
+  const suggestion = useMemo<SlotSuggestion | null>(
+    () =>
+      isClosed
+        ? null
+        : getNextSlotSuggestion(slots, sessionStartDate, sessionEndDate),
+    [slots, sessionStartDate, sessionEndDate, isClosed]
+  );
+
+  // Tant que le libellé est vide (premier chargement ou après un ajout réussi),
+  // le formulaire affiche la suggestion ; dès que l'utilisateur saisit un libellé,
+  // sa saisie n'est plus écrasée.
+  const newSlot = !slotDraft.label && suggestion ? suggestion : slotDraft;
 
   const isDateValid =
     !newSlot.date ||
@@ -114,7 +110,7 @@ export function SlotsTab({
 
       toast.success("Créneau ajouté");
 
-      // Réinitialiser avec la nouvelle suggestion qui sera calculée par le useEffect
+      // Réinitialiser : le formulaire reprend la nouvelle suggestion
       setNewSlot({
         label: "",
         date: "",

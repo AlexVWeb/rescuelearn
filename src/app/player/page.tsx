@@ -86,51 +86,29 @@ export default function PlayerPage() {
   const [dailySubmitting, setDailySubmitting] = useState(false);
   const [showDailyModal, setShowDailyModal] = useState(false);
 
-  const loadDailyQuestion = async (qId: number) => {
-    setDailyQuestionLoading(true);
-    setShowDailyModal(true);
-    try {
-      const res = await getQuestionForPlayerAction(qId);
-      if (res.success && res.data) {
-        setDailyQuestion(res.data);
+  const dailyQuestionIdParam = searchParams.get("dailyQuestionId");
+  const dailyQuestionId = dailyQuestionIdParam
+    ? parseInt(dailyQuestionIdParam, 10)
+    : NaN;
 
-        // Check if there's a pre-selected option in search params
-        const selectOptionParam = searchParams.get("selectOption");
-        if (selectOptionParam !== null) {
-          handleDailySubmit(qId, selectOptionParam);
-        }
-      } else {
-        toast.error(res.error || "Impossible de charger la question.");
-        setShowDailyModal(false);
-      }
-    } catch {
-      toast.error("Erreur lors du chargement de la question.");
-      setShowDailyModal(false);
-    } finally {
-      setDailyQuestionLoading(false);
+  // Ouvre la modale dès le rendu où le paramètre apparaît ; le chargement se fait dans l'effet.
+  const [prevSearchParams, setPrevSearchParams] = useState<
+    typeof searchParams | null
+  >(null);
+  if (searchParams !== prevSearchParams) {
+    setPrevSearchParams(searchParams);
+    if (!isNaN(dailyQuestionId)) {
+      setDailyQuestionLoading(true);
+      setShowDailyModal(true);
     }
-  };
+  }
 
   type ProgressionStats = NonNullable<
     Awaited<ReturnType<typeof getProgressionStatsAction>>["data"]
   >;
 
   const [stats, setStats] = useState<ProgressionStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
-
-  const fetchStats = async () => {
-    setStatsLoading(true);
-    try {
-      const res = await getProgressionStatsAction();
-      if (res.success && res.data) {
-        setStats(res.data);
-      }
-    } catch {
-      // Ignored
-    } finally {
-      setStatsLoading(false);
-    }
-  };
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const handleDailySubmit = async (qId: number, optionIndex: string) => {
     setDailySelectedOption(optionIndex);
@@ -159,16 +137,48 @@ export default function PlayerPage() {
   };
 
   useEffect(() => {
-    const questionIdParam = searchParams.get("dailyQuestionId");
-    if (questionIdParam) {
-      const qId = parseInt(questionIdParam, 10);
-      if (!isNaN(qId)) {
-        loadDailyQuestion(qId);
+    const loadDailyQuestion = async (qId: number) => {
+      try {
+        const res = await getQuestionForPlayerAction(qId);
+        if (res.success && res.data) {
+          setDailyQuestion(res.data);
+
+          // Check if there's a pre-selected option in search params
+          const selectOptionParam = searchParams.get("selectOption");
+          if (selectOptionParam !== null) {
+            handleDailySubmit(qId, selectOptionParam);
+          }
+        } else {
+          toast.error(res.error || "Impossible de charger la question.");
+          setShowDailyModal(false);
+        }
+      } catch {
+        toast.error("Erreur lors du chargement de la question.");
+        setShowDailyModal(false);
+      } finally {
+        setDailyQuestionLoading(false);
       }
+    };
+
+    if (!isNaN(dailyQuestionId)) {
+      loadDailyQuestion(dailyQuestionId);
     }
-  }, [searchParams]);
+  }, [searchParams, dailyQuestionId]);
 
   useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await getProgressionStatsAction();
+        if (res.success && res.data) {
+          setStats(res.data);
+        }
+      } catch {
+        // Ignored
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
     fetchStats();
   }, []);
 

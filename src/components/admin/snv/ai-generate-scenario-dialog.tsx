@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -78,12 +78,11 @@ export function AiGenerateScenarioDialog({
     Record<number, boolean>
   >({});
 
-  useEffect(() => {
-    if (open) {
-      if (referenciels.length > 0 && !selectedReferenciel) {
-        setSelectedReferenciel(referenciels[0].id.toString());
-      }
-    } else {
+  // Ajustements faits pendant le rendu (et non dans un effet) pour éviter un rendu en cascade
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (!open) {
       // Reset state on close
       setTopic("");
       setLevel("");
@@ -93,7 +92,10 @@ export function AiGenerateScenarioDialog({
       setGeneratedScenario(null);
       setSelectedIndices({});
     }
-  }, [open, referenciels, selectedReferenciel]);
+  }
+  if (open && referenciels.length > 0 && !selectedReferenciel) {
+    setSelectedReferenciel(referenciels[0].id.toString());
+  }
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();

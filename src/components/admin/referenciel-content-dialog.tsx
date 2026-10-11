@@ -60,12 +60,30 @@ export function ReferencielContentDialog({
     else toast.error(result.error);
   }, []);
 
+  // Réinitialisation pendant le rendu (et non dans un effet) pour éviter un rendu en cascade
+  const [prevReferenciel, setPrevReferenciel] =
+    React.useState<typeof referenciel>(null);
+  if (referenciel !== prevReferenciel) {
+    setPrevReferenciel(referenciel);
+    if (referenciel) {
+      setTargets(new Set(["quizzes", "cards"]));
+      setConfirmDelete(false);
+      setCounts(null);
+    }
+  }
+
   React.useEffect(() => {
     if (!referenciel) return;
-    setTargets(new Set(["quizzes", "cards"]));
-    setConfirmDelete(false);
-    loadCounts(referenciel.id);
-  }, [referenciel, loadCounts]);
+    let cancelled = false;
+    getReferencielContentCountsAction(referenciel.id).then((result) => {
+      if (cancelled) return;
+      if (result.success) setCounts(result.data);
+      else toast.error(result.error);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [referenciel]);
 
   const toggleTarget = (target: Target, checked: boolean) => {
     setConfirmDelete(false);

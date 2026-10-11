@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { SessionStatusBadge } from "./session-status-badge";
@@ -24,6 +24,7 @@ import {
   Trainee,
   TrainingSession,
 } from "@/app/admin/training/types";
+import { useMounted } from "@/hooks/use-mounted";
 
 interface SessionTabsLayoutProps {
   session?: TrainingSession & { slots: Slot[]; inscriptions: Inscription[] };
@@ -56,10 +57,7 @@ export function SessionTabsLayout({
   const slots = session?.slots || [];
   const inscriptions = session?.inscriptions || [];
 
-  const [mounted, setMounted] = useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   if (!mounted) {
     return (

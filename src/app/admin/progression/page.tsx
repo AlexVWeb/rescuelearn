@@ -143,7 +143,10 @@ export default function AdminProgressionPage() {
   };
 
   useEffect(() => {
-    fetchTrees();
+    // isLoading vaut déjà true au montage. Faux positif : fetchTrees ne met à jour
+    // l'état qu'après son await, mais la règle ne suit pas les fonctions async du composant.
+    // oxlint-disable-next-line react/set-state-in-effect
+    fetchTrees({ silent: true });
     fetchReferenciels();
   }, []);
 

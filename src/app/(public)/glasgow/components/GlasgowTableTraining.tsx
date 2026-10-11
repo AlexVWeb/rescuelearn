@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Shuffle,
@@ -22,88 +22,99 @@ import type {
   ScoreResult,
 } from "../interfaces/GlasgowData";
 
-export function GlasgowTableTraining({ className }: { className?: string }) {
-  // Official French first aid (DGSCGC / SUAP) terms for Glasgow scale
-  const glasgowData: GlasgowData = useMemo<GlasgowData>(
-    () => ({
-      oculaire: [
-        { score: 1, description: "Aucune" },
-        { score: 2, description: "À la douleur" },
-        { score: 3, description: "À la demande" },
-        { score: 4, description: "Spontanée" },
-      ],
-      verbale: [
-        { score: 1, description: "Aucune" },
-        { score: 2, description: "Incompréhensible" },
-        { score: 3, description: "Inappropriée" },
-        { score: 4, description: "Confuse" },
-        { score: 5, description: "Orientée" },
-      ],
-      motrice: [
-        { score: 1, description: "Aucune" },
-        { score: 2, description: "Extension anormale" },
-        { score: 3, description: "Flexion anormale" },
-        { score: 4, description: "Évitement / Retrait" },
-        { score: 5, description: "Localise la douleur" },
-        { score: 6, description: "À l'ordre" },
-      ],
-    }),
-    []
-  );
+// Official French first aid (DGSCGC / SUAP) terms for Glasgow scale
+const glasgowData: GlasgowData = {
+  oculaire: [
+    { score: 1, description: "Aucune" },
+    { score: 2, description: "À la douleur" },
+    { score: 3, description: "À la demande" },
+    { score: 4, description: "Spontanée" },
+  ],
+  verbale: [
+    { score: 1, description: "Aucune" },
+    { score: 2, description: "Incompréhensible" },
+    { score: 3, description: "Inappropriée" },
+    { score: 4, description: "Confuse" },
+    { score: 5, description: "Orientée" },
+  ],
+  motrice: [
+    { score: 1, description: "Aucune" },
+    { score: 2, description: "Extension anormale" },
+    { score: 3, description: "Flexion anormale" },
+    { score: 4, description: "Évitement / Retrait" },
+    { score: 5, description: "Localise la douleur" },
+    { score: 6, description: "À l'ordre" },
+  ],
+};
 
-  const [hiddenCells, setHiddenCells] = useState<Set<string>>(new Set());
-  const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
-  const [showResults, setShowResults] = useState<boolean>(false);
+const TOTAL_ROWS = 15; // 4 + 5 + 6 = 15 rows
+
+function getMaxCells(gameMode: GameMode): number {
+  if (gameMode === "scores" || gameMode === "descriptions") {
+    return TOTAL_ROWS;
+  }
+  return TOTAL_ROWS * 2;
+}
+
+function pickHiddenCells(
+  gameMode: GameMode,
+  numCellsToHide: number
+): Set<string> {
+  const allCells: string[] = [];
+
+  (Object.keys(glasgowData) as Array<keyof GlasgowData>).forEach((category) => {
+    const items = glasgowData[category];
+    items.forEach((item) => {
+      allCells.push(`${category}-${item.score}-score`);
+      allCells.push(`${category}-${item.score}-description`);
+    });
+  });
+
+  let availableCells = allCells;
+  if (gameMode === "scores") {
+    availableCells = allCells.filter((cell) => cell.endsWith("-score"));
+  } else if (gameMode === "descriptions") {
+    availableCells = allCells.filter((cell) => cell.endsWith("-description"));
+  }
+
+  const shuffled = secureShuffle(availableCells);
+  const actualNumToHide = Math.min(numCellsToHide, availableCells.length);
+  return new Set(shuffled.slice(0, actualNumToHide));
+}
+
+export function GlasgowTableTraining({ className }: { className?: string }) {
   const [gameMode, setGameMode] = useState<GameMode>("mixed");
   const [numCellsToHide, setNumCellsToHide] = useState<number>(6);
+  // Composant monté uniquement côté client (onglet "training"), le tirage initial est donc sûr.
+  const [hiddenCells, setHiddenCells] = useState<Set<string>>(() =>
+    pickHiddenCells("mixed", 6)
+  );
+  const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
+  const [showResults, setShowResults] = useState<boolean>(false);
 
-  const getMaxCells = useCallback((): number => {
-    const totalRows = 15; // 4 + 5 + 6 = 15 rows
-    if (gameMode === "scores" || gameMode === "descriptions") {
-      return totalRows;
-    }
-    return totalRows * 2;
-  }, [gameMode]);
+  const maxCells = getMaxCells(gameMode);
 
-  const generateHiddenCells = useCallback((): void => {
-    const allCells: string[] = [];
-
-    (Object.keys(glasgowData) as Array<keyof GlasgowData>).forEach(
-      (category) => {
-        const items = glasgowData[category];
-        items.forEach((item) => {
-          allCells.push(`${category}-${item.score}-score`);
-          allCells.push(`${category}-${item.score}-description`);
-        });
-      }
-    );
-
-    let availableCells = allCells;
-    if (gameMode === "scores") {
-      availableCells = allCells.filter((cell) => cell.endsWith("-score"));
-    } else if (gameMode === "descriptions") {
-      availableCells = allCells.filter((cell) => cell.endsWith("-description"));
-    }
-
-    const shuffled = secureShuffle(availableCells);
-    const actualNumToHide = Math.min(numCellsToHide, availableCells.length);
-    const selected = shuffled.slice(0, actualNumToHide);
-
-    setHiddenCells(new Set(selected));
+  const regenerate = (mode: GameMode, count: number): void => {
+    setHiddenCells(pickHiddenCells(mode, count));
     setUserAnswers({});
     setShowResults(false);
-  }, [gameMode, numCellsToHide, glasgowData]);
+  };
 
-  useEffect(() => {
-    const maxCells = getMaxCells();
-    if (numCellsToHide > maxCells) {
-      setNumCellsToHide(maxCells);
-    }
-  }, [gameMode, numCellsToHide, getMaxCells]);
+  const generateHiddenCells = (): void => {
+    regenerate(gameMode, numCellsToHide);
+  };
 
-  useEffect(() => {
-    generateHiddenCells();
-  }, [generateHiddenCells]);
+  const handleGameModeChange = (mode: GameMode): void => {
+    const count = Math.min(numCellsToHide, getMaxCells(mode));
+    setGameMode(mode);
+    setNumCellsToHide(count);
+    regenerate(mode, count);
+  };
+
+  const handleNumCellsChange = (count: number): void => {
+    setNumCellsToHide(count);
+    regenerate(gameMode, count);
+  };
 
   const handleAnswerChange = (cellId: string, value: string): void => {
     setUserAnswers((prev) => ({
@@ -116,19 +127,16 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
     setShowResults(true);
   };
 
-  const getCorrectAnswer = useCallback(
-    (cellId: string): string => {
-      const [category, scoreStr, type] = cellId.split("-");
-      const score = parseInt(scoreStr);
-      const item = glasgowData[category as keyof GlasgowData].find(
-        (i) => i.score === score
-      );
+  const getCorrectAnswer = useCallback((cellId: string): string => {
+    const [category, scoreStr, type] = cellId.split("-");
+    const score = parseInt(scoreStr);
+    const item = glasgowData[category as keyof GlasgowData].find(
+      (i) => i.score === score
+    );
 
-      if (!item) return "";
-      return type === "score" ? score.toString() : item.description;
-    },
-    [glasgowData]
-  );
+    if (!item) return "";
+    return type === "score" ? score.toString() : item.description;
+  }, []);
 
   const isCorrect = useCallback(
     (cellId: string): boolean | null => {
@@ -302,7 +310,7 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
           <select
             id="select-game-mode"
             value={gameMode}
-            onChange={(e) => setGameMode(e.target.value as GameMode)}
+            onChange={(e) => handleGameModeChange(e.target.value as GameMode)}
             className="rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-gray-700 dark:text-white"
           >
             <option value="mixed">Tout deviner (Aléatoire)</option>
@@ -321,16 +329,16 @@ export function GlasgowTableTraining({ className }: { className?: string }) {
               Nombre de défis
             </label>
             <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-              {numCellsToHide} / {getMaxCells()} cases
+              {numCellsToHide} / {maxCells} cases
             </span>
           </div>
           <input
             id="range-cells-to-hide"
             type="range"
             min="1"
-            max={getMaxCells()}
+            max={maxCells}
             value={numCellsToHide}
-            onChange={(e) => setNumCellsToHide(parseInt(e.target.value))}
+            onChange={(e) => handleNumCellsChange(parseInt(e.target.value))}
             className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600 dark:bg-gray-800"
           />
         </div>

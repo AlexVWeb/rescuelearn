@@ -1,7 +1,7 @@
 "use client";
 import { logger } from "@/lib/logger";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { LearningCard } from "./components/LearningCard";
 import { LearningFilters } from "./components/LearningFilters";
@@ -18,7 +18,6 @@ type SortOption = "random" | "alphabetical";
 
 export default function LearningPage() {
   const [allCards, setAllCards] = useState<ApiLearningCard[]>([]);
-  const [filteredCards, setFilteredCards] = useState<ApiLearningCard[]>([]);
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [selectedNiveau, setSelectedNiveau] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,7 +37,6 @@ export default function LearningPage() {
           learningCardService.getThemesAndNiveaux(),
         ]);
         setAllCards(cards);
-        setFilteredCards(cards);
         setFilters(fetchedFilters);
       } catch (error) {
         logger.error("Erreur lors du chargement des données:", error);
@@ -50,7 +48,7 @@ export default function LearningPage() {
     fetchData();
   }, []);
 
-  useEffect(() => {
+  const filteredCards = useMemo(() => {
     let filtered = [...allCards];
 
     if (selectedTheme) {
@@ -72,8 +70,7 @@ export default function LearningPage() {
       }
     }
 
-    setFilteredCards(filtered);
-    setCurrentPage(1); // Réinitialiser la pagination lors du changement de filtre ou de tri
+    return filtered;
   }, [allCards, selectedTheme, selectedNiveau, sortOption]);
 
   const totalPages = Math.ceil(filteredCards.length / itemsPerPage);
@@ -89,6 +86,17 @@ export default function LearningPage() {
 
   const handleSortChange = (value: SortOption) => {
     setSortOption(value);
+    setCurrentPage(1);
+  };
+
+  // Réinitialiser la pagination lors du changement de filtre
+  const handleThemeChange = (value: string | null) => {
+    setSelectedTheme(value);
+    setCurrentPage(1);
+  };
+
+  const handleNiveauChange = (value: string | null) => {
+    setSelectedNiveau(value);
     setCurrentPage(1);
   };
 
@@ -122,8 +130,8 @@ export default function LearningPage() {
           niveaux={filters.niveaux.map((n) => n.niveau)}
           selectedTheme={selectedTheme}
           selectedNiveau={selectedNiveau}
-          onThemeChange={setSelectedTheme}
-          onNiveauChange={setSelectedNiveau}
+          onThemeChange={handleThemeChange}
+          onNiveauChange={handleNiveauChange}
           itemsPerPage={itemsPerPage}
           onItemsPerPageChange={handleItemsPerPageChange}
           sortOption={sortOption}

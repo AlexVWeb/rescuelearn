@@ -83,7 +83,14 @@ export function AiGenerateDialog({
         }
       };
       fetchReferenciels();
-    } else {
+    }
+  }, [open, initialReferencielId, initialTopicIds]);
+
+  // Reset à la fermeture, pendant le rendu (et non dans un effet) pour éviter un rendu en cascade
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (!open) {
       setTopic("");
       setLevel("");
       setQuestionCount("10");
@@ -92,7 +99,7 @@ export function AiGenerateDialog({
       setSelectedTopicIds([]);
       setFreeTopicMode(false);
     }
-  }, [open, initialReferencielId, initialTopicIds]);
+  }
 
   const currentReferenciel = referenciels.find(
     (r) => r.id.toString() === selectedReferenciel
