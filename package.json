@@ -8,7 +8,8 @@
     "vercel-build": "bun run db:generate && bunx prisma migrate deploy && next build",
     "deploy": "bash scripts/deploy.sh",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix --fix-suggestions",
     "db:generate": "prisma generate",
     "db:migrate": "bash scripts/migrate.sh",
     "db:push": "prisma db push",
@@ -86,19 +87,16 @@
   "devDependencies": {
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
-    "@eslint/eslintrc": "^3.3.7",
     "@types/node": "^25.9.9",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitest/coverage-v8": "4.1.11",
     "@vitest/ui": "4.1.11",
-    "eslint": "9.39.5",
-    "eslint-config-next": "16.3.8",
-    "eslint-plugin-unused-imports": "^4.4.1",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^16.4.0",
+    "oxlint": "^1.87.0",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.7.4",
     "prisma": "^7.10.0",
@@ -109,7 +107,7 @@
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
-      "eslint --fix",
+      "oxlint --fix --fix-suggestions",
       "prettier --write"
     ],
     "*.{json,css,md}": [

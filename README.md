@@ -188,7 +188,7 @@ bun run type-check && bun run validate && bun run test && bun x lint-staged
 - `type-check` : Vérification stricte des types TypeScript (`tsc --noEmit`).
 - `validate` : Validation des fichiers de schémas Prisma.
 - `test` : Passage des 260+ tests unitaires et d'intégration via Vitest.
-- `lint-staged` : Analyse syntaxique et de style ESLint & Prettier sur les fichiers modifiés.
+- `lint-staged` : Analyse Oxlint & formatage Prettier sur les fichiers modifiés.
 
 ---
 
@@ -226,7 +226,7 @@ rescuelearn/
 │   │   └── prisma.ts        # Client Prisma étendu
 │   ├── services/            # Services business (ex: SiretService)
 │   └── types/               # Typages globaux du projet
-├── eslint.config.mjs        # Configuration de linting ESLint
+├── .oxlintrc.json           # Configuration de linting Oxlint
 ├── prettierrc.json          # Configuration de formatage Prettier
 ├── package.json             # Dépendances et scripts de build
 └── vitest.config.ts         # Configuration des tests
