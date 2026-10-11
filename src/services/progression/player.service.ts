@@ -11,6 +11,7 @@ import {
   nextStreak,
   regenerateHearts,
 } from "@/lib/progression/player-stats";
+import { nextVideoWatch } from "@/lib/progression/video";
 import {
   LEVEL_CHAIN,
   levelForExperience,
@@ -259,13 +260,30 @@ export class ProgressionPlayerService {
       data: { userId, nodeId: node.id },
     });
 
+    const videoWatches = await prisma.playerVideoWatch.findMany({
+      where: {
+        userId,
+        exerciseId: {
+          in: node.exercises
+            .filter((ex) => ex.type === "VIDEO")
+            .map((ex) => ex.id),
+        },
+      },
+      select: { exerciseId: true, watchedSec: true, completedAt: true },
+    });
+    const watchByExercise = new Map(
+      videoWatches.map((watch) => [watch.exerciseId, watch])
+    );
+
     return {
       attemptId: attempt.id,
       nodeId: node.id,
       title: node.title,
       xpReward: node.xpReward,
       hearts,
-      exercises: node.exercises.map(toClientExercise),
+      exercises: node.exercises.map((ex) =>
+        toClientExercise(ex, watchByExercise.get(ex.id))
+      ),
     };
   }
 
@@ -337,12 +355,92 @@ export class ProgressionPlayerService {
     };
   }
 
+  /**
+   * Point de contrôle de visionnage : le serveur n'accorde que le temps
+   * réellement écoulé depuis le précédent. Une fois validée, la vidéo l'est
+   * pour de bon (révision libre). Ne consomme pas de cœur.
+   */
+  static async recordVideoCheckpoint(
+    userId: string,
+    attemptId: string,
+    exerciseId: string,
+    position: number
+  ) {
+    const attempt = await this.getOpenAttempt(userId, attemptId);
+
+    const exercise = await prisma.progressionNodeExercise.findUnique({
+      where: { id: exerciseId },
+      select: { nodeId: true, type: true, videoDurationSec: true },
+    });
+    if (
+      !exercise ||
+      exercise.nodeId !== attempt.nodeId ||
+      exercise.type !== "VIDEO" ||
+      !exercise.videoDurationSec
+    ) {
+      throw new ProgressionPlayError("Vidéo introuvable.");
+    }
+
+    const watch = await prisma.playerVideoWatch.upsert({
+      where: { userId_exerciseId: { userId, exerciseId } },
+      create: { userId, exerciseId },
+      update: {},
+    });
+    if (watch.completedAt) {
+      return {
+        watchedSec: watch.watchedSec,
+        completed: true,
+        rejected: false,
+      };
+    }
+
+    const now = new Date();
+    const next = nextVideoWatch(
+      watch,
+      position,
+      exercise.videoDurationSec,
+      now
+    );
+
+    // Mise à jour conditionnelle : deux points de contrôle simultanés
+    // (deux onglets) ne peuvent pas cumuler le même temps écoulé.
+    const updated = await prisma.playerVideoWatch.updateMany({
+      where: { id: watch.id, lastCheckpointAt: watch.lastCheckpointAt },
+      data: {
+        watchedSec: next.watchedSec,
+        lastCheckpointAt: now,
+        completedAt: next.completed ? now : null,
+      },
+    });
+    if (updated.count === 0) {
+      const current = await prisma.playerVideoWatch.findUniqueOrThrow({
+        where: { id: watch.id },
+      });
+      return {
+        watchedSec: current.watchedSec,
+        completed: Boolean(current.completedAt),
+        rejected: true,
+      };
+    }
+
+    return next;
+  }
+
   static async submitNodeCompletion(userId: string, attemptId: string) {
     const attempt = await this.getOpenAttempt(userId, attemptId);
 
     const node = await prisma.progressionNode.findUnique({
       where: { id: attempt.nodeId },
-      include: { exercises: { select: { id: true, type: true } } },
+      include: {
+        exercises: {
+          select: {
+            id: true,
+            type: true,
+            videoYoutubeId: true,
+            videoDurationSec: true,
+          },
+        },
+      },
     });
 
     if (!node) {
@@ -362,6 +460,28 @@ export class ProgressionPlayerService {
         "Toutes les questions doivent être répondues."
       );
     }
+
+    // Une vidéo mal configurée n'est pas jouable : elle ne bloque pas le nœud
+    const videoIds = node.exercises
+      .filter(
+        (ex) => ex.type === "VIDEO" && ex.videoYoutubeId && ex.videoDurationSec
+      )
+      .map((ex) => ex.id);
+    if (videoIds.length > 0) {
+      const watchedVideos = await prisma.playerVideoWatch.count({
+        where: {
+          userId,
+          exerciseId: { in: videoIds },
+          completedAt: { not: null },
+        },
+      });
+      if (watchedVideos < videoIds.length) {
+        throw new ProgressionPlayError(
+          "Toutes les vidéos doivent être visionnées."
+        );
+      }
+    }
+
     const score = lessonScore(
       node.exercises,
       quizIds.filter((id) => answered.get(id)).length

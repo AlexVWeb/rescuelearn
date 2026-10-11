@@ -63,7 +63,13 @@ model ProgressionNodeExercise {
   // Configuration JSON générique pour de futurs mini-jeux (ex: ordonner des gestes)
   gameConfig Json?
 
+  // Contenu Vidéo : identifiant YouTube (11 caractères) extrait de l'URL côté serveur
+  videoYoutubeId   String?
+  videoTitle       String?
+  videoDurationSec Int? // Détectée par l'aperçu admin, modifiable
+
   attemptAnswers ProgressionAttemptAnswer[]
+  videoWatches   PlayerVideoWatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -74,6 +80,7 @@ enum ProgressionExerciseType {
   MICRO_COURSE
   FLASHCARD
   MINI_GAME
+  VIDEO
 }
 
 // Suivi de la complétion du joueur pour chaque bloc
@@ -115,4 +122,20 @@ model ProgressionAttemptAnswer {
   answeredAt DateTime                @default(now())
 
   @@unique([attemptId, exerciseId])
+}
+
+// Visionnage d'une vidéo par un joueur, alimenté par des points de contrôle
+// notés côté serveur (pas d'avance ni d'accélération possible). Lié au joueur
+// et non à la tentative : une fois validée, la vidéo reste libre en révision.
+model PlayerVideoWatch {
+  id               String                  @id @default(cuid())
+  userId           String
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseId       String
+  exercise         ProgressionNodeExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  watchedSec       Int                     @default(0)
+  lastCheckpointAt DateTime                @default(now())
+  completedAt      DateTime?
+
+  @@unique([userId, exerciseId])
 }

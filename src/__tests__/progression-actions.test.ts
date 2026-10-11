@@ -42,6 +42,13 @@ const mockPrisma = vi.hoisted(() => ({
     update: vi.fn(),
     upsert: vi.fn(),
   },
+  playerVideoWatch: {
+    findMany: vi.fn().mockResolvedValue([]),
+    upsert: vi.fn(),
+    updateMany: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
+    count: vi.fn(),
+  },
   user: {
     findUnique: vi.fn(),
     update: vi.fn(),
@@ -76,6 +83,7 @@ import {
   answerExerciseAction,
   startProgressionNodeSessionAction,
   submitNodeCompletionAction,
+  videoCheckpointAction,
 } from "@/app/actions/progression-player-actions";
 
 describe("progression server actions", () => {
@@ -629,6 +637,233 @@ describe("progression server actions", () => {
       });
       expect(res.success).toBe(false);
       expect(res.error).toBe("Plus de vies disponibles.");
+    });
+  });
+  describe("Video checkpoints", () => {
+    const mockOpenAttempt = () => {
+      mockPrisma.progressionAttempt.findUnique.mockResolvedValue({
+        id: "att-1",
+        userId: "user-1",
+        nodeId: "node-1",
+        completedAt: null,
+      });
+    };
+
+    const mockVideoExercise = (overrides = {}) => {
+      mockPrisma.progressionNodeExercise.findUnique.mockResolvedValue({
+        nodeId: "node-1",
+        type: "VIDEO",
+        videoDurationSec: 300,
+        ...overrides,
+      });
+    };
+
+    it("credits only the real elapsed time on a seek ahead", async () => {
+      mockUser([UserRole.PLAYER]);
+      mockOpenAttempt();
+      mockVideoExercise();
+      const lastCheckpointAt = new Date(Date.now() - 15_000);
+      mockPrisma.playerVideoWatch.upsert.mockResolvedValue({
+        id: "watch-1",
+        watchedSec: 30,
+        lastCheckpointAt,
+        completedAt: null,
+      });
+      mockPrisma.playerVideoWatch.updateMany.mockResolvedValue({ count: 1 });
+
+      const res = await videoCheckpointAction({
+        attemptId: "att-1",
+        exerciseId: "ex-v",
+        position: 250,
+      });
+      expect(res.success).toBe(true);
+      expect(res.data?.rejected).toBe(true);
+      expect(res.data?.completed).toBe(false);
+      expect(res.data?.watchedSec).toBeLessThanOrEqual(49);
+      expect(mockPrisma.playerVideoWatch.updateMany).toHaveBeenCalledWith({
+        where: { id: "watch-1", lastCheckpointAt },
+        data: expect.objectContaining({ completedAt: null }),
+      });
+    });
+
+    it("validates the video at the end", async () => {
+      mockUser([UserRole.PLAYER]);
+      mockOpenAttempt();
+      mockVideoExercise();
+      mockPrisma.playerVideoWatch.upsert.mockResolvedValue({
+        id: "watch-1",
+        watchedSec: 290,
+        lastCheckpointAt: new Date(Date.now() - 10_000),
+        completedAt: null,
+      });
+      mockPrisma.playerVideoWatch.updateMany.mockResolvedValue({ count: 1 });
+
+      const res = await videoCheckpointAction({
+        attemptId: "att-1",
+        exerciseId: "ex-v",
+        position: 300,
+      });
+      expect(res.data).toEqual({
+        watchedSec: 300,
+        completed: true,
+        rejected: false,
+      });
+    });
+
+    it("keeps an already validated video untouched", async () => {
+      mockUser([UserRole.PLAYER]);
+      mockOpenAttempt();
+      mockVideoExercise();
+      mockPrisma.playerVideoWatch.upsert.mockResolvedValue({
+        id: "watch-1",
+        watchedSec: 300,
+        lastCheckpointAt: new Date(),
+        completedAt: new Date(),
+      });
+
+      const res = await videoCheckpointAction({
+        attemptId: "att-1",
+        exerciseId: "ex-v",
+        position: 10,
+      });
+      expect(res.data?.completed).toBe(true);
+      expect(mockPrisma.playerVideoWatch.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("returns the current state when a concurrent checkpoint won", async () => {
+      mockUser([UserRole.PLAYER]);
+      mockOpenAttempt();
+      mockVideoExercise();
+      mockPrisma.playerVideoWatch.upsert.mockResolvedValue({
+        id: "watch-1",
+        watchedSec: 30,
+        lastCheckpointAt: new Date(Date.now() - 15_000),
+        completedAt: null,
+      });
+      mockPrisma.playerVideoWatch.updateMany.mockResolvedValue({ count: 0 });
+      mockPrisma.playerVideoWatch.findUniqueOrThrow.mockResolvedValue({
+        watchedSec: 45,
+        completedAt: null,
+      });
+
+      const res = await videoCheckpointAction({
+        attemptId: "att-1",
+        exerciseId: "ex-v",
+        position: 45,
+      });
+      expect(res.data).toEqual({
+        watchedSec: 45,
+        completed: false,
+        rejected: true,
+      });
+    });
+
+    it("refuses a non-video exercise", async () => {
+      mockUser([UserRole.PLAYER]);
+      mockOpenAttempt();
+      mockVideoExercise({ type: "QUIZ_QUESTION" });
+
+      const res = await videoCheckpointAction({
+        attemptId: "att-1",
+        exerciseId: "ex-1",
+        position: 10,
+      });
+      expect(res.success).toBe(false);
+      expect(res.error).toBe("Vidéo introuvable.");
+      expect(mockPrisma.playerVideoWatch.upsert).not.toHaveBeenCalled();
+    });
+
+    it("refuses a video from another node", async () => {
+      mockUser([UserRole.PLAYER]);
+      mockOpenAttempt();
+      mockVideoExercise({ nodeId: "node-2" });
+
+      const res = await videoCheckpointAction({
+        attemptId: "att-1",
+        exerciseId: "ex-v",
+        position: 10,
+      });
+      expect(res.success).toBe(false);
+    });
+
+    it("rejects an invalid position", async () => {
+      mockUser([UserRole.PLAYER]);
+
+      const res = await videoCheckpointAction({
+        attemptId: "att-1",
+        exerciseId: "ex-v",
+        position: -5,
+      });
+      expect(res.success).toBe(false);
+      expect(mockPrisma.progressionAttempt.findUnique).not.toHaveBeenCalled();
+    });
+
+    it("refuses to complete a node with an unwatched video", async () => {
+      mockUser([UserRole.PLAYER]);
+      mockOpenAttempt();
+      mockPrisma.progressionNode.findUnique.mockResolvedValue({
+        id: "node-1",
+        title: "Hémorragies",
+        xpReward: 100,
+        exercises: [
+          {
+            id: "ex-v",
+            type: "VIDEO",
+            videoYoutubeId: "dQw4w9WgXcQ",
+            videoDurationSec: 300,
+          },
+        ],
+      });
+      mockPrisma.progressionAttemptAnswer.findMany.mockResolvedValue([]);
+      mockPrisma.playerVideoWatch.count.mockResolvedValue(0);
+
+      const res = await submitNodeCompletionAction("att-1");
+      expect(res.success).toBe(false);
+      expect(res.error).toBe("Toutes les vidéos doivent être visionnées.");
+      expect(mockPrisma.progressionAttempt.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("exposes the resume position when starting a node", async () => {
+      mockUser([UserRole.PLAYER]);
+      mockPrisma.progressionNode.findUnique.mockResolvedValue({
+        id: "node-1",
+        treeId: "tree-1",
+        title: "Hémorragies",
+        xpReward: 100,
+        exercises: [
+          {
+            id: "ex-v",
+            type: "VIDEO",
+            order: 0,
+            videoYoutubeId: "dQw4w9WgXcQ",
+            videoTitle: "Le garrot",
+            videoDurationSec: 300,
+          },
+        ],
+      });
+      mockPrisma.progressionNode.findMany.mockResolvedValue([{ id: "node-1" }]);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        hearts: 3,
+        heartsUpdatedAt: new Date(),
+      });
+      mockPrisma.progressionAttempt.create.mockResolvedValue({ id: "att-1" });
+      mockPrisma.playerVideoWatch.findMany.mockResolvedValueOnce([
+        { exerciseId: "ex-v", watchedSec: 120, completedAt: null },
+      ]);
+
+      const res = await startProgressionNodeSessionAction("node-1");
+      expect(res.data?.exercises[0]).toEqual({
+        id: "ex-v",
+        type: "VIDEO",
+        order: 0,
+        video: {
+          youtubeId: "dQw4w9WgXcQ",
+          title: "Le garrot",
+          durationSec: 300,
+          watchedSec: 120,
+          completed: false,
+        },
+      });
     });
   });
 });

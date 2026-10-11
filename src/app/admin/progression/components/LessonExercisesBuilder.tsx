@@ -14,11 +14,13 @@ import {
   BookOpen,
   HelpCircle,
   GraduationCap,
+  PlayCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Exercise } from "@/types/progression";
 import { answerIndex } from "@/lib/quiz-answers";
 import { ExerciseItemPicker, type PickerItem } from "./ExerciseItemPicker";
+import { VideoExerciseConfig } from "./VideoExerciseConfig";
 
 export interface AdminQuestion {
   id: number;
@@ -46,6 +48,7 @@ const TYPE_ACCENT: Record<Exercise["type"], string> = {
   QUIZ_QUESTION: "border-l-blue-600",
   FLASHCARD: "border-l-purple-500",
   MINI_GAME: "border-l-amber-500",
+  VIDEO: "border-l-rose-500",
 };
 
 export function LessonExercisesBuilder({
@@ -61,6 +64,9 @@ export function LessonExercisesBuilder({
       learningCardId: ex.learningCardId || null,
       courseTitle: ex.courseTitle || "",
       courseContent: ex.courseContent || "",
+      videoUrl: ex.videoUrl || "",
+      videoTitle: ex.videoTitle || "",
+      videoDurationSec: ex.videoDurationSec ?? null,
       // Questions / fiches générées par l'IA, créées en base à la sauvegarde
       _newQuestion: ex._newQuestion,
       _newFlashcard: ex._newFlashcard,
@@ -132,10 +138,11 @@ export function LessonExercisesBuilder({
     setExercises(updated);
   };
 
+  // Forme fonctionnelle : l'aperçu vidéo met à jour la durée de façon asynchrone
   const handleUpdateExercise = (index: number, fields: Partial<Exercise>) => {
-    const updated = [...exercises];
-    updated[index] = { ...updated[index], ...fields };
-    setExercises(updated);
+    setExercises((prev) =>
+      prev.map((ex, i) => (i === index ? { ...ex, ...fields } : ex))
+    );
   };
 
   const handleSave = async () => {
@@ -210,6 +217,12 @@ export function LessonExercisesBuilder({
                         <>
                           <GraduationCap className="h-4 w-4 text-purple-600" />
                           <span>Flashcard</span>
+                        </>
+                      )}
+                      {ex.type === "VIDEO" && (
+                        <>
+                          <PlayCircle className="h-4 w-4 text-rose-600" />
+                          <span>Vidéo</span>
                         </>
                       )}
                     </CardTitle>
@@ -355,6 +368,14 @@ export function LessonExercisesBuilder({
                       />
                     </div>
                   )}
+
+                  {/* VIDEO CONFIG */}
+                  {ex.type === "VIDEO" && (
+                    <VideoExerciseConfig
+                      exercise={ex}
+                      onChange={(fields) => handleUpdateExercise(index, fields)}
+                    />
+                  )}
                 </CardContent>
               </Card>
             );
@@ -390,6 +411,14 @@ export function LessonExercisesBuilder({
           onClick={() => handleAddExercise("FLASHCARD")}
         >
           <Plus className="h-4 w-4" /> Flashcard
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="flex items-center gap-1.5"
+          onClick={() => handleAddExercise("VIDEO")}
+        >
+          <Plus className="h-4 w-4" /> Vidéo
         </Button>
       </div>
     </div>

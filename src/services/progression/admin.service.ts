@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ProgressionExerciseInput } from "@/types/progression";
+import { parseYoutubeId } from "@/lib/progression/video";
 import { getProgressionQuizBank } from "./ai-exercises";
 import {
   generateEntireTreeWithAi,
@@ -9,6 +10,22 @@ import {
 } from "./generation";
 
 const LEVELS = ["GQS", "PSC", "SST", "PSE1", "PSE2"];
+
+// Une vidéo non jouable bloquerait le joueur : identifiant et durée requis
+function parseVideoInput(ex: ProgressionExerciseInput) {
+  const youtubeId = parseYoutubeId(ex.videoUrl ?? "");
+  if (!youtubeId) {
+    throw new Error("Lien YouTube invalide pour un exercice vidéo.");
+  }
+  if (!ex.videoDurationSec || ex.videoDurationSec <= 0) {
+    throw new Error("Durée manquante pour un exercice vidéo.");
+  }
+  return {
+    youtubeId,
+    title: ex.videoTitle?.trim() || null,
+    durationSec: ex.videoDurationSec,
+  };
+}
 
 export class ProgressionAdminService {
   static generateProgressionNodeWithAi = generateProgressionNodeWithAi;
@@ -59,7 +76,14 @@ export class ProgressionAdminService {
       throw new Error("Nœud introuvable.");
     }
 
-    return node;
+    // Le builder édite un lien : l'identifiant brut est accepté par parseYoutubeId
+    return {
+      ...node,
+      exercises: node.exercises.map((ex) => ({
+        ...ex,
+        videoUrl: ex.videoYoutubeId,
+      })),
+    };
   }
 
   static async createProgressionNode(data: {
@@ -199,12 +223,17 @@ export class ProgressionAdminService {
         finalLearningCardId = createdCard.id;
       }
 
+      const video = ex.type === "VIDEO" ? parseVideoInput(ex) : null;
+
       processedExercises.push({
         type: ex.type,
         questionId: finalQuestionId,
         learningCardId: finalLearningCardId,
         courseTitle: ex.courseTitle || null,
         courseContent: ex.courseContent || null,
+        videoYoutubeId: video?.youtubeId ?? null,
+        videoTitle: video?.title ?? null,
+        videoDurationSec: video?.durationSec ?? null,
       });
     }
 

@@ -98,9 +98,17 @@ type SessionExercise = {
     info: string;
     reference: string;
   } | null;
+  videoYoutubeId: string | null;
+  videoTitle: string | null;
+  videoDurationSec: number | null;
 };
 
-export function toClientExercise(ex: SessionExercise) {
+type VideoWatchState = { watchedSec: number; completedAt: Date | null };
+
+export function toClientExercise(
+  ex: SessionExercise,
+  videoWatch?: VideoWatchState | null
+) {
   if (ex.type === "QUIZ_QUESTION" && ex.question) {
     return {
       id: ex.id,
@@ -128,6 +136,21 @@ export function toClientExercise(ex: SessionExercise) {
         niveau: ex.learningCard.niveau,
         info: ex.learningCard.info,
         reference: ex.learningCard.reference,
+      },
+    };
+  }
+  if (ex.type === "VIDEO" && ex.videoYoutubeId && ex.videoDurationSec) {
+    return {
+      id: ex.id,
+      type: ex.type,
+      order: ex.order,
+      video: {
+        youtubeId: ex.videoYoutubeId,
+        title: ex.videoTitle,
+        durationSec: ex.videoDurationSec,
+        // Reprise là où le joueur s'est arrêté ; lecture libre une fois validée
+        watchedSec: videoWatch?.watchedSec ?? 0,
+        completed: Boolean(videoWatch?.completedAt),
       },
     };
   }

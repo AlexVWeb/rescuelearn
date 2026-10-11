@@ -70,6 +70,35 @@ export async function answerExerciseAction(
   }
 }
 
+const videoCheckpointSchema = z.object({
+  attemptId: z.string().min(1),
+  exerciseId: z.string().min(1),
+  position: z.number().finite().min(0),
+});
+
+export async function videoCheckpointAction(
+  values: z.infer<typeof videoCheckpointSchema>
+) {
+  try {
+    const parsed = videoCheckpointSchema.safeParse(values);
+    if (!parsed.success) {
+      return { success: false, error: "Position invalide." };
+    }
+    const user = await getUserContext();
+    const { attemptId, exerciseId, position } = parsed.data;
+    const data = await ProgressionPlayerService.recordVideoCheckpoint(
+      user.id,
+      attemptId,
+      exerciseId,
+      position
+    );
+    return { success: true, data };
+  } catch (error) {
+    logger.error("Erreur videoCheckpointAction:", error);
+    return { success: false, error: playErrorMessage(error) };
+  }
+}
+
 export async function submitNodeCompletionAction(attemptId: string) {
   try {
     if (typeof attemptId !== "string" || !attemptId) {

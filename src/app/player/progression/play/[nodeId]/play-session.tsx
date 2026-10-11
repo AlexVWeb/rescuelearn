@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { marked } from "marked";
 import { PlaySessionExercise } from "@/types/progression";
+import { VideoExercise } from "./video-exercise";
 
 interface PlaySessionClientProps {
   sessionData: {
@@ -62,10 +63,19 @@ export default function PlaySessionClient({
     explanation: string | null;
   } | null>(null);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
+  // Vidéos validées par le serveur (visionnage complet)
+  const [watchedVideoIds, setWatchedVideoIds] = useState(
+    () =>
+      new Set(exercises.filter((ex) => ex.video?.completed).map((ex) => ex.id))
+  );
 
   const router = useRouter();
 
   const currentExercise = exercises[currentIndex];
+  const isVideoPending =
+    currentExercise?.type === "VIDEO" &&
+    Boolean(currentExercise.video) &&
+    !watchedVideoIds.has(currentExercise.id);
   const progressPercent =
     exercises.length > 0 ? (currentIndex / exercises.length) * 100 : 100;
 
@@ -374,6 +384,22 @@ export default function PlaySessionClient({
           </div>
         )}
 
+        {/* VIDEO TYPE */}
+        {currentExercise.type === "VIDEO" && currentExercise.video && (
+          <VideoExercise
+            key={currentExercise.id}
+            attemptId={attemptId}
+            exerciseId={currentExercise.id}
+            video={currentExercise.video}
+            onCompleted={() => {
+              playSound("correct");
+              setWatchedVideoIds((prev) =>
+                new Set(prev).add(currentExercise.id)
+              );
+            }}
+          />
+        )}
+
         {/* FLASHCARD TYPE */}
         {currentExercise.type === "FLASHCARD" && (
           <div className="animate-fade-in flex flex-col items-center justify-center space-y-6">
@@ -439,7 +465,12 @@ export default function PlaySessionClient({
         ) : (
           <Button
             className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-blue-600 py-6 font-bold text-white hover:bg-blue-700"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isVideoPending}
+            title={
+              isVideoPending
+                ? "Regardez la vidéo jusqu'au bout pour continuer"
+                : undefined
+            }
             onClick={handleNext}
           >
             Continuer
