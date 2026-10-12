@@ -50,7 +50,7 @@ export function LearningBar() {
 
   const handleReferenceClick = (e: React.MouseEvent, reference: string) => {
     e.stopPropagation();
-    const pageMatch = reference.match(/Page (\d+)/);
+    const pageMatch = reference.match(/pages?\s*(\d+)/i);
     const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
     window.open(`/referenciels/PSE1_PSE2.pdf#page=${pageNumber}`, "_blank");
   };
