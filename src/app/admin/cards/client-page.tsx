@@ -15,6 +15,7 @@ import {
 import { Plus, BrainCircuit, X } from "lucide-react";
 import {
   bulkLearningCardsAction,
+  bulkUpdateLearningCardsAction,
   deleteLearningCardAction,
   getAdminLearningCardIdsAction,
 } from "@/app/actions/learning-card-actions";
@@ -27,6 +28,7 @@ import {
 } from "@/lib/card-filters";
 import { CardsTable } from "@/components/admin/cards/cards-table";
 import { CardDialog } from "@/components/admin/cards/card-dialog";
+import type { BulkCardChanges } from "@/components/admin/cards/bulk-edit-cards-dialog";
 import { AiGenerateCardDialog } from "@/components/admin/cards/ai-generate-card-dialog";
 import {
   AlertDialog,
@@ -169,6 +171,20 @@ export default function CardsClientPage({
     return true;
   };
 
+  const handleBulkEdit = async (
+    ids: number[],
+    changes: BulkCardChanges
+  ): Promise<boolean> => {
+    const result = await bulkUpdateLearningCardsAction({ ids, ...changes });
+    if (!result.success) {
+      toast.error(result.error || "Impossible de modifier les cartes");
+      return false;
+    }
+    toast.success(`${result.count} carte(s) modifiée(s)`);
+    router.refresh();
+    return true;
+  };
+
   return (
     <div className="w-full p-8">
       <div className="mb-8 flex items-center justify-between space-y-2">
@@ -268,6 +284,9 @@ export default function CardsClientPage({
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
           onBulkAction={handleBulkAction}
+          onBulkEdit={handleBulkEdit}
+          referenciels={referenciels}
+          niveaux={niveaux}
         />
       </div>
 

@@ -24,6 +24,8 @@ interface BulkActionsBarProps {
   actions?: BulkContentAction[];
   onAction: (action: BulkContentAction) => Promise<void>;
   onClear: () => void;
+  /** Actions supplémentaires affichées avant archiver/restaurer/supprimer */
+  children?: React.ReactNode;
 }
 
 export function BulkActionsBar({
@@ -33,6 +35,7 @@ export function BulkActionsBar({
   actions = ["archive", "restore", "delete"],
   onAction,
   onClear,
+  children,
 }: BulkActionsBarProps) {
   const [pending, setPending] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -64,6 +67,7 @@ export function BulkActionsBar({
         <X className="h-4 w-4" />
       </Button>
       <div className="ml-auto flex flex-wrap gap-2">
+        {children}
         {actions.includes("archive") && (
           <Button
             variant="outline"

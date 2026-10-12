@@ -20,12 +20,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash, Search } from "lucide-react";
+import { MoreHorizontal, Edit, Trash, Search, Pencil } from "lucide-react";
 import { useTransition } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArchivedBadge } from "@/components/admin/archived-badge";
 import { BulkActionsBar } from "@/components/admin/bulk-actions-bar";
 import type { BulkContentAction } from "@/lib/content-archive";
+import {
+  BulkEditCardsDialog,
+  type BulkCardChanges,
+} from "@/components/admin/cards/bulk-edit-cards-dialog";
 
 interface ReferencielSimple {
   id: number;
@@ -55,6 +59,9 @@ interface CardsTableProps {
   onEdit: (card: LearningCardAdmin) => void;
   onDelete: (id: number) => void;
   onBulkAction: (ids: number[], action: BulkContentAction) => Promise<boolean>;
+  onBulkEdit: (ids: number[], changes: BulkCardChanges) => Promise<boolean>;
+  referenciels: ReferencielSimple[];
+  niveaux: string[];
   /** Récupère les ids de toutes les cartes filtrées (toutes pages) */
   onSelectAllFiltered: () => Promise<number[]>;
 }
@@ -65,6 +72,9 @@ export function CardsTable({
   onEdit,
   onDelete,
   onBulkAction,
+  onBulkEdit,
+  referenciels,
+  niveaux,
   onSelectAllFiltered,
 }: CardsTableProps) {
   const router = useRouter();
@@ -136,6 +146,13 @@ export function CardsTable({
     if (await onBulkAction([...selected], action)) setSelected(new Set());
   };
 
+  const [bulkEditOpen, setBulkEditOpen] = React.useState(false);
+  const handleBulkEdit = async (changes: BulkCardChanges) => {
+    const ok = await onBulkEdit([...selected], changes);
+    if (ok) setSelected(new Set());
+    return ok;
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateParams(1, searchVal);
@@ -168,6 +185,22 @@ export function CardsTable({
         deleteWarning="Les étapes de leçon qui utilisent ces cartes seront aussi retirées des parcours. Préférez l'archivage pour simplement masquer ces contenus."
         onAction={handleBulkAction}
         onClear={() => setSelected(new Set())}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setBulkEditOpen(true)}
+        >
+          <Pencil className="mr-2 h-4 w-4" /> Modifier
+        </Button>
+      </BulkActionsBar>
+      <BulkEditCardsDialog
+        open={bulkEditOpen}
+        onOpenChange={setBulkEditOpen}
+        count={selected.size}
+        referenciels={referenciels}
+        niveaux={niveaux}
+        onSubmit={handleBulkEdit}
       />
       {allSelected && meta.total > selected.size && (
         <p className="text-muted-foreground text-sm">

@@ -327,6 +327,74 @@ export async function bulkLearningCardsAction(input: unknown) {
   }
 }
 
+const bulkUpdateLearningCardsSchema = z
+  .object({
+    ids: z.array(z.number().int().positive()).min(1).max(MAX_BULK_IDS),
+    // Seuls les champs présents sont modifiés ; null retire le référentiel
+    referencielId: z.number().int().positive().nullable().optional(),
+    niveau: z.string().trim().min(1).optional(),
+    theme: z.string().trim().min(1).optional(),
+  })
+  .refine(
+    (d) =>
+      d.referencielId !== undefined ||
+      d.niveau !== undefined ||
+      d.theme !== undefined,
+    "Aucun champ à modifier"
+  );
+
+export async function bulkUpdateLearningCardsAction(input: unknown) {
+  const user = await getUserContext();
+  if (!hasRole(user.roles, UserRole.SUPER_ADMIN)) {
+    return { success: false, error: "Forbidden" };
+  }
+
+  const parsed = bulkUpdateLearningCardsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Paramètres invalides" };
+  }
+  const { ids, referencielId, niveau, theme } = parsed.data;
+
+  try {
+    const where = { id: { in: ids } };
+    const [{ count }] = await prisma.$transaction([
+      prisma.learningCard.updateMany({
+        where,
+        data: {
+          ...(referencielId !== undefined && { referencielId }),
+          ...(niveau !== undefined && { niveau }),
+          ...(theme !== undefined && { theme }),
+        },
+      }),
+      // Un sujet appartient à un référentiel : on détache ceux devenus incohérents
+      ...(referencielId !== undefined
+        ? [
+            prisma.learningCard.updateMany({
+              where: {
+                ...where,
+                topicId: { not: null },
+                ...(referencielId !== null && {
+                  topic: { referencielId: { not: referencielId } },
+                }),
+              },
+              data: { topicId: null },
+            }),
+          ]
+        : []),
+    ]);
+
+    revalidatePath("/admin/cards");
+    revalidatePath("/learning");
+    return { success: true, count };
+  } catch (error) {
+    logger.error("Failed to bulk edit learning cards:", error);
+    return {
+      success: false,
+      error: "Impossible de modifier les cartes d'apprentissage.",
+    };
+  }
+}
+
 const bulkLearningCardsSchema = z.object({
   referencielId: z.number().nullable().optional(),
   cards: z.array(
