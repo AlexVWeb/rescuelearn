@@ -39,10 +39,24 @@ export async function requireSuperAdmin() {
   return user;
 }
 
-/** Throws if user has no organisme. Returns user with organismeId typed as string. */
+// Rôles autorisés à gérer les données d'un organisme (formations, stagiaires...)
+const ORGANISME_STAFF_ROLES = [
+  UserRole.SUPER_ADMIN,
+  UserRole.ADMIN_ORGANISME,
+  UserRole.FORMATEUR,
+];
+
+/**
+ * Throws if user has no organisme or is not organisme staff (a PLAYER attached
+ * to an organisme must not reach training data). Returns user with
+ * organismeId typed as string.
+ */
 export async function requireOrganisme() {
   const user = await getUserContext();
   if (!user.organismeId) throw new Error("Aucun organisme associé");
+  if (!ORGANISME_STAFF_ROLES.some((role) => hasRole(user.roles, role))) {
+    throw new Error("Non autorisé");
+  }
   return user as typeof user & { organismeId: string };
 }
 
