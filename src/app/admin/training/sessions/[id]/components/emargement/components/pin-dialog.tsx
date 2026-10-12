@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMounted } from "@/hooks/use-mounted";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,11 +18,10 @@ interface PinDialogProps {
 }
 
 export function PinDialog({ pin, slot }: PinDialogProps) {
-  const [qrUrl, setQrUrl] = useState("");
-
-  useEffect(() => {
-    setQrUrl(`${window.location.origin}/validation?pin=${pin}`);
-  }, [pin]);
+  const mounted = useMounted();
+  const qrUrl = mounted
+    ? `${window.location.origin}/validation?pin=${pin}`
+    : "";
 
   return (
     <Dialog>

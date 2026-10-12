@@ -35,6 +35,7 @@ import {
   Settings2,
   Sparkles,
   AlertCircle,
+  LayoutGrid,
 } from "lucide-react";
 import {
   getProgressionTreesAction,
@@ -53,6 +54,7 @@ import {
 } from "./components/TreeGenerationStatus";
 import { getReferencielsAction } from "@/app/actions/referenciel-actions";
 import { ProgressionNodeForm } from "./components/ProgressionNodeForm";
+import { PlayerModulesPanel } from "./components/PlayerModulesPanel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -94,6 +96,7 @@ const hasTopics = (ref: Referenciel) =>
 export default function AdminProgressionPage() {
   const [trees, setTrees] = useState<Tree[]>([]);
   const [selectedLevel, setSelectedLevel] = useState("GQS");
+  const [showModules, setShowModules] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // AI Generation States
@@ -140,7 +143,10 @@ export default function AdminProgressionPage() {
   };
 
   useEffect(() => {
-    fetchTrees();
+    // isLoading vaut déjà true au montage. Faux positif : fetchTrees ne met à jour
+    // l'état qu'après son await, mais la règle ne suit pas les fonctions async du composant.
+    // oxlint-disable-next-line react/set-state-in-effect
+    fetchTrees({ silent: true });
     fetchReferenciels();
   }, []);
 
@@ -358,7 +364,9 @@ export default function AdminProgressionPage() {
             chaque joueur.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div
+          className={`flex items-center gap-2 ${showModules ? "invisible" : ""}`}
+        >
           <Button
             variant="outline"
             className="border-indigo-200 bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100"
@@ -388,9 +396,12 @@ export default function AdminProgressionPage() {
         {["GQS", "PSC", "SST", "PSE1", "PSE2"].map((lvl) => (
           <button
             key={lvl}
-            onClick={() => setSelectedLevel(lvl)}
+            onClick={() => {
+              setSelectedLevel(lvl);
+              setShowModules(false);
+            }}
             className={`-mb-0.5 border-b-2 px-4 py-2.5 text-sm font-bold transition-all ${
-              selectedLevel === lvl
+              !showModules && selectedLevel === lvl
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
@@ -398,9 +409,21 @@ export default function AdminProgressionPage() {
             {lvl}
           </button>
         ))}
+        <button
+          onClick={() => setShowModules(true)}
+          className={`-mb-0.5 ml-auto flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-bold transition-all ${
+            showModules
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <LayoutGrid className="h-4 w-4" /> Modules
+        </button>
       </div>
 
-      {isLoading ? (
+      {showModules ? (
+        <PlayerModulesPanel />
+      ) : isLoading ? (
         <div className="text-muted-foreground flex h-40 items-center justify-center text-sm font-semibold">
           Chargement des arbres de progression...
         </div>

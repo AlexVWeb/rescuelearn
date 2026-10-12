@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -16,6 +16,7 @@ import {
   Mail,
   ShieldCheck,
   ShieldAlert,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ import {
   validateInviteCode,
   linkUserToOrganisme,
   requestPasswordReset,
+  getPostLoginPath,
 } from "./actions";
 import {
   Form,
@@ -75,6 +77,48 @@ export default function LoginClientPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userType, setUserType] = useState<"player" | "trainer">("trainer");
+
+  // Autofill passkey : le navigateur propose les passkeys dans le champ email.
+  // Le cycle est annulé automatiquement si l'utilisateur clique le bouton passkey.
+  useEffect(() => {
+    if (view !== "login") return;
+    let cancelled = false;
+
+    (async () => {
+      if (!(await PublicKeyCredential.isConditionalMediationAvailable?.())) {
+        return;
+      }
+      const { error } = await authClient.signIn.passkey({ autoFill: true });
+      if (!error && !cancelled) {
+        router.push(await getPostLoginPath());
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [view, router]);
+
+  async function onPasskeySignIn() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await authClient.signIn.passkey();
+      if (error) {
+        // Annulation par l'utilisateur ou par le relais de l'autofill : silencieux
+        const code = "code" in error ? error.code : undefined;
+        if (code !== "AUTH_CANCELLED" && code !== "ERROR_CEREMONY_ABORTED") {
+          setError("Connexion par passkey impossible. Réessayez.");
+        }
+        setLoading(false);
+        return;
+      }
+      router.push(await getPostLoginPath());
+    } catch {
+      setError("Connexion impossible. Vérifiez votre réseau et réessayez.");
+      setLoading(false);
+    }
+  }
 
   const mainForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -421,6 +465,9 @@ export default function LoginClientPage({
                         <FormControl>
                           <Input
                             placeholder="vous@exemple.com"
+                            autoComplete={
+                              view === "login" ? "username webauthn" : "email"
+                            }
                             className="border-gray-300 focus-visible:ring-blue-500"
                             {...field}
                           />
@@ -559,6 +606,25 @@ export default function LoginClientPage({
                   </button>
                 </form>
               </Form>
+
+              {view === "login" && (
+                <>
+                  <div className="my-5 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-gray-200" />
+                    <span className="text-xs text-gray-400 uppercase">ou</span>
+                    <div className="h-px flex-1 bg-gray-200" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onPasskeySignIn}
+                    disabled={loading}
+                    className="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    <KeyRound className="size-4" />
+                    Se connecter avec une passkey
+                  </button>
+                </>
+              )}
 
               <p className="mt-6 text-center text-sm text-gray-500">
                 {view === "signup"

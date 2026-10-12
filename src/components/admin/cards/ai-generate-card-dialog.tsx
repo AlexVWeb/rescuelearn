@@ -90,15 +90,11 @@ export function AiGenerateCardDialog({
     Record<number, boolean>
   >({});
 
-  useEffect(() => {
-    if (open) {
-      if (referenciels.length > 0 && !selectedReferenciel) {
-        const initial =
-          referenciels.find((r) => r.id === initialReferencielId) ??
-          referenciels[0];
-        setSelectedReferenciel(initial.id.toString());
-      }
-    } else {
+  // Ajustements faits pendant le rendu (et non dans un effet) pour éviter un rendu en cascade
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (!open) {
       // Reset state on close
       setTopic("");
       setTopics([]);
@@ -112,7 +108,13 @@ export function AiGenerateCardDialog({
       setGeneratedCards([]);
       setSelectedIndices({});
     }
-  }, [open, referenciels, selectedReferenciel, initialReferencielId]);
+  }
+  if (open && referenciels.length > 0 && !selectedReferenciel) {
+    const initial =
+      referenciels.find((r) => r.id === initialReferencielId) ??
+      referenciels[0];
+    setSelectedReferenciel(initial.id.toString());
+  }
 
   const shouldLoadTopics = hasTopics(
     referenciels.find((r) => r.id.toString() === selectedReferenciel)

@@ -119,6 +119,7 @@ export async function testSendDailyQuizEmailAction() {
       },
       include: {
         quizzes: {
+          where: { archivedAt: null },
           include: {
             questions: {
               include: {
@@ -139,6 +140,7 @@ export async function testSendDailyQuizEmailAction() {
 
     if (candidateQuestions.length === 0) {
       candidateQuestions = await prisma.question.findMany({
+        where: { quiz: { archivedAt: null } },
         include: {
           options: true,
         },

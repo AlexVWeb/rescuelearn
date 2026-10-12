@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { shuffleArray } from "../utils/utils";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { useMounted } from "@/hooks/use-mounted";
 
 interface PageProps {
   params: Promise<{
@@ -39,11 +40,9 @@ function QuizPageContent({ params }: PageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const difficulty = (searchParams.get("difficulty") || "medium") as
-    | "easy"
-    | "medium"
-    | "hard";
+    "easy" | "medium" | "hard";
   const isRandomMode = searchParams.get("random") === "true";
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [quizData, setQuizData] = useState<QuizComponentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,10 +55,6 @@ function QuizPageContent({ params }: PageProps) {
   const [isTimeCritical, setIsTimeCritical] = useState(false);
   const [performance, setPerformance] = useState({ stars: 0, message: "" });
   const [dialogOpen, setDialogOpen] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     const header = document.body.getElementsByTagName("header")[0];

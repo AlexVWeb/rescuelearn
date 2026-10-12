@@ -52,30 +52,67 @@ export function useEmargement({
   useEffect(() => {
     if (!isAutoRefresh || !supabase) return;
 
-    const channel = supabase
-      .channel("emargement_changes")
-      .on<EmargementRealtimeRecord>(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "Emargement" },
-        (payload) => {
-          const currentSlots = slotsRef.current;
-          const newSlotId = (payload.new as Partial<EmargementRealtimeRecord>)
-            .slotId;
-          const oldSlotId = (payload.old as Partial<EmargementRealtimeRecord>)
-            .slotId;
+    const client = supabase;
+    let channel: ReturnType<typeof client.channel> | null = null;
+    let refreshTimer: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
 
-          if (
-            (newSlotId && currentSlots.some((s) => s.id === newSlotId)) ||
-            (oldSlotId && currentSlots.some((s) => s.id === oldSlotId))
-          ) {
-            router.refresh();
+    // Récupère un JWT Supabase (role=authenticated) frappé côté serveur pour
+    // l'admin connecté, et l'applique au client Realtime. Sans ce token, la
+    // RLS de "Emargement" refuse l'abonnement (deny-all pour anon).
+    const fetchToken = async (): Promise<number | null> => {
+      const res = await fetch("/api/realtime/token", { cache: "no-store" });
+      if (!res.ok) {
+        logger.error(`Token Realtime indisponible (HTTP ${res.status})`);
+        return null;
+      }
+      const { token, expiresIn } = (await res.json()) as {
+        token: string;
+        expiresIn: number;
+      };
+      await client.realtime.setAuth(token);
+      return expiresIn;
+    };
+
+    const start = async () => {
+      const expiresIn = await fetchToken();
+      if (cancelled || expiresIn == null) return;
+
+      // Re-frappe le token avant expiration (refresh du JWT, pas des données).
+      const refreshMs = Math.max((expiresIn - 300) * 1000, 60_000);
+      refreshTimer = setInterval(() => {
+        void fetchToken();
+      }, refreshMs);
+
+      channel = client
+        .channel("emargement_changes")
+        .on<EmargementRealtimeRecord>(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "Emargement" },
+          (payload) => {
+            const currentSlots = slotsRef.current;
+            const newSlotId = (payload.new as Partial<EmargementRealtimeRecord>)
+              .slotId;
+            const oldSlotId = (payload.old as Partial<EmargementRealtimeRecord>)
+              .slotId;
+
+            if (
+              (newSlotId && currentSlots.some((s) => s.id === newSlotId)) ||
+              (oldSlotId && currentSlots.some((s) => s.id === oldSlotId))
+            ) {
+              router.refresh();
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    };
+
+    void start();
 
     return () => {
-      supabase?.removeChannel(channel);
+      cancelled = true;
+      if (refreshTimer) clearInterval(refreshTimer);
+      if (channel) client.removeChannel(channel);
     };
   }, [isAutoRefresh, router]);
 

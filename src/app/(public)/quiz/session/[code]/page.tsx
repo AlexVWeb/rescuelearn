@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useEffectEvent, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, LogOut, Shield } from "lucide-react";
 import { RealtimeChannel } from "@supabase/supabase-js";
@@ -18,6 +18,7 @@ import { EcgLine } from "../../components/EcgLine";
 import { MultiplayerLobby } from "../components/MultiplayerLobby";
 import { MultiplayerGame } from "../components/MultiplayerGame";
 import { MultiplayerLeaderboard } from "../components/MultiplayerLeaderboard";
+import { useMounted } from "@/hooks/use-mounted";
 
 // Presence Payload Type
 interface ParticipantPresence {
@@ -61,7 +62,7 @@ export default function QuizSessionPage() {
   const code = (params?.code as string)?.toUpperCase();
   const hostToken = searchParams?.get("hostToken") || undefined;
 
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,10 +98,6 @@ export default function QuizSessionPage() {
   // Refs for tracking presence & channel
   const channelRef = useRef<RealtimeChannel | null>(null);
   const isTransitioningRef = useRef(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // 1. Initial State Load
   useEffect(() => {
@@ -163,7 +160,7 @@ export default function QuizSessionPage() {
         } else {
           setError(res.error || "Session de quiz introuvable");
         }
-      } catch (err) {
+      } catch {
         setError("Impossible de charger la session");
       } finally {
         setLoading(false);
@@ -199,7 +196,7 @@ export default function QuizSessionPage() {
       } else {
         alert(res.error || "Impossible de rejoindre le jeu");
       }
-    } catch (err) {
+    } catch {
       alert("Une erreur inattendue est survenue");
     }
   };
@@ -309,20 +306,30 @@ export default function QuizSessionPage() {
   }, [session, isHost, nickname, participantId, hasAnswered]);
 
   // 3. Question Timer countdown
+  // Réinitialise le temps restant pendant le rendu à chaque changement de session,
+  // l'effet ne gère que le décompte.
+  const [timerSession, setTimerSession] = useState(session);
+  if (session !== timerSession) {
+    setTimerSession(session);
+    if (
+      session &&
+      session.status === "IN_PROGRESS" &&
+      session.currentQuestionId
+    ) {
+      setTimeRemaining(
+        session.difficulty === "easy" ? 999999 : session.timePerQuestion
+      );
+    }
+  }
+
   useEffect(() => {
     if (
       !session ||
       session.status !== "IN_PROGRESS" ||
-      !session.currentQuestionId
+      !session.currentQuestionId ||
+      session.difficulty === "easy"
     )
       return;
-
-    if (session.difficulty === "easy") {
-      setTimeRemaining(999999);
-      return;
-    }
-
-    setTimeRemaining(session.timePerQuestion);
 
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
@@ -336,34 +343,6 @@ export default function QuizSessionPage() {
 
     return () => clearInterval(interval);
   }, [session]);
-
-  // Keyboard Shortcuts for options selection
-  useEffect(() => {
-    if (
-      session?.status !== "IN_PROGRESS" ||
-      !currentQuestion ||
-      isHost ||
-      hasAnswered ||
-      (session.difficulty !== "easy" && timeRemaining === 0)
-    )
-      return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const key = e.key.toUpperCase();
-      const optionIndex = ["A", "B", "C", "D"].indexOf(key);
-      if (optionIndex !== -1 && currentQuestion.options[optionIndex]) {
-        handleSubmitAnswer(currentQuestion.options[optionIndex].id);
-      }
-
-      const numIndex = ["1", "2", "3", "4"].indexOf(e.key);
-      if (numIndex !== -1 && currentQuestion.options[numIndex]) {
-        handleSubmitAnswer(currentQuestion.options[numIndex].id);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [session, currentQuestion, isHost, hasAnswered, timeRemaining]);
 
   // 4. Actions
   const handleStartQuiz = async () => {
@@ -390,7 +369,7 @@ export default function QuizSessionPage() {
           },
         });
       }
-    } catch (err) {
+    } catch {
       alert("Erreur lors du démarrage du quiz");
     } finally {
       isTransitioningRef.current = false;
@@ -443,7 +422,7 @@ export default function QuizSessionPage() {
           });
         }
       }
-    } catch (err) {
+    } catch {
       alert("Erreur lors du passage à la question suivante");
     } finally {
       isTransitioningRef.current = false;
@@ -451,6 +430,10 @@ export default function QuizSessionPage() {
   };
 
   // Automated next question transition
+  const nextQuestionFromEffect = useEffectEvent(() => {
+    handleNextQuestion();
+  });
+
   useEffect(() => {
     if (
       !isHost ||
@@ -466,7 +449,10 @@ export default function QuizSessionPage() {
     const timeOut = !isEasyMode && timeRemaining === 0;
 
     if (allAnswered || timeOut) {
-      handleNextQuestion();
+      // Faux positif : handleNextQuestion ne met à jour l'état qu'après son await,
+      // mais la règle ne suit pas les fonctions async du composant.
+      // oxlint-disable-next-line react/set-state-in-effect
+      nextQuestionFromEffect();
     }
   }, [isHost, session, participants.length, answeredCount, timeRemaining]);
 
@@ -502,7 +488,7 @@ export default function QuizSessionPage() {
       } else {
         alert(res.error || "Erreur lors de l'enregistrement de la réponse");
       }
-    } catch (err) {
+    } catch {
       alert("Erreur de communication avec le serveur");
     }
   };
@@ -515,6 +501,40 @@ export default function QuizSessionPage() {
   };
 
   // 5. Render States
+  // Keyboard Shortcuts for options selection
+  // useEffectEvent : lit toujours la dernière version de handleSubmitAnswer
+  // sans réabonner le listener à chaque rendu.
+  const submitAnswerFromKeyboard = useEffectEvent((optionId: number) => {
+    handleSubmitAnswer(optionId);
+  });
+
+  useEffect(() => {
+    if (
+      session?.status !== "IN_PROGRESS" ||
+      !currentQuestion ||
+      isHost ||
+      hasAnswered ||
+      (session.difficulty !== "easy" && timeRemaining === 0)
+    )
+      return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toUpperCase();
+      const optionIndex = ["A", "B", "C", "D"].indexOf(key);
+      if (optionIndex !== -1 && currentQuestion.options[optionIndex]) {
+        submitAnswerFromKeyboard(currentQuestion.options[optionIndex].id);
+      }
+
+      const numIndex = ["1", "2", "3", "4"].indexOf(e.key);
+      if (numIndex !== -1 && currentQuestion.options[numIndex]) {
+        submitAnswerFromKeyboard(currentQuestion.options[numIndex].id);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [session, currentQuestion, isHost, hasAnswered, timeRemaining]);
+
   if (!mounted) return null;
 
   if (loading) {

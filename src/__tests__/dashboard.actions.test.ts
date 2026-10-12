@@ -50,6 +50,7 @@ function mockAuthenticatedUser(organismeId = "org-1") {
   mockPrisma.user.findUnique.mockResolvedValue({
     id: "user-1",
     organismeId,
+    roles: ["ADMIN_ORGANISME"],
     firstName: "Nicolas",
     lastName: "Dupont",
     phone: "0600000000",

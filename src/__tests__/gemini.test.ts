@@ -45,6 +45,7 @@ import {
   generateLearningCardsFromPdf,
   generateQuizFromPdf,
   retryWithBackoff,
+  generateProgressionNodeFromPdf,
 } from "@/lib/gemini";
 
 const smallPdf = new Uint8Array(1024);
@@ -137,6 +138,104 @@ describe("gemini business logic", () => {
       expect(
         buildProgressionPrompt("Hémorragies", structure, "PSE1")
       ).not.toContain("CONTEXTE CIBLÉ");
+    });
+
+    it("should only describe the requested exercise arrays", () => {
+      const prompt = buildProgressionPrompt(
+        "Hémorragies",
+        { microCourseCount: 0, quizCount: 2, flashcardCount: 0 },
+        "PSE1"
+      );
+      expect(prompt).toContain('"quizzes" : 2 questions');
+      expect(prompt).not.toContain('"microCourses"');
+      expect(prompt).not.toContain('"flashcards"');
+    });
+  });
+
+  describe("generateProgressionNodeFromPdf", () => {
+    const structure = { microCourseCount: 1, quizCount: 1, flashcardCount: 1 };
+    const quiz = {
+      questionText: "Q ?",
+      options: ["A", "B", "C", "D"],
+      correctAnswer: 1,
+      explanation: "Car.",
+    };
+    const lesson = {
+      title: "Hémorragies",
+      description: "Desc",
+      flashcards: [
+        {
+          flashcardTheme: "T",
+          flashcardInfo: "Info",
+          flashcardReference: "p. 3",
+        },
+      ],
+      quizzes: [quiz],
+      microCourses: [{ courseTitle: "Cours", courseContent: "# Contenu" }],
+    };
+
+    it("should require every field of each exercise kind in the schema", async () => {
+      mockGenerateContent.mockResolvedValue({ text: JSON.stringify(lesson) });
+
+      await generateProgressionNodeFromPdf({
+        pdf: smallPdf,
+        topic: "Hémorragies",
+        structureConfig: structure,
+      });
+
+      const schema = mockGenerateContent.mock.calls[0][0].config.responseSchema;
+      expect(schema.required).toEqual([
+        "title",
+        "description",
+        "microCourses",
+        "quizzes",
+        "flashcards",
+      ]);
+      expect(schema.properties.microCourses.items.required).toEqual([
+        "courseTitle",
+        "courseContent",
+      ]);
+      expect(schema.properties.quizzes.items.required).toContain("options");
+      expect(schema.properties.quizzes.items.properties.options.minItems).toBe(
+        "4"
+      );
+    });
+
+    it("should return exercises ordered course, quiz then flashcard", async () => {
+      mockGenerateContent.mockResolvedValue({ text: JSON.stringify(lesson) });
+
+      const result = await generateProgressionNodeFromPdf({
+        pdf: smallPdf,
+        topic: "Hémorragies",
+        structureConfig: structure,
+      });
+
+      expect(result.exercises.map((ex) => ex.type)).toEqual([
+        "MICRO_COURSE",
+        "QUIZ_QUESTION",
+        "FLASHCARD",
+      ]);
+      expect(result.exercises[1]).toMatchObject(quiz);
+    });
+
+    it("should retry when an exercise comes back empty", async () => {
+      mockGenerateContent
+        .mockResolvedValueOnce({
+          text: JSON.stringify({
+            ...lesson,
+            microCourses: [{ courseTitle: "Cours", courseContent: "" }],
+          }),
+        })
+        .mockResolvedValueOnce({ text: JSON.stringify(lesson) });
+
+      const result = await generateProgressionNodeFromPdf({
+        pdf: smallPdf,
+        topic: "Hémorragies",
+        structureConfig: structure,
+      });
+
+      expect(mockGenerateContent).toHaveBeenCalledTimes(2);
+      expect(result.exercises[0].courseContent).toBe("# Contenu");
     });
   });
 

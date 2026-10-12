@@ -12,6 +12,7 @@ export async function GET(request: Request) {
       prisma.quiz.findMany({
         where: {
           status: "PUBLISHED",
+          archivedAt: null,
         },
         skip,
         take: limit,
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
         },
       }),
       prisma.quiz.count({
-        where: { status: "PUBLISHED" },
+        where: { status: "PUBLISHED", archivedAt: null },
       }),
     ]);
 
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
       totalItems: total,
       member: formattedQuizzes,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

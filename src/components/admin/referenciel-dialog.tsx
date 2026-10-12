@@ -68,6 +68,17 @@ export function ReferencielDialog({
     },
   });
 
+  // État local réinitialisé pendant le rendu (et non dans un effet) pour éviter un rendu en cascade
+  const [prevOpen, setPrevOpen] = useState<boolean | null>(null);
+  const [prevReferenciel, setPrevReferenciel] = useState(referenciel);
+  if (open !== prevOpen || referenciel !== prevReferenciel) {
+    setPrevOpen(open);
+    setPrevReferenciel(referenciel);
+    setFile(null); // Reset file on edit open, user must re-upload if they want to change it
+    if (!referenciel) setAnalyzeAfterImport(true);
+  }
+
+  // Le formulaire react-hook-form est un store externe : sa réinitialisation reste dans l'effet
   useEffect(() => {
     if (referenciel) {
       form.reset({
@@ -75,15 +86,12 @@ export function ReferencielDialog({
         yearEdition: referenciel.yearEdition,
         levels: referenciel.levels,
       });
-      setFile(null); // Reset file on edit open, user must re-upload if they want to change it
     } else {
       form.reset({
         title: "",
         yearEdition: dayjs().year(),
         levels: [],
       });
-      setFile(null);
-      setAnalyzeAfterImport(true);
     }
   }, [referenciel, form, open]);
 

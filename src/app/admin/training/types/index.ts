@@ -7,13 +7,7 @@ export const SESSION_STATUS = {
 } as const;
 
 export type SessionType =
-  | "PSC"
-  | "PSE1"
-  | "PSE2"
-  | "SST"
-  | "IPS"
-  | "FF"
-  | "FPS";
+  "PSC" | "PSE1" | "PSE2" | "SST" | "IPS" | "FF" | "FPS";
 
 export type InscriptionStatus = "inscrit" | "présent" | "absent" | "éliminé";
 export const INSCRIPTION_STATUS = {
@@ -101,12 +95,7 @@ export interface Inscription {
   traineeId: string;
   trainingSessionId: string;
   status:
-    | "inscrit"
-    | "actée"
-    | "annulé"
-    | "présent_partiel"
-    | "présent"
-    | string;
+    "inscrit" | "actée" | "annulé" | "présent_partiel" | "présent" | string;
   attestationResult?: string | null;
   attestationValidatedAt?: Date | null;
   createdAt?: Date;

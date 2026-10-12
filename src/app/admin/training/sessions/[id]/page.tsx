@@ -31,7 +31,7 @@ export default async function SessionDetailsPage({
     if (organisme?.logo) {
       organismeLogoBase64 = await getLogoAsBase64(organisme.logo);
     }
-  } catch (e) {
+  } catch {
     return notFound();
   }
 

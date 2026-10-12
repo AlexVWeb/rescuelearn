@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -64,25 +64,6 @@ export function ImportDialog({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      if (initialData) {
-        const content = JSON.stringify(initialData, null, 2);
-        setJsonContent(content);
-        validateJSON(content);
-      } else {
-        const content = JSON.stringify(DEFAULT_EXAMPLE, null, 2);
-        setJsonContent(content);
-        setIsValid(false);
-        setError(null);
-      }
-    } else {
-      setJsonContent("");
-      setIsValid(false);
-      setError(null);
-    }
-  }, [open, initialData]);
-
   const validateJSON = (content: string) => {
     try {
       if (!content.trim()) {
@@ -118,6 +99,31 @@ export function ImportDialog({
       return false;
     }
   };
+
+  // Synchronise le contenu à l'ouverture/fermeture pendant le rendu
+  // (et non dans un effet) pour éviter un rendu en cascade
+  const [prevOpen, setPrevOpen] = useState<boolean | null>(null);
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+  if (open !== prevOpen || initialData !== prevInitialData) {
+    setPrevOpen(open);
+    setPrevInitialData(initialData);
+    if (open) {
+      if (initialData) {
+        const content = JSON.stringify(initialData, null, 2);
+        setJsonContent(content);
+        validateJSON(content);
+      } else {
+        const content = JSON.stringify(DEFAULT_EXAMPLE, null, 2);
+        setJsonContent(content);
+        setIsValid(false);
+        setError(null);
+      }
+    } else {
+      setJsonContent("");
+      setIsValid(false);
+      setError(null);
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;

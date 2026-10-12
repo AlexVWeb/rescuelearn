@@ -20,7 +20,7 @@ export default async function ProfilePage() {
       <div>
         <h1 className="text-2xl font-bold">Mon compte</h1>
         <p className="text-muted-foreground text-sm">
-          Gérez vos informations personnelles.
+          Gérez vos informations personnelles et la sécurité de votre compte.
         </p>
       </div>
       <ProfileForm user={user} />

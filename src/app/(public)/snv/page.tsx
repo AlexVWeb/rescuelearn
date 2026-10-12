@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { snvService } from "./services/snvService";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { useMounted } from "@/hooks/use-mounted";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -36,7 +37,7 @@ const itemVariants = {
 };
 
 const SNVCatalogue = () => {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [scenarios, setScenarios] = useState<SNVScenario[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,10 +50,6 @@ const SNVCatalogue = () => {
   const [selectedTime, setSelectedTime] = useState<number>(60);
   const [totalPages, setTotalPages] = useState<number>(1);
   const router = useRouter();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!mounted) return;

@@ -13,18 +13,24 @@ import {
   VolumeX,
   BookOpen,
 } from "lucide-react";
-import { submitNodeCompletionAction } from "@/app/actions/progression-player-actions";
+import {
+  answerExerciseAction,
+  submitNodeCompletionAction,
+} from "@/app/actions/progression-player-actions";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { marked } from "marked";
 import { PlaySessionExercise } from "@/types/progression";
+import { VideoExercise } from "./video-exercise";
 
 interface PlaySessionClientProps {
   sessionData: {
+    attemptId: string;
     nodeId: string;
     title: string;
     xpReward: number;
+    hearts: number;
     exercises: PlaySessionExercise[];
   };
 }
@@ -32,15 +38,19 @@ interface PlaySessionClientProps {
 export default function PlaySessionClient({
   sessionData,
 }: PlaySessionClientProps) {
-  const { nodeId, title, exercises } = sessionData;
+  const { attemptId, title, exercises } = sessionData;
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Game states
-  const [hearts, setHearts] = useState(5);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [hearts, setHearts] = useState(sessionData.hearts);
   const [isFinished, setIsFinished] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
-  const [xpEarned, setXpEarned] = useState(0);
+  const [result, setResult] = useState<{
+    xpGained: number;
+    score: number;
+    alreadyCompleted: boolean;
+  } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Exercise validation state
@@ -48,11 +58,24 @@ export default function PlaySessionClient({
     null
   );
   const [isAnswered, setIsAnswered] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    correctAnswerIndex: number;
+    explanation: string | null;
+  } | null>(null);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
+  // Vidéos validées par le serveur (visionnage complet)
+  const [watchedVideoIds, setWatchedVideoIds] = useState(
+    () =>
+      new Set(exercises.filter((ex) => ex.video?.completed).map((ex) => ex.id))
+  );
 
   const router = useRouter();
 
   const currentExercise = exercises[currentIndex];
+  const isVideoPending =
+    currentExercise?.type === "VIDEO" &&
+    Boolean(currentExercise.video) &&
+    !watchedVideoIds.has(currentExercise.id);
   const progressPercent =
     exercises.length > 0 ? (currentIndex / exercises.length) * 100 : 100;
 
@@ -104,46 +127,56 @@ export default function PlaySessionClient({
     }
   };
 
-  const handleValidateAnswer = () => {
-    if (selectedOptionIdx === null) return;
-    setIsAnswered(true);
-
-    const isCorrect =
-      selectedOptionIdx === currentExercise.question?.correctAnswerIndex;
-    if (isCorrect) {
-      setCorrectAnswers((prev) => prev + 1);
-      playSound("correct");
-    } else {
-      setHearts((prev) => {
-        const nextHearts = prev - 1;
-        if (nextHearts <= 0) {
-          setIsGameOver(true);
-          playSound("incorrect");
-        }
-        return nextHearts;
+  const handleValidateAnswer = async () => {
+    if (selectedOptionIdx === null || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await answerExerciseAction({
+        attemptId,
+        exerciseId: currentExercise.id,
+        optionIndex: selectedOptionIdx,
       });
-      playSound("incorrect");
+      if (!res.success || !res.data) {
+        toast.error(res.error || "Erreur de validation.");
+        if (res.error === "Plus de vies disponibles.") setIsGameOver(true);
+        return;
+      }
+      setIsAnswered(true);
+      setFeedback({
+        correctAnswerIndex: res.data.correctAnswerIndex,
+        explanation: res.data.explanation,
+      });
+      setHearts(res.data.hearts);
+      playSound(res.data.isCorrect ? "correct" : "incorrect");
+      if (!res.data.isCorrect && res.data.hearts <= 0) setIsGameOver(true);
+    } catch {
+      toast.error("Une erreur inattendue est survenue.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleNext = async () => {
+    if (isSubmitting) return;
     playSound("click");
     setSelectedOptionIdx(null);
     setIsAnswered(false);
+    setFeedback(null);
     setIsCardFlipped(false);
 
     if (currentIndex + 1 < exercises.length) {
       setCurrentIndex((prev) => prev + 1);
     } else {
-      // All exercises finished, submit progress
-      const finalScore =
-        exercises.length > 0
-          ? Math.round((correctAnswers / exercises.length) * 100)
-          : 100;
+      // Fin de leçon : le serveur calcule le score à partir des réponses notées
+      setIsSubmitting(true);
       try {
-        const res = await submitNodeCompletionAction(nodeId, finalScore);
+        const res = await submitNodeCompletionAction(attemptId);
         if (res.success && res.data) {
-          setXpEarned(res.data.xpGained);
+          setResult({
+            xpGained: res.data.xpGained,
+            score: res.data.score,
+            alreadyCompleted: res.data.alreadyCompleted,
+          });
           setIsFinished(true);
           playSound("success");
         } else {
@@ -151,6 +184,8 @@ export default function PlaySessionClient({
         }
       } catch {
         toast.error("Une erreur inattendue est survenue.");
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -168,7 +203,8 @@ export default function PlaySessionClient({
         <h2 className="text-2xl font-black text-red-600">Plus de vies !</h2>
         <p className="text-sm leading-relaxed text-gray-500">
           Ne vous découragez pas, le secourisme demande de l'entraînement.
-          Révisez vos fiches et réessayez !
+          Révisez vos fiches et réessayez : une vie se recharge toutes les 4
+          heures.
         </p>
         <Button
           className="w-full rounded-2xl bg-blue-600 py-6 font-bold text-white hover:bg-blue-700"
@@ -180,7 +216,7 @@ export default function PlaySessionClient({
     );
   }
 
-  if (isFinished) {
+  if (isFinished && result) {
     return (
       <div className="animate-fade-in mx-auto flex min-h-[85vh] max-w-md flex-col items-center justify-center space-y-6 p-6 text-center">
         <div className="animate-bounce text-6xl">🎉</div>
@@ -192,20 +228,30 @@ export default function PlaySessionClient({
         </div>
         <div className="flex w-full items-center justify-around rounded-2xl border border-amber-100 bg-amber-50 p-4">
           <div className="text-center">
-            <span className="block text-2xl font-black text-amber-600">
-              +{xpEarned}
-            </span>
-            <span className="text-xs font-bold tracking-widest text-gray-500 uppercase">
-              XP gagnés
-            </span>
+            {result.alreadyCompleted ? (
+              <>
+                <span className="block text-2xl font-black text-amber-600">
+                  ✓
+                </span>
+                <span className="text-xs font-bold tracking-widest text-gray-500 uppercase">
+                  Bloc déjà validé
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="block text-2xl font-black text-amber-600">
+                  +{result.xpGained}
+                </span>
+                <span className="text-xs font-bold tracking-widest text-gray-500 uppercase">
+                  XP gagnés
+                </span>
+              </>
+            )}
           </div>
           <div className="h-8 w-px bg-amber-200" />
           <div className="text-center">
             <span className="block text-2xl font-black text-emerald-600">
-              {exercises.length > 0
-                ? Math.round((correctAnswers / exercises.length) * 100)
-                : 100}
-              %
+              {result.score}%
             </span>
             <span className="text-xs font-bold tracking-widest text-gray-500 uppercase">
               Précision
@@ -292,8 +338,7 @@ export default function PlaySessionClient({
               {currentExercise.question?.options.map(
                 (opt: { id?: string | number; text: string }, idx: number) => {
                   const isSelected = selectedOptionIdx === idx;
-                  const isCorrectAnswer =
-                    idx === currentExercise.question?.correctAnswerIndex;
+                  const isCorrectAnswer = idx === feedback?.correctAnswerIndex;
 
                   return (
                     <button
@@ -331,13 +376,28 @@ export default function PlaySessionClient({
             </div>
 
             {/* Explanation box after submit */}
-            {isAnswered && currentExercise.question?.explanation && (
+            {isAnswered && feedback?.explanation && (
               <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs leading-relaxed text-blue-900">
-                <strong>💡 Explication :</strong>{" "}
-                {currentExercise.question?.explanation}
+                <strong>💡 Explication :</strong> {feedback.explanation}
               </div>
             )}
           </div>
+        )}
+
+        {/* VIDEO TYPE */}
+        {currentExercise.type === "VIDEO" && currentExercise.video && (
+          <VideoExercise
+            key={currentExercise.id}
+            attemptId={attemptId}
+            exerciseId={currentExercise.id}
+            video={currentExercise.video}
+            onCompleted={() => {
+              playSound("correct");
+              setWatchedVideoIds((prev) =>
+                new Set(prev).add(currentExercise.id)
+              );
+            }}
+          />
         )}
 
         {/* FLASHCARD TYPE */}
@@ -397,7 +457,7 @@ export default function PlaySessionClient({
         {currentExercise.type === "QUIZ_QUESTION" && !isAnswered ? (
           <Button
             className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-blue-600 py-6 font-bold text-white hover:bg-blue-700"
-            disabled={selectedOptionIdx === null}
+            disabled={selectedOptionIdx === null || isSubmitting}
             onClick={handleValidateAnswer}
           >
             Valider la réponse
@@ -405,6 +465,12 @@ export default function PlaySessionClient({
         ) : (
           <Button
             className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-blue-600 py-6 font-bold text-white hover:bg-blue-700"
+            disabled={isSubmitting || isVideoPending}
+            title={
+              isVideoPending
+                ? "Regardez la vidéo jusqu'au bout pour continuer"
+                : undefined
+            }
             onClick={handleNext}
           >
             Continuer

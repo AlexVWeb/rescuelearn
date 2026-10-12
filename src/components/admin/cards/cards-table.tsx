@@ -20,8 +20,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Edit, Trash, Search } from "lucide-react";
+import { MoreHorizontal, Edit, Trash, Search, Pencil } from "lucide-react";
 import { useTransition } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArchivedBadge } from "@/components/admin/archived-badge";
+import { BulkActionsBar } from "@/components/admin/bulk-actions-bar";
+import type { BulkContentAction } from "@/lib/content-archive";
+import {
+  BulkEditCardsDialog,
+  type BulkCardChanges,
+} from "@/components/admin/cards/bulk-edit-cards-dialog";
 
 interface ReferencielSimple {
   id: number;
@@ -36,6 +44,8 @@ interface LearningCardAdmin {
   reference: string;
   referencielId: number | null;
   referenciel?: ReferencielSimple | null;
+  archivedAt: Date | null;
+  _count?: { progressionExercises: number };
 }
 
 interface CardsTableProps {
@@ -48,9 +58,25 @@ interface CardsTableProps {
   };
   onEdit: (card: LearningCardAdmin) => void;
   onDelete: (id: number) => void;
+  onBulkAction: (ids: number[], action: BulkContentAction) => Promise<boolean>;
+  onBulkEdit: (ids: number[], changes: BulkCardChanges) => Promise<boolean>;
+  referenciels: ReferencielSimple[];
+  niveaux: string[];
+  /** Récupère les ids de toutes les cartes filtrées (toutes pages) */
+  onSelectAllFiltered: () => Promise<number[]>;
 }
 
-export function CardsTable({ data, meta, onEdit, onDelete }: CardsTableProps) {
+export function CardsTable({
+  data,
+  meta,
+  onEdit,
+  onDelete,
+  onBulkAction,
+  onBulkEdit,
+  referenciels,
+  niveaux,
+  onSelectAllFiltered,
+}: CardsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -79,6 +105,54 @@ export function CardsTable({ data, meta, onEdit, onDelete }: CardsTableProps) {
     });
   };
 
+  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+
+  // Changement de page/filtre ou rafraîchissement : on repart d'une sélection vide
+  // pour ne jamais agir sur des cartes qui ne sont plus affichées.
+  const [syncedData, setSyncedData] = React.useState(data);
+  if (syncedData !== data) {
+    setSyncedData(data);
+    setSelected(new Set());
+  }
+
+  const allSelected = data.length > 0 && data.every((c) => selected.has(c.id));
+  const someSelected = !allSelected && data.some((c) => selected.has(c.id));
+
+  const toggleAll = (checked: boolean) => {
+    setSelected(checked ? new Set(data.map((c) => c.id)) : new Set());
+  };
+
+  const toggleOne = (id: number, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const [selectingAll, setSelectingAll] = React.useState(false);
+  const selectAllFiltered = async () => {
+    setSelectingAll(true);
+    try {
+      const ids = await onSelectAllFiltered();
+      if (ids.length) setSelected(new Set(ids));
+    } finally {
+      setSelectingAll(false);
+    }
+  };
+
+  const handleBulkAction = async (action: BulkContentAction) => {
+    if (await onBulkAction([...selected], action)) setSelected(new Set());
+  };
+
+  const [bulkEditOpen, setBulkEditOpen] = React.useState(false);
+  const handleBulkEdit = async (changes: BulkCardChanges) => {
+    const ok = await onBulkEdit([...selected], changes);
+    if (ok) setSelected(new Set());
+    return ok;
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateParams(1, searchVal);
@@ -105,30 +179,100 @@ export function CardsTable({ data, meta, onEdit, onDelete }: CardsTableProps) {
         </Button>
       </form>
 
+      <BulkActionsBar
+        count={selected.size}
+        itemLabel="carte(s)"
+        deleteWarning="Les étapes de leçon qui utilisent ces cartes seront aussi retirées des parcours. Préférez l'archivage pour simplement masquer ces contenus."
+        onAction={handleBulkAction}
+        onClear={() => setSelected(new Set())}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setBulkEditOpen(true)}
+        >
+          <Pencil className="mr-2 h-4 w-4" /> Modifier
+        </Button>
+      </BulkActionsBar>
+      <BulkEditCardsDialog
+        open={bulkEditOpen}
+        onOpenChange={setBulkEditOpen}
+        count={selected.size}
+        referenciels={referenciels}
+        niveaux={niveaux}
+        onSubmit={handleBulkEdit}
+      />
+      {allSelected && meta.total > selected.size && (
+        <p className="text-muted-foreground text-sm">
+          Les {selected.size} cartes de la page sont sélectionnées.{" "}
+          <button
+            type="button"
+            onClick={selectAllFiltered}
+            disabled={selectingAll}
+            className="font-semibold text-blue-600 hover:underline disabled:opacity-50"
+          >
+            {selectingAll
+              ? "Sélection..."
+              : `Sélectionner les ${meta.total} cartes filtrées`}
+          </button>
+        </p>
+      )}
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={allSelected || (someSelected && "indeterminate")}
+                  onCheckedChange={(value) => toggleAll(!!value)}
+                  aria-label="Tout sélectionner"
+                />
+              </TableHead>
               <TableHead className="w-[180px]">Thème</TableHead>
               <TableHead className="w-[120px]">Niveau</TableHead>
               <TableHead>Informations</TableHead>
               <TableHead className="w-[150px]">Référence</TableHead>
               <TableHead className="w-[180px]">Référentiel</TableHead>
+              <TableHead className="w-[80px]">Leçons</TableHead>
               <TableHead className="w-[80px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length > 0 ? (
               data.map((card) => (
-                <TableRow key={card.id}>
-                  <TableCell className="font-semibold">{card.theme}</TableCell>
+                <TableRow
+                  key={card.id}
+                  data-state={selected.has(card.id) && "selected"}
+                >
+                  <TableCell>
+                    <Checkbox
+                      checked={selected.has(card.id)}
+                      onCheckedChange={(value) => toggleOne(card.id, !!value)}
+                      aria-label="Sélectionner la carte"
+                    />
+                  </TableCell>
+                  <TableCell className="font-semibold">
+                    <div className="flex flex-col items-start gap-1">
+                      {card.theme}
+                      {card.archivedAt && <ArchivedBadge />}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <span className="inline-flex items-center rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-700/10 ring-inset">
                       {card.niveau}
                     </span>
                   </TableCell>
-                  <TableCell className="max-w-[400px] truncate">
-                    {card.info}
+                  <TableCell className="max-w-[400px] min-w-[260px]">
+                    {card.info ? (
+                      <div className="line-clamp-2 whitespace-normal">
+                        {card.info}
+                      </div>
+                    ) : (
+                      <span className="text-xs font-semibold text-red-600">
+                        Contenu vide
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {card.reference}
@@ -142,6 +286,15 @@ export function CardsTable({ data, meta, onEdit, onDelete }: CardsTableProps) {
                       <span className="text-muted-foreground text-xs italic">
                         Aucun
                       </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {card._count?.progressionExercises ? (
+                      <span className="bg-secondary rounded-md px-2 py-0.5 text-xs font-semibold">
+                        {card._count.progressionExercises}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -170,7 +323,7 @@ export function CardsTable({ data, meta, onEdit, onDelete }: CardsTableProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   Aucune carte d'apprentissage trouvée.
                 </TableCell>
               </TableRow>

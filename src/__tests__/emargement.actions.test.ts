@@ -51,6 +51,7 @@ function mockAuthenticatedUser(organismeId = "org-1") {
   mockPrisma.user.findUnique.mockResolvedValue({
     id: "user-1",
     organismeId,
+    roles: ["ADMIN_ORGANISME"],
   });
 }
 
@@ -94,6 +95,16 @@ describe("generateSlotPin", () => {
     await expect(generateSlotPin("slot-1")).rejects.toThrow(
       "Aucun organisme associé"
     );
+  });
+
+  it("throw si un joueur rattaché à l'organisme tente de générer un PIN", async () => {
+    mockAuthenticatedUser();
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      organismeId: "org-1",
+      roles: ["PLAYER"],
+    });
+    await expect(generateSlotPin("slot-1")).rejects.toThrow("Non autorisé");
   });
 
   it("throw si le créneau n'existe pas", async () => {

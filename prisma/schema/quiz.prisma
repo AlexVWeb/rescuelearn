@@ -14,6 +14,7 @@ model Quiz {
   generatedByAi     Boolean            @default(false)
   aiModel           String?
   aiPrompt          String?            @db.Text
+  archivedAt        DateTime? // Non nul = archivé (ex : référentiel déprécié), masqué côté joueur
   sessions          QuizSession[]
 }
 

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { logger } from "@/lib/logger";
-import { UserRole } from "@/lib/roles";
+import { hasRole, UserRole } from "@/lib/roles";
 
 export async function requestPasswordReset(email: string) {
   try {
@@ -92,4 +92,26 @@ export async function linkUserToOrganisme(inviteCode: string) {
       error: "Une erreur est survenue lors de l'association à l'organisme.",
     };
   }
+}
+
+/**
+ * Destination après une connexion par passkey : la passkey identifie le
+ * compte sans passer par l'onglet élève/formateur, on route selon les rôles.
+ */
+export async function getPostLoginPath(): Promise<string> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return "/login";
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { roles: true },
+  });
+
+  const isTrainer = [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN_ORGANISME,
+    UserRole.FORMATEUR,
+  ].some((role) => hasRole(user?.roles, role));
+
+  return isTrainer ? "/admin" : "/player";
 }

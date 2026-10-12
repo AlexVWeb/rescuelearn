@@ -1,9 +1,24 @@
 "use client";
 
 import React from "react";
-import { Trophy, Flame, Star, Heart, Volume2, VolumeX } from "lucide-react";
+import {
+  Flame,
+  GraduationCap,
+  Heart,
+  Star,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
+
+export interface LevelProgress {
+  level: string;
+  nextLevel: string | null;
+  completedNodes: number;
+  totalNodes: number;
+}
 
 interface PlayerStatsBannerProps {
+  levelProgress?: LevelProgress | null;
   streak: number;
   xp: number;
   hearts: number;
@@ -11,7 +26,26 @@ interface PlayerStatsBannerProps {
   onToggleSound: () => void;
 }
 
+function levelObjective({
+  nextLevel,
+  completedNodes,
+  totalNodes,
+}: LevelProgress): string {
+  if (totalNodes === 0) return "Parcours en préparation";
+  const remaining = totalNodes - completedNodes;
+  if (remaining > 0) {
+    const lessons = `${remaining} leçon${remaining > 1 ? "s" : ""}`;
+    return nextLevel
+      ? `Objectif : encore ${lessons} pour débloquer ${nextLevel}`
+      : `Objectif : encore ${lessons} pour terminer le parcours`;
+  }
+  return nextLevel
+    ? `Parcours terminé · ${nextLevel} bientôt disponible`
+    : "Filière terminée, bravo !";
+}
+
 export function PlayerStatsBanner({
+  levelProgress,
   streak,
   xp,
   hearts,
@@ -23,17 +57,38 @@ export function PlayerStatsBanner({
       className="mb-8 flex flex-wrap items-center justify-between gap-6 rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white shadow-xl md:p-8"
       aria-label="Statistiques principales"
     >
-      <div className="flex items-center gap-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-white shadow-inner backdrop-blur-md">
-          <Trophy className="h-8 w-8 animate-bounce text-yellow-300" />
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white shadow-inner backdrop-blur-md">
+          <GraduationCap className="h-8 w-8 text-yellow-300" />
         </div>
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-black tracking-tight md:text-3xl">
-            LIGUE DE BRONZE
+            {levelProgress ? `NIVEAU ${levelProgress.level}` : "MON PARCOURS"}
           </h1>
-          <p className="text-xs font-extrabold tracking-wider text-blue-200 uppercase">
-            Objectif : Finir dans le top 3 pour monter
-          </p>
+          {levelProgress && (
+            <>
+              <p className="text-xs font-extrabold tracking-wider text-blue-200 uppercase">
+                {levelObjective(levelProgress)}
+              </p>
+              {levelProgress.totalNodes > 0 && (
+                <div
+                  role="progressbar"
+                  aria-label={`Progression du niveau ${levelProgress.level}`}
+                  aria-valuemin={0}
+                  aria-valuemax={levelProgress.totalNodes}
+                  aria-valuenow={levelProgress.completedNodes}
+                  className="mt-2 h-1.5 w-48 max-w-full overflow-hidden rounded-full bg-white/20"
+                >
+                  <div
+                    className="h-full rounded-full bg-yellow-300 transition-all duration-500"
+                    style={{
+                      width: `${(levelProgress.completedNodes / levelProgress.totalNodes) * 100}%`,
+                    }}
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 

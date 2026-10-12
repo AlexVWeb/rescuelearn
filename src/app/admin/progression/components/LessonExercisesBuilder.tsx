@@ -1,15 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -21,12 +14,20 @@ import {
   BookOpen,
   HelpCircle,
   GraduationCap,
+  PlayCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import type { Exercise } from "@/types/progression";
+import { answerIndex } from "@/lib/quiz-answers";
+import { ExerciseItemPicker, type PickerItem } from "./ExerciseItemPicker";
+import { VideoExerciseConfig } from "./VideoExerciseConfig";
 
-interface Question {
+export interface AdminQuestion {
   id: number;
   text: string;
+  correctAnswer: string;
+  quiz: { title: string };
+  options: { text: string }[];
 }
 
 interface LearningCard {
@@ -35,20 +36,20 @@ interface LearningCard {
   info: string;
 }
 
-interface Exercise {
-  type: "MICRO_COURSE" | "QUIZ_QUESTION" | "FLASHCARD" | "MINI_GAME";
-  questionId?: number | null;
-  learningCardId?: number | null;
-  courseTitle?: string | null;
-  courseContent?: string | null;
-}
-
 interface LessonExercisesBuilderProps {
   initialExercises: Exercise[];
-  availableQuestions: Question[];
+  availableQuestions: AdminQuestion[];
   availableLearningCards: LearningCard[];
   onSave: (exercises: Exercise[]) => Promise<void>;
 }
+
+const TYPE_ACCENT: Record<Exercise["type"], string> = {
+  MICRO_COURSE: "border-l-emerald-500",
+  QUIZ_QUESTION: "border-l-blue-600",
+  FLASHCARD: "border-l-purple-500",
+  MINI_GAME: "border-l-amber-500",
+  VIDEO: "border-l-rose-500",
+};
 
 export function LessonExercisesBuilder({
   initialExercises,
@@ -63,9 +64,42 @@ export function LessonExercisesBuilder({
       learningCardId: ex.learningCardId || null,
       courseTitle: ex.courseTitle || "",
       courseContent: ex.courseContent || "",
+      videoUrl: ex.videoUrl || "",
+      videoTitle: ex.videoTitle || "",
+      videoDurationSec: ex.videoDurationSec ?? null,
+      // Questions / fiches générées par l'IA, créées en base à la sauvegarde
+      _newQuestion: ex._newQuestion,
+      _newFlashcard: ex._newFlashcard,
     }))
   );
   const [isSaving, setIsSaving] = useState(false);
+
+  const questionItems = useMemo<PickerItem[]>(
+    () =>
+      availableQuestions.map((q) => {
+        const correct = answerIndex(q.correctAnswer);
+        return {
+          id: q.id,
+          title: q.text,
+          subtitle: q.quiz.title,
+          options: q.options.map((opt, idx) => ({
+            text: opt.text,
+            correct: idx === correct,
+          })),
+        };
+      }),
+    [availableQuestions]
+  );
+
+  const cardItems = useMemo<PickerItem[]>(
+    () =>
+      availableLearningCards.map((c) => ({
+        id: c.id,
+        title: c.info,
+        subtitle: c.theme,
+      })),
+    [availableLearningCards]
+  );
 
   const handleAddExercise = (type: Exercise["type"]) => {
     const newEx: Exercise = {
@@ -104,10 +138,11 @@ export function LessonExercisesBuilder({
     setExercises(updated);
   };
 
+  // Forme fonctionnelle : l'aperçu vidéo met à jour la durée de façon asynchrone
   const handleUpdateExercise = (index: number, fields: Partial<Exercise>) => {
-    const updated = [...exercises];
-    updated[index] = { ...updated[index], ...fields };
-    setExercises(updated);
+    setExercises((prev) =>
+      prev.map((ex, i) => (i === index ? { ...ex, ...fields } : ex))
+    );
   };
 
   const handleSave = async () => {
@@ -158,9 +193,9 @@ export function LessonExercisesBuilder({
             return (
               <Card
                 key={index}
-                className="relative border-l-4 border-l-blue-600"
+                className={`relative min-w-0 gap-3 border-l-4 py-4 ${TYPE_ACCENT[ex.type]}`}
               >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
                   <div className="flex items-center gap-2">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600">
                       {index + 1}
@@ -182,6 +217,12 @@ export function LessonExercisesBuilder({
                         <>
                           <GraduationCap className="h-4 w-4 text-purple-600" />
                           <span>Flashcard</span>
+                        </>
+                      )}
+                      {ex.type === "VIDEO" && (
+                        <>
+                          <PlayCircle className="h-4 w-4 text-rose-600" />
+                          <span>Vidéo</span>
                         </>
                       )}
                     </CardTitle>
@@ -252,53 +293,88 @@ export function LessonExercisesBuilder({
                   {/* QUIZ CONFIG */}
                   {ex.type === "QUIZ_QUESTION" && (
                     <div className="grid gap-2">
-                      <Label>Sélectionner la question</Label>
-                      <Select
-                        value={String(ex.questionId || "")}
-                        onValueChange={(val) =>
+                      <Label>Question</Label>
+                      <ExerciseItemPicker
+                        items={questionItems}
+                        selected={
+                          ex._newQuestion
+                            ? {
+                                id: -1,
+                                title: ex._newQuestion.text,
+                                options: ex._newQuestion.options.map(
+                                  (opt, oIdx) => ({
+                                    text: opt,
+                                    correct:
+                                      oIdx ===
+                                      answerIndex(
+                                        ex._newQuestion!.correctAnswer
+                                      ),
+                                  })
+                                ),
+                              }
+                            : (questionItems.find(
+                                (q) => q.id === ex.questionId
+                              ) ?? null)
+                        }
+                        selectedBadge={
+                          ex._newQuestion
+                            ? "Nouvelle · créée à la sauvegarde"
+                            : undefined
+                        }
+                        onSelect={(id) =>
                           handleUpdateExercise(index, {
-                            questionId: parseInt(val, 10),
+                            questionId: id,
+                            _newQuestion: undefined,
                           })
                         }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choisir une question..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableQuestions.map((q) => (
-                            <SelectItem key={q.id} value={String(q.id)}>
-                              {q.text}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Choisir une question..."
+                        dialogTitle="Choisir une question"
+                        searchPlaceholder="Rechercher par texte ou banque de quiz..."
+                      />
                     </div>
                   )}
 
                   {/* FLASHCARD CONFIG */}
                   {ex.type === "FLASHCARD" && (
                     <div className="grid gap-2">
-                      <Label>Sélectionner la fiche mémo</Label>
-                      <Select
-                        value={String(ex.learningCardId || "")}
-                        onValueChange={(val) =>
+                      <Label>Fiche mémo</Label>
+                      <ExerciseItemPicker
+                        items={cardItems}
+                        selected={
+                          ex._newFlashcard
+                            ? {
+                                id: -1,
+                                title: ex._newFlashcard.info,
+                                subtitle: ex._newFlashcard.theme,
+                              }
+                            : (cardItems.find(
+                                (c) => c.id === ex.learningCardId
+                              ) ?? null)
+                        }
+                        selectedBadge={
+                          ex._newFlashcard
+                            ? "Nouvelle · créée à la sauvegarde"
+                            : undefined
+                        }
+                        onSelect={(id) =>
                           handleUpdateExercise(index, {
-                            learningCardId: parseInt(val, 10),
+                            learningCardId: id,
+                            _newFlashcard: undefined,
                           })
                         }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choisir une fiche..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableLearningCards.map((c) => (
-                            <SelectItem key={c.id} value={String(c.id)}>
-                              [{c.theme}] {c.info.substring(0, 80)}...
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Choisir une fiche..."
+                        dialogTitle="Choisir une fiche mémo"
+                        searchPlaceholder="Rechercher par thème ou contenu..."
+                      />
                     </div>
+                  )}
+
+                  {/* VIDEO CONFIG */}
+                  {ex.type === "VIDEO" && (
+                    <VideoExerciseConfig
+                      exercise={ex}
+                      onChange={(fields) => handleUpdateExercise(index, fields)}
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -335,6 +411,14 @@ export function LessonExercisesBuilder({
           onClick={() => handleAddExercise("FLASHCARD")}
         >
           <Plus className="h-4 w-4" /> Flashcard
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="flex items-center gap-1.5"
+          onClick={() => handleAddExercise("VIDEO")}
+        >
+          <Plus className="h-4 w-4" /> Vidéo
         </Button>
       </div>
     </div>

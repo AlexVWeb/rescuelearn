@@ -11,7 +11,12 @@ import Link from "next/link";
 import { User as UserIcon } from "lucide-react";
 import { PlayerNav } from "./components/PlayerNav";
 import { PlayerSignOutButton } from "./components/PlayerSignOutButton";
-import { isFeatureEnabled, FeatureKey } from "@/lib/features";
+import {
+  isFeatureEnabled,
+  FeatureKey,
+  getPlayerModulesState,
+} from "@/lib/features";
+import { PlayerModulesProvider } from "./components/PlayerModulesProvider";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +83,8 @@ export default async function PlayerLayout({
     redirect(`/verify-email?email=${encodeURIComponent(dbUser.email)}`);
   }
 
+  const modules = await getPlayerModulesState();
+
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
       {/* Header / Navbar */}
@@ -109,14 +116,18 @@ export default async function PlayerLayout({
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+            <Link
+              href="/player/profil"
+              className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 transition-colors hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"
+              aria-label="Mon profil"
+            >
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700">
                 <UserIcon className="h-4 w-4" />
               </div>
               <span className="hidden text-sm font-medium text-gray-700 sm:inline-block">
                 {dbUser.name}
               </span>
-            </div>
+            </Link>
 
             {/* Bouton de déconnexion utilisant un composant interactif léger */}
             <PlayerSignOutButton />
@@ -127,7 +138,9 @@ export default async function PlayerLayout({
       {/* Main Content Area */}
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {children}
+          <PlayerModulesProvider modules={modules}>
+            {children}
+          </PlayerModulesProvider>
         </div>
       </main>
     </div>

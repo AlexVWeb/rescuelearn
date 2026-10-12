@@ -143,11 +143,14 @@ export async function reorderProgressionNodesAction(
 }
 
 const exerciseSaveSchema = z.object({
-  type: z.enum(["MICRO_COURSE", "QUIZ_QUESTION", "FLASHCARD"]),
+  type: z.enum(["MICRO_COURSE", "QUIZ_QUESTION", "FLASHCARD", "VIDEO"]),
   questionId: z.number().nullable().optional(),
   learningCardId: z.number().nullable().optional(),
   courseTitle: z.string().nullable().optional(),
   courseContent: z.string().nullable().optional(),
+  videoUrl: z.string().nullable().optional(),
+  videoTitle: z.string().max(200).nullable().optional(),
+  videoDurationSec: z.number().int().nullable().optional(),
   _newQuestion: z
     .object({
       text: z.string(),

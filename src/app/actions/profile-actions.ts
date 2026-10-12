@@ -6,22 +6,34 @@ import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
+import { APIError } from "better-auth/api";
 
 import { EmailService } from "@/lib/email";
+
+const PROFILE_PATHS = ["/admin/profile", "/player/profil"] as const;
+type ProfilePath = (typeof PROFILE_PATHS)[number];
 
 export async function updateProfileAction(data: {
   firstName: string;
   lastName: string;
   email: string;
   currentPassword?: string;
+  /** Page où ramener l'utilisateur après les liens de confirmation e-mail. */
+  profilePath?: ProfilePath;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const reqHeaders = await headers();
+  const session = await auth.api.getSession({ headers: reqHeaders });
   if (!session) return { success: false, error: "Non autorisé" };
 
   const fullName = `${data.firstName} ${data.lastName}`.trim();
   const currentEmail = session.user.email;
-  const isEmailChanging =
-    data.email.toLowerCase().trim() !== currentEmail.toLowerCase().trim();
+  const newEmail = data.email.toLowerCase().trim();
+  const isEmailChanging = newEmail !== currentEmail.toLowerCase().trim();
+  const profilePath: ProfilePath = PROFILE_PATHS.includes(
+    data.profilePath as ProfilePath
+  )
+    ? (data.profilePath as ProfilePath)
+    : "/admin/profile";
 
   if (isEmailChanging) {
     if (!data.currentPassword) {
@@ -56,39 +68,47 @@ export async function updateProfileAction(data: {
   }
 
   try {
-    const newEmail = data.email.toLowerCase().trim();
     await prisma.user.update({
       where: { id: session.user.id },
       data: {
         firstName: data.firstName,
         lastName: data.lastName,
         name: fullName,
-        ...(isEmailChanging ? { email: newEmail, emailVerified: false } : {}),
       },
     });
-
-    if (isEmailChanging) {
-      logger.info(
-        `User ${session.user.id} updated email from ${currentEmail} to ${newEmail}`
-      );
-      await EmailService.sendEmailChangedNotification({
-        oldEmail: currentEmail,
-        newEmail,
-      });
-    }
-
-    revalidatePath("/admin/profile");
-    return { success: true, emailChanged: isEmailChanging };
   } catch (error) {
-    if (
-      error instanceof Error &&
-      (error as { code?: string }).code === "P2002"
-    ) {
-      return { success: false, error: "Cet email est déjà utilisé" };
-    }
     logger.error("Failed to update profile:", error);
     return { success: false, error: "Erreur lors de la mise à jour" };
   }
+
+  if (isEmailChanging) {
+    // L'email n'est pas modifié ici : Better-Auth envoie un lien d'approbation
+    // à l'ancienne adresse, puis un lien de vérification à la nouvelle.
+    try {
+      await auth.api.changeEmail({
+        body: { newEmail, callbackURL: profilePath },
+        headers: reqHeaders,
+      });
+      logger.info(
+        `User ${session.user.id} requested email change from ${currentEmail} to ${newEmail}`
+      );
+    } catch (error) {
+      if (
+        error instanceof APIError &&
+        error.status === "UNPROCESSABLE_ENTITY"
+      ) {
+        return { success: false, error: "Cet email est déjà utilisé" };
+      }
+      logger.error("Failed to request email change:", error);
+      return {
+        success: false,
+        error: "Impossible d'envoyer l'e-mail de confirmation.",
+      };
+    }
+  }
+
+  revalidatePath(profilePath);
+  return { success: true, emailChangePending: isEmailChanging };
 }
 
 export async function updatePasswordAction(data: {

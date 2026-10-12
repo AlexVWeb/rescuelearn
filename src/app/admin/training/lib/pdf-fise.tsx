@@ -150,8 +150,6 @@ const FisePage: React.FC<FisePageProps> = ({
     ? dayjs(inscription.trainee.dateOfBirth).format("DD/MM/YYYY")
     : "";
 
-  const isAcquis = inscription.attestationResult === "acquis";
-
   return (
     <Page size="A4" style={styles.page}>
       {/* ── HEADER ──────────────────────────────────────────────────────────── */}
@@ -451,8 +449,7 @@ const MultipleFiseDocument: React.FC<MultipleFiseDocumentProps> = ({
 // ──────────────────────────────────────────────────────────────────────────
 
 type PDFDownloadChildren =
-  | React.ReactNode
-  | ((props: { loading: boolean }) => React.ReactNode);
+  React.ReactNode | ((props: { loading: boolean }) => React.ReactNode);
 
 /**
  * Component to download a single FISE PDF

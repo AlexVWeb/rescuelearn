@@ -77,6 +77,7 @@ export async function GET(req: NextRequest) {
         },
         include: {
           quizzes: {
+            where: { archivedAt: null },
             include: {
               questions: {
                 include: {
@@ -99,6 +100,7 @@ export async function GET(req: NextRequest) {
       // If no questions found for specific level, fallback to any question in the database
       if (candidateQuestions.length === 0) {
         candidateQuestions = await prisma.question.findMany({
+          where: { quiz: { archivedAt: null } },
           include: {
             options: true,
             quiz: true,

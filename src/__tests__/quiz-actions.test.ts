@@ -26,6 +26,13 @@ const mockPrisma = vi.hoisted(() => ({
   },
   question: {
     createManyAndReturn: vi.fn(),
+    findMany: vi.fn(),
+    count: vi.fn(),
+    delete: vi.fn(),
+    deleteMany: vi.fn(),
+  },
+  progressionNodeExercise: {
+    deleteMany: vi.fn(),
   },
   questionOption: {
     createMany: vi.fn(),
@@ -36,6 +43,8 @@ const mockPrisma = vi.hoisted(() => ({
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    updateMany: vi.fn(),
+    deleteMany: vi.fn(),
   },
 }));
 
@@ -62,6 +71,8 @@ import {
   updateQuestionAction,
   deleteQuestionAction,
   getAllQuizzesSimpleAction,
+  bulkQuizzesAction,
+  bulkDeleteQuestionsAction,
 } from "@/app/actions/quiz-actions";
 
 describe("quiz-actions", () => {
@@ -145,6 +156,158 @@ describe("quiz-actions", () => {
       expect(res.success).toBe(true);
       expect(res.data).toHaveLength(1);
       expect(res.data?.[0].title).toBe("Quiz 1");
+      expect(mockPrisma.quiz.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            archivedAt: null,
+            title: { contains: "Quiz", mode: "insensitive" },
+          },
+        })
+      );
+    });
+
+    it("should filter archived quizzes of a referenciel", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.quiz.findMany.mockResolvedValue([]);
+      mockPrisma.quiz.count.mockResolvedValue(0);
+
+      await getQuizzesAction(1, 10, "", {
+        archived: "archived",
+        referencielId: 3,
+      });
+      expect(mockPrisma.quiz.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { archivedAt: { not: null }, referencielId: 3 },
+        })
+      );
+    });
+  });
+
+  describe("bulkQuizzesAction", () => {
+    it("should forbid non SUPER_ADMIN users", async () => {
+      mockSession({ id: "player-1" }, [UserRole.FORMATEUR]);
+      const res = await bulkQuizzesAction({ ids: [1], action: "delete" });
+      expect(res).toEqual({ success: false, error: "Forbidden" });
+      expect(mockPrisma.quiz.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("should reject an empty selection", async () => {
+      mockSession({ id: "user-1" });
+      const res = await bulkQuizzesAction({ ids: [], action: "archive" });
+      expect(res.success).toBe(false);
+      expect(mockPrisma.quiz.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("should archive the selected quizzes", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.quiz.updateMany.mockResolvedValue({ count: 2 });
+
+      const res = await bulkQuizzesAction({ ids: [1, 2], action: "archive" });
+      expect(res).toEqual({ success: true, count: 2 });
+      expect(mockPrisma.quiz.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [1, 2] } },
+        data: { archivedAt: expect.any(Date) },
+      });
+    });
+
+    it("should restore the selected quizzes", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.quiz.updateMany.mockResolvedValue({ count: 1 });
+
+      await bulkQuizzesAction({ ids: [4], action: "restore" });
+      expect(mockPrisma.quiz.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [4] } },
+        data: { archivedAt: null },
+      });
+    });
+
+    it("should delete the selected quizzes and their lesson steps", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.$transaction.mockResolvedValue([{ count: 5 }, { count: 3 }]);
+
+      const res = await bulkQuizzesAction({ ids: [1, 2, 3], action: "delete" });
+      expect(res).toEqual({ success: true, count: 3 });
+      expect(
+        mockPrisma.progressionNodeExercise.deleteMany
+      ).toHaveBeenCalledWith({
+        where: { question: { quizId: { in: [1, 2, 3] } } },
+      });
+      expect(mockPrisma.quiz.deleteMany).toHaveBeenCalledWith({
+        where: { id: { in: [1, 2, 3] } },
+      });
+    });
+  });
+
+  describe("getQuestionsAction filters", () => {
+    it("should filter progression banks with no options", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.question.findMany.mockResolvedValue([]);
+      mockPrisma.question.count.mockResolvedValue(0);
+
+      await getQuestionsAction(1, 100, "", {
+        source: "progression",
+        archived: "archived",
+        incomplete: true,
+      });
+      expect(mockPrisma.question.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            options: { none: {} },
+            quiz: {
+              title: { startsWith: "Banque Progression" },
+              archivedAt: { not: null },
+            },
+          },
+        })
+      );
+    });
+
+    it("should exclude progression banks from classic quizzes", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.question.findMany.mockResolvedValue([]);
+      mockPrisma.question.count.mockResolvedValue(0);
+
+      await getQuestionsAction(1, 100, "", { source: "quiz", quizId: 7 });
+      expect(mockPrisma.question.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            quizId: 7,
+            quiz: {
+              NOT: { title: { startsWith: "Banque Progression" } },
+            },
+          },
+        })
+      );
+    });
+  });
+
+  describe("bulkDeleteQuestionsAction", () => {
+    it("should forbid non SUPER_ADMIN users", async () => {
+      mockSession({ id: "player-1" }, [UserRole.FORMATEUR]);
+      const res = await bulkDeleteQuestionsAction({ ids: [1] });
+      expect(res).toEqual({ success: false, error: "Forbidden" });
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("should reject an empty selection", async () => {
+      mockSession({ id: "user-1" });
+      const res = await bulkDeleteQuestionsAction({ ids: [] });
+      expect(res.success).toBe(false);
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("should delete questions and the lesson steps using them", async () => {
+      mockSession({ id: "user-1" });
+      mockPrisma.$transaction.mockResolvedValue([{ count: 2 }, { count: 3 }]);
+
+      const res = await bulkDeleteQuestionsAction({ ids: [4, 5, 6] });
+      expect(res).toEqual({ success: true, count: 3, removedExercises: 2 });
+      expect(
+        mockPrisma.progressionNodeExercise.deleteMany
+      ).toHaveBeenCalledWith({ where: { questionId: { in: [4, 5, 6] } } });
+      expect(mockPrisma.question.deleteMany).toHaveBeenCalledWith({
+        where: { id: { in: [4, 5, 6] } },
+      });
     });
   });
 

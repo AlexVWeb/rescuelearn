@@ -6,6 +6,7 @@ import {
   haveIBeenPwned,
 } from "better-auth/plugins";
 import { APIError } from "better-auth/api";
+import { passkey } from "@better-auth/passkey";
 import { randomUUID } from "crypto";
 
 import { EmailService } from "@/lib/email";
@@ -14,6 +15,8 @@ import { prisma } from "@/lib/prisma";
 import { getBaseUrl } from "@/lib/utils";
 import { isFeatureEnabled, FeatureKey } from "@/lib/features";
 import { getLoginTypeError, LOGIN_TYPE_HEADER } from "@/lib/login-type";
+import { getPasskeyRelyingParty } from "@/lib/passkey-config";
+import { SITE_NAME } from "@/lib/site";
 
 const ac = createAccessControl({
   organization: ["update", "delete"] as const,
@@ -21,6 +24,20 @@ const ac = createAccessControl({
   invitation: ["create", "cancel"] as const,
   ac: ["create", "read", "update", "delete"] as const,
 });
+
+const relyingParty = getPasskeyRelyingParty(getBaseUrl());
+
+/** Lit (sans vérifier) le payload du JWT de vérification émis par Better-Auth. */
+function isChangeEmailVerificationToken(token: string): boolean {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1] ?? "", "base64url").toString()
+    );
+    return payload.requestType === "change-email-verification";
+  } catch {
+    return false;
+  }
+}
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
@@ -47,6 +64,7 @@ export const auth = betterAuth({
       "/sign-up/email": { window: 60 * 60, max: 3 }, // 3 inscriptions / heure
       "/forgot-password": { window: 60 * 60, max: 3 }, // 3 demandes / heure
       "/reset-password": { window: 60 * 60, max: 5 }, // 5 resets / heure
+      "/passkey/verify-authentication": { window: 15 * 60, max: 10 }, // 10 tentatives / 15 min
     },
   },
 
@@ -109,10 +127,22 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({
       user,
       url,
+      token,
     }: {
       user: { email: string };
       url: string;
+      token: string;
     }) => {
+      // Better-Auth réutilise ce hook pour la 2e étape d'un changement d'email
+      // (après approbation par l'ancienne adresse) : user.email est alors la
+      // nouvelle adresse, et le token signé porte ce type de demande.
+      if (isChangeEmailVerificationToken(token)) {
+        await EmailService.sendNewEmailVerification({
+          to: user.email,
+          verificationUrl: url,
+        });
+        return;
+      }
       await EmailService.sendVerificationEmail({
         to: user.email,
         verificationUrl: url,
@@ -121,6 +151,14 @@ export const auth = betterAuth({
   },
 
   plugins: [
+    // Connexion sans mot de passe. Le contrôle d'onglet élève/formateur ne
+    // s'applique pas : la passkey identifie le compte, le client redirige
+    // ensuite selon les rôles (cf. getPostLoginPath).
+    passkey({
+      rpID: relyingParty.rpID,
+      rpName: SITE_NAME,
+      origin: relyingParty.origins,
+    }),
     haveIBeenPwned({
       customPasswordCompromisedMessage:
         "Ce mot de passe a été compromis dans une fuite de données. Veuillez en choisir un autre.",
@@ -212,6 +250,18 @@ export const auth = betterAuth({
     }),
   ],
   user: {
+    // Changement d'email en deux étapes : l'ancienne adresse approuve, puis la
+    // nouvelle est vérifiée. L'email du compte ne change qu'à la fin.
+    changeEmail: {
+      enabled: true,
+      sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+        await EmailService.sendEmailChangeConfirmation({
+          to: user.email,
+          newEmail,
+          confirmUrl: url,
+        });
+      },
+    },
     additionalFields: {
       roles: {
         type: "string",

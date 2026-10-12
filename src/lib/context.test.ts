@@ -65,11 +65,43 @@ describe("Context Library", () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue({
         id: "u1",
         organismeId: "org-1",
+        roles: ["ADMIN_ORGANISME"],
       } as unknown as Awaited<ReturnType<typeof prisma.user.findUnique>>);
 
       const result = await requireOrganisme();
       expect(result.organismeId).toBe("org-1");
     });
+
+    const mockUserWith = (roles: unknown) => {
+      vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: { id: "u1" },
+      } as unknown as Awaited<ReturnType<typeof auth.api.getSession>>);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: "u1",
+        organismeId: "org-1",
+        roles,
+      } as unknown as Awaited<ReturnType<typeof prisma.user.findUnique>>);
+    };
+
+    it.each([
+      [["FORMATEUR"]],
+      [["ADMIN_ORGANISME"]],
+      [["SUPER_ADMIN"]],
+      ['["FORMATEUR"]'],
+    ])("accepts organisme staff (roles %j)", async (roles) => {
+      mockUserWith(roles);
+      await expect(requireOrganisme()).resolves.toMatchObject({
+        organismeId: "org-1",
+      });
+    });
+
+    it.each([[["PLAYER"]], [[]], [null]])(
+      "rejects non-staff users attached to an organisme (roles %j)",
+      async (roles) => {
+        mockUserWith(roles);
+        await expect(requireOrganisme()).rejects.toThrow("Non autorisé");
+      }
+    );
 
     it("throws if organismeId is missing", async () => {
       vi.mocked(auth.api.getSession).mockResolvedValue({
@@ -93,6 +125,7 @@ describe("Context Library", () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue({
         id: "u1",
         organismeId: "org-1",
+        roles: ["ADMIN_ORGANISME"],
       } as unknown as Awaited<ReturnType<typeof prisma.user.findUnique>>);
 
       const result = await getTenantPrisma();

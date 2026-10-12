@@ -143,11 +143,7 @@ interface PvPageProps {
   };
 }
 
-const PvPage: React.FC<PvPageProps> = ({
-  session,
-  inscriptions,
-  formateur,
-}) => {
+const PvPage: React.FC<PvPageProps> = ({ session, inscriptions }) => {
   const startDateStr = session.startDate
     ? dayjs(session.startDate).format("DD/MM/YYYY")
     : "_______________";
@@ -372,8 +368,7 @@ const PvDocument: React.FC<PvPageProps> = (props) => (
 export const PvPDFDownload: React.FC<
   PvPageProps & {
     children?:
-      | React.ReactNode
-      | ((props: { loading: boolean }) => React.ReactNode);
+      React.ReactNode | ((props: { loading: boolean }) => React.ReactNode);
     className?: string;
   }
 > = ({ children, className, ...props }) => (

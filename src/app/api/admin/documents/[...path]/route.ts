@@ -4,6 +4,8 @@ import { requireOrganisme } from "@/lib/context";
 import { getFile } from "@/lib/r2";
 import { hasRole, UserRole } from "@/lib/roles";
 
+const INLINE_CONTENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
@@ -42,9 +44,17 @@ export async function GET(
     const { buffer, contentType } = await getFile(key, isExternalTraining);
 
     // 4. Retour du fichier
-    return new NextResponse(buffer, {
+    // Le Content-Type stocké vient de l'upload : seuls PDF et images sont
+    // affichés dans le navigateur, tout le reste est forcé en téléchargement
+    // pour qu'un HTML déposé ne puisse pas s'exécuter sur le domaine de l'app.
+    const isInlineSafe =
+      !!contentType && INLINE_CONTENT_TYPES.includes(contentType);
+    // Uint8Array : les types Node récents n'acceptent plus Buffer comme BodyInit
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
-        "Content-Type": contentType || "application/octet-stream",
+        "Content-Type": isInlineSafe ? contentType : "application/octet-stream",
+        "Content-Disposition": isInlineSafe ? "inline" : "attachment",
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, max-age=3600",
       },
     });

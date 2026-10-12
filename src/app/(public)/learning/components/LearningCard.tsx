@@ -29,7 +29,7 @@ export function LearningCard({
   ) => {
     if (!pdfUrl) return;
     e.stopPropagation();
-    const pageMatch = reference.match(/Page (\d+)/);
+    const pageMatch = reference.match(/pages?\s*(\d+)/i);
     const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
     let url = pdfUrl;
     if (url.startsWith("http")) {

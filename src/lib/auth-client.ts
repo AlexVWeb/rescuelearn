@@ -1,5 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import { organizationClient } from "better-auth/client/plugins";
+import { passkeyClient } from "@better-auth/passkey/client";
 
 export const authClient = createAuthClient({
   // Côté navigateur, on cible toujours l'origine courante : sinon une page
@@ -8,5 +9,5 @@ export const authClient = createAuthClient({
     typeof window !== "undefined"
       ? window.location.origin
       : process.env.NEXT_PUBLIC_APP_URL,
-  plugins: [organizationClient()],
+  plugins: [organizationClient(), passkeyClient()],
 });

@@ -18,6 +18,7 @@ import {
   createQuizSessionAction,
   checkServerSaturationAction,
 } from "@/app/actions/quiz-session-actions";
+import { useMounted } from "@/hooks/use-mounted";
 
 // Variants pour les animations Framer Motion
 const containerVariants = {
@@ -41,7 +42,7 @@ const itemVariants = {
 
 // Composant principal
 const QuizCatalogue = () => {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +67,6 @@ const QuizCatalogue = () => {
   const router = useRouter();
 
   useEffect(() => {
-    setMounted(true);
     const checkSaturation = async () => {
       const res = await checkServerSaturationAction();
       if (res.success && res.isSaturated) {
@@ -126,7 +126,7 @@ const QuizCatalogue = () => {
       } else {
         alert(res.error || "Impossible de créer la session multijoueurs");
       }
-    } catch (err) {
+    } catch {
       alert("Une erreur inattendue est survenue");
     } finally {
       setMultiplayerLoading(false);
@@ -157,7 +157,7 @@ const QuizCatalogue = () => {
       } else {
         setJoinError(res.error || "Impossible de rejoindre cette session");
       }
-    } catch (err) {
+    } catch {
       setJoinError("Une erreur inattendue est survenue");
     } finally {
       setJoinLoading(false);
