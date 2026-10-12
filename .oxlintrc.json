@@ -140,6 +140,7 @@
     "react/error-boundaries": "error",
     "react/set-state-in-render": "error",
     "react/unsupported-syntax": "warn",
+    // Composants que React Compiler ne peut pas optimiser (TanStack Table, react-hook-form watch).
     "react/incompatible-library": "warn",
     // Règles React Compiler : occurrences existantes à corriger dans un chantier dédié.
     "react/set-state-in-effect": "warn",
