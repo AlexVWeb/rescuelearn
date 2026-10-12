@@ -52,23 +52,23 @@ export function NavUser({
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
 
   useEffect(() => {
+    const loadOrganizations = async () => {
+      try {
+        const result = await getAvailableOrganizations();
+        if (result.success && result.data) {
+          setOrganizations(result.data);
+          setCurrentOrganizationId(result.currentOrganizationId ?? null);
+          setIsSuperAdmin(!!result.isSuperAdmin);
+        }
+      } catch {
+        // Silent error handling client-side (errors logged server-side)
+      } finally {
+        setIsLoadingOrgs(false);
+      }
+    };
+
     loadOrganizations();
   }, []);
-
-  const loadOrganizations = async () => {
-    try {
-      const result = await getAvailableOrganizations();
-      if (result.success && result.data) {
-        setOrganizations(result.data);
-        setCurrentOrganizationId(result.currentOrganizationId ?? null);
-        setIsSuperAdmin(!!result.isSuperAdmin);
-      }
-    } catch {
-      // Silent error handling client-side (errors logged server-side)
-    } finally {
-      setIsLoadingOrgs(false);
-    }
-  };
 
   const handleSwitchOrganization = async (organizationId: string | null) => {
     try {

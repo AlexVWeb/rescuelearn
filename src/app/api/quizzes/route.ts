@@ -47,7 +47,7 @@ export async function GET(request: Request) {
       totalItems: total,
       member: formattedQuizzes,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

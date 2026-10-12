@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useEffectEvent, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Loader2, LogOut, Shield } from "lucide-react";
 import { RealtimeChannel } from "@supabase/supabase-js";
@@ -344,34 +344,6 @@ export default function QuizSessionPage() {
     return () => clearInterval(interval);
   }, [session]);
 
-  // Keyboard Shortcuts for options selection
-  useEffect(() => {
-    if (
-      session?.status !== "IN_PROGRESS" ||
-      !currentQuestion ||
-      isHost ||
-      hasAnswered ||
-      (session.difficulty !== "easy" && timeRemaining === 0)
-    )
-      return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const key = e.key.toUpperCase();
-      const optionIndex = ["A", "B", "C", "D"].indexOf(key);
-      if (optionIndex !== -1 && currentQuestion.options[optionIndex]) {
-        handleSubmitAnswer(currentQuestion.options[optionIndex].id);
-      }
-
-      const numIndex = ["1", "2", "3", "4"].indexOf(e.key);
-      if (numIndex !== -1 && currentQuestion.options[numIndex]) {
-        handleSubmitAnswer(currentQuestion.options[numIndex].id);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [session, currentQuestion, isHost, hasAnswered, timeRemaining]);
-
   // 4. Actions
   const handleStartQuiz = async () => {
     if (!session || !isHost || isTransitioningRef.current) return;
@@ -458,6 +430,10 @@ export default function QuizSessionPage() {
   };
 
   // Automated next question transition
+  const nextQuestionFromEffect = useEffectEvent(() => {
+    handleNextQuestion();
+  });
+
   useEffect(() => {
     if (
       !isHost ||
@@ -476,7 +452,7 @@ export default function QuizSessionPage() {
       // Faux positif : handleNextQuestion ne met à jour l'état qu'après son await,
       // mais la règle ne suit pas les fonctions async du composant.
       // oxlint-disable-next-line react/set-state-in-effect
-      handleNextQuestion();
+      nextQuestionFromEffect();
     }
   }, [isHost, session, participants.length, answeredCount, timeRemaining]);
 
@@ -525,6 +501,40 @@ export default function QuizSessionPage() {
   };
 
   // 5. Render States
+  // Keyboard Shortcuts for options selection
+  // useEffectEvent : lit toujours la dernière version de handleSubmitAnswer
+  // sans réabonner le listener à chaque rendu.
+  const submitAnswerFromKeyboard = useEffectEvent((optionId: number) => {
+    handleSubmitAnswer(optionId);
+  });
+
+  useEffect(() => {
+    if (
+      session?.status !== "IN_PROGRESS" ||
+      !currentQuestion ||
+      isHost ||
+      hasAnswered ||
+      (session.difficulty !== "easy" && timeRemaining === 0)
+    )
+      return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toUpperCase();
+      const optionIndex = ["A", "B", "C", "D"].indexOf(key);
+      if (optionIndex !== -1 && currentQuestion.options[optionIndex]) {
+        submitAnswerFromKeyboard(currentQuestion.options[optionIndex].id);
+      }
+
+      const numIndex = ["1", "2", "3", "4"].indexOf(e.key);
+      if (numIndex !== -1 && currentQuestion.options[numIndex]) {
+        submitAnswerFromKeyboard(currentQuestion.options[numIndex].id);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [session, currentQuestion, isHost, hasAnswered, timeRemaining]);
+
   if (!mounted) return null;
 
   if (loading) {

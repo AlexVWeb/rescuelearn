@@ -143,11 +143,7 @@ interface PvPageProps {
   };
 }
 
-const PvPage: React.FC<PvPageProps> = ({
-  session,
-  inscriptions,
-  formateur,
-}) => {
+const PvPage: React.FC<PvPageProps> = ({ session, inscriptions }) => {
   const startDateStr = session.startDate
     ? dayjs(session.startDate).format("DD/MM/YYYY")
     : "_______________";

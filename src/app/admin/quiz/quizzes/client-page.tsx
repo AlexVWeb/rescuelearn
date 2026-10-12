@@ -82,7 +82,7 @@ export default function QuizClientPage({
         } else {
           toast.error(result.error || "Impossible de supprimer le quiz");
         }
-      } catch (err) {
+      } catch {
         toast.error("Une erreur est survenue lors de la suppression");
       } finally {
         setDeleteDialogOpen(false);

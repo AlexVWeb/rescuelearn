@@ -32,6 +32,19 @@ interface PageParams {
   id: string;
 }
 
+const getTimeLimit = (difficulty: string, timeLimit: number) => {
+  switch (difficulty) {
+    case "easy":
+      return 999999; // Un grand nombre pour simuler un temps illimité
+    case "medium":
+      return timeLimit; // Utilise le temps sélectionné
+    case "hard":
+      return 10; // 10 secondes fixes
+    default:
+      return 999999;
+  }
+};
+
 const SNVGameContent = ({ params }: { params: Promise<PageParams> }) => {
   const [scenario, setScenario] = useState<SNVScenario | null>(null);
   const [loading, setLoading] = useState(true);
@@ -190,19 +203,6 @@ const SNVGameContent = ({ params }: { params: Promise<PageParams> }) => {
       return () => clearInterval(timer);
     }
   }, [timeLeft, gameOver, difficulty, showExplanation, handleColorSelect]);
-
-  const getTimeLimit = (difficulty: string, timeLimit: number) => {
-    switch (difficulty) {
-      case "easy":
-        return 999999; // Un grand nombre pour simuler un temps illimité
-      case "medium":
-        return timeLimit; // Utilise le temps sélectionné
-      case "hard":
-        return 10; // 10 secondes fixes
-      default:
-        return 999999;
-    }
-  };
 
   const restartScenario = () => {
     setGameOver(false);

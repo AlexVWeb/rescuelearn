@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useEffectEvent } from "react";
 import { Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -136,6 +136,12 @@ export default function PlayerPage() {
     }
   };
 
+  const submitDailyFromEffect = useEffectEvent(
+    (qId: number, optionIndex: string) => {
+      handleDailySubmit(qId, optionIndex);
+    }
+  );
+
   useEffect(() => {
     const loadDailyQuestion = async (qId: number) => {
       try {
@@ -146,7 +152,7 @@ export default function PlayerPage() {
           // Check if there's a pre-selected option in search params
           const selectOptionParam = searchParams.get("selectOption");
           if (selectOptionParam !== null) {
-            handleDailySubmit(qId, selectOptionParam);
+            submitDailyFromEffect(qId, selectOptionParam);
           }
         } else {
           toast.error(res.error || "Impossible de charger la question.");
