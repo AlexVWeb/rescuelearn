@@ -86,16 +86,21 @@ export async function getReferencielsAction(
   }
 }
 
+// Action publique (page /learning, sans session) : elle ne signe que le PDF
+// d'un référentiel existant, jamais une clé arbitraire du bucket.
 export async function getPresignedUrlAction(url: string): Promise<string> {
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    const r2PublicUrl = process.env.R2_PUBLIC_URL;
-    if (r2PublicUrl && url.startsWith(r2PublicUrl)) {
-      const key = url.replace(`${r2PublicUrl}/`, "");
-      const { getPresignedUrl } = await import("@/lib/r2");
-      return await getPresignedUrl(key);
-    }
-  }
-  return url;
+  const r2PublicUrl = process.env.R2_PUBLIC_URL;
+  if (!r2PublicUrl || !url.startsWith(`${r2PublicUrl}/`)) return url;
+
+  const referenciel = await prisma.referenciel.findFirst({
+    where: { pdfUrl: url },
+    select: { id: true },
+  });
+  if (!referenciel) throw new Error("Référentiel introuvable");
+
+  const key = url.slice(r2PublicUrl.length + 1);
+  const { getPresignedUrl } = await import("@/lib/r2");
+  return await getPresignedUrl(key);
 }
 
 export async function deleteReferencielAction(id: number) {

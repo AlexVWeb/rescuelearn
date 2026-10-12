@@ -40,11 +40,19 @@ vi.mock("@/lib/r2", () => ({
 }));
 
 describe("ExternalTraining Actions", () => {
-  const mockUser = { organismeId: "org-1" };
+  const mockUser = { organismeId: "org-1", roles: ["ADMIN_ORGANISME"] };
+  const ownKey = (name: string) =>
+    `dev/organisme/org-1/external-trainings/${name}`;
+  const pdfFile = (name = "diploma.pdf", body = "%PDF-1.7 test") =>
+    new File([body], name, { type: "application/pdf" });
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(requireOrganisme).mockResolvedValue(mockUser as never);
+    vi.mocked(r2.getStorageKey).mockImplementation(
+      (organismeId, type, filename) =>
+        `dev/organisme/${organismeId}/${type}/${filename}`
+    );
   });
 
   describe("createExternalTraining", () => {
@@ -80,15 +88,39 @@ describe("ExternalTraining Actions", () => {
         name: "Test",
         organisme: "Croix Rouge",
         obtainedAt: new Date(),
-        fileKey: "some-key",
+        fileKey: ownKey("some.pdf"),
       };
 
       const result = await createExternalTraining(data);
 
       expect(result).toEqual({ id: "new-id" });
       expect(prisma.externalTraining.create).toHaveBeenCalledWith({
-        data: { ...data, organismeId: "org-1" },
+        data: {
+          ...data,
+          isFC: false,
+          certificateNumber: null,
+          organismeId: "org-1",
+        },
       });
+    });
+
+    it("rejects a fileKey from another organisme and ignores extra fields", async () => {
+      vi.mocked(prisma.trainee.findUnique).mockResolvedValue({
+        id: "trainee-1",
+        organismeId: "org-1",
+      } as never);
+
+      await expect(
+        createExternalTraining({
+          traineeId: "trainee-1",
+          type: "PSC",
+          name: "Test",
+          organisme: "Croix Rouge",
+          obtainedAt: new Date(),
+          fileKey: "dev/organisme/org-2/external-trainings/x.pdf",
+        })
+      ).rejects.toThrow("Fichier non autorisé");
+      expect(prisma.externalTraining.create).not.toHaveBeenCalled();
     });
 
     it("throws error if creating FC when no initial training exists", async () => {
@@ -147,7 +179,7 @@ describe("ExternalTraining Actions", () => {
         id: "ext-1",
         traineeId: "trainee-1",
         organismeId: "org-1",
-        fileKey: "old-key",
+        fileKey: ownKey("old.pdf"),
       } as never);
       vi.mocked(prisma.externalTraining.update).mockResolvedValue({
         id: "ext-1",
@@ -158,13 +190,13 @@ describe("ExternalTraining Actions", () => {
         name: "Updated Test",
         organisme: "Croix Rouge",
         obtainedAt: new Date(),
-        fileKey: "new-key",
+        fileKey: ownKey("new.pdf"),
       };
 
       const result = await updateExternalTraining("ext-1", data);
 
       expect(result).toEqual({ id: "ext-1" });
-      expect(r2.deleteFile).toHaveBeenCalledWith("old-key");
+      expect(r2.deleteFile).toHaveBeenCalledWith(ownKey("old.pdf"));
       expect(prisma.externalTraining.update).toHaveBeenCalledWith({
         where: { id: "ext-1" },
         data: {
@@ -174,10 +206,34 @@ describe("ExternalTraining Actions", () => {
           obtainedAt: data.obtainedAt,
           isFC: false,
           certificateNumber: null,
-          fileUrl: null,
-          fileKey: "new-key",
+          fileKey: ownKey("new.pdf"),
         },
       });
+    });
+
+    it("rejects a fileKey outside the organisme folder", async () => {
+      vi.mocked(prisma.externalTraining.findUnique).mockResolvedValue({
+        id: "ext-1",
+        organismeId: "org-1",
+        fileKey: null,
+      } as never);
+
+      for (const fileKey of [
+        "dev/referenciels/gqs.pdf",
+        "dev/organisme/org-2/external-trainings/x.pdf",
+        ownKey("../../org-2/external-trainings/x.pdf"),
+      ]) {
+        await expect(
+          updateExternalTraining("ext-1", {
+            type: "PSC",
+            name: "Test",
+            organisme: "Croix Rouge",
+            obtainedAt: new Date(),
+            fileKey,
+          })
+        ).rejects.toThrow("Fichier non autorisé");
+      }
+      expect(prisma.externalTraining.update).not.toHaveBeenCalled();
     });
 
     it("throws error if trying to update record from another organism", async () => {
@@ -199,28 +255,68 @@ describe("ExternalTraining Actions", () => {
 
   describe("uploadExternalTrainingFile", () => {
     it("uploads file and returns the standardized key", async () => {
-      const file = new File(["test"], "diploma.pdf", {
-        type: "application/pdf",
-      });
       const formData = new FormData();
-      formData.append("file", file);
-
-      vi.mocked(r2.getStorageKey).mockReturnValue(
-        "dev/organisme/org-1/external-trainings/key"
-      );
+      formData.append("file", pdfFile());
       vi.mocked(r2.uploadFile).mockResolvedValue("https://url");
 
       const result = await uploadExternalTrainingFile(formData);
 
-      expect(result).toEqual({
-        key: "dev/organisme/org-1/external-trainings/key",
-      });
-      expect(r2.getStorageKey).toHaveBeenCalledWith(
-        "org-1",
-        "external-trainings",
-        expect.stringContaining("diploma.pdf")
+      expect(result.key).toMatch(
+        /^dev\/organisme\/org-1\/external-trainings\/\d+-diploma\.pdf$/
       );
-      expect(r2.uploadFile).toHaveBeenCalled();
+      expect(r2.uploadFile).toHaveBeenCalledWith(
+        result.key,
+        expect.any(Buffer),
+        "application/pdf",
+        true
+      );
+    });
+
+    it("rejects a file whose content is not PDF/JPEG/PNG", async () => {
+      const formData = new FormData();
+      formData.append(
+        "file",
+        new File(["<script>alert(1)</script>"], "x.pdf", {
+          type: "application/pdf",
+        })
+      );
+      await expect(uploadExternalTrainingFile(formData)).rejects.toThrow(
+        "Format non supporté"
+      );
+      expect(r2.uploadFile).not.toHaveBeenCalled();
+    });
+
+    it("rejects files over 5 MB", async () => {
+      const formData = new FormData();
+      formData.append(
+        "file",
+        pdfFile("big.pdf", "%PDF-" + "a".repeat(5 * 1024 * 1024))
+      );
+      await expect(uploadExternalTrainingFile(formData)).rejects.toThrow(
+        "trop volumineux"
+      );
+    });
+
+    it("stores the detected type and a sanitized file name", async () => {
+      const formData = new FormData();
+      formData.append(
+        "file",
+        new File(["%PDF-1.7"], "../../Attestation été.html", {
+          type: "text/html",
+        })
+      );
+
+      const { key } = await uploadExternalTrainingFile(formData);
+
+      expect(key).toMatch(
+        /^dev\/organisme\/org-1\/external-trainings\/\d+-_Attestation_ete\.pdf$/
+      );
+      expect(r2.uploadFile).toHaveBeenCalledWith(
+        key,
+        expect.any(Buffer),
+        "application/pdf",
+        true
+      );
     });
 
     it("throws error if no file is provided", async () => {
@@ -236,7 +332,7 @@ describe("ExternalTraining Actions", () => {
       vi.mocked(prisma.externalTraining.findUnique).mockResolvedValue({
         id: "ext-1",
         organismeId: "org-1",
-        fileKey: "some-key",
+        fileKey: ownKey("some.pdf"),
       } as never);
       vi.mocked(prisma.externalTraining.delete).mockResolvedValue({
         id: "ext-1",
@@ -244,10 +340,26 @@ describe("ExternalTraining Actions", () => {
 
       await deleteExternalTraining("ext-1");
 
-      expect(r2.deleteFile).toHaveBeenCalledWith("some-key");
+      expect(r2.deleteFile).toHaveBeenCalledWith(ownKey("some.pdf"));
       expect(prisma.externalTraining.delete).toHaveBeenCalledWith({
         where: { id: "ext-1" },
       });
+    });
+
+    it("never deletes a stored key outside the organisme folder", async () => {
+      vi.mocked(prisma.externalTraining.findUnique).mockResolvedValue({
+        id: "ext-1",
+        organismeId: "org-1",
+        fileKey: "dev/referenciels/gqs.pdf",
+      } as never);
+      vi.mocked(prisma.externalTraining.delete).mockResolvedValue({
+        id: "ext-1",
+      } as never);
+
+      await deleteExternalTraining("ext-1");
+
+      expect(r2.deleteFile).not.toHaveBeenCalled();
+      expect(prisma.externalTraining.delete).toHaveBeenCalled();
     });
 
     it("throws error if trying to delete record from another organism", async () => {

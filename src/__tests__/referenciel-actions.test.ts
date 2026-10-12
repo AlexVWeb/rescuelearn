@@ -14,6 +14,7 @@ const mockPrisma = vi.hoisted(() => ({
     findMany: vi.fn(),
     count: vi.fn(),
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
@@ -53,7 +54,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 import { getUserContext } from "@/lib/context";
-import { uploadFile } from "@/lib/r2";
+import { getPresignedUrl, uploadFile } from "@/lib/r2";
 import { startReferencielAnalysisAction } from "@/app/actions/referenciel-topic-actions";
 
 process.env.R2_PUBLIC_URL = "https://r2.example.com";
@@ -190,13 +191,29 @@ describe("referenciel-actions", () => {
   });
 
   describe("getPresignedUrlAction", () => {
-    it("should sign absolute R2 URL", async () => {
+    it("should sign the PDF of a known referenciel", async () => {
+      mockPrisma.referenciel.findFirst.mockResolvedValue({ id: 1 });
       const res = await getPresignedUrlAction(
         "https://r2.example.com/dev/referenciels/pse1.pdf"
       );
+      expect(mockPrisma.referenciel.findFirst).toHaveBeenCalledWith({
+        where: { pdfUrl: "https://r2.example.com/dev/referenciels/pse1.pdf" },
+        select: { id: true },
+      });
+      expect(getPresignedUrl).toHaveBeenCalledWith("dev/referenciels/pse1.pdf");
       expect(res).toBe(
         "https://r2-presigned.example.com/dev/referenciels/test.pdf"
       );
+    });
+
+    it("should refuse to sign a key that is not a referenciel PDF", async () => {
+      mockPrisma.referenciel.findFirst.mockResolvedValue(null);
+      await expect(
+        getPresignedUrlAction(
+          "https://r2.example.com/prod/organisme/abc/external-trainings/x.pdf"
+        )
+      ).rejects.toThrow("Référentiel introuvable");
+      expect(getPresignedUrl).not.toHaveBeenCalled();
     });
 
     it("should return the original URL if not absolute R2 URL", async () => {

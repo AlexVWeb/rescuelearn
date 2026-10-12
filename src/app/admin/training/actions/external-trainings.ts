@@ -2,6 +2,58 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireOrganisme } from "@/lib/context";
+// Certificats acceptés, identifiés par leur signature binaire et non par le
+// type MIME déclaré par le navigateur (falsifiable).
+const CERTIFICATE_TYPES = [
+  {
+    mime: "application/pdf",
+    ext: "pdf",
+    magic: [0x25, 0x50, 0x44, 0x46, 0x2d],
+  },
+  { mime: "image/jpeg", ext: "jpg", magic: [0xff, 0xd8, 0xff] },
+  { mime: "image/png", ext: "png", magic: [0x89, 0x50, 0x4e, 0x47] },
+] as const;
+const MAX_CERTIFICATE_BYTES = 5 * 1024 * 1024;
+
+function detectCertificateType(buffer: Buffer) {
+  return CERTIFICATE_TYPES.find((t) =>
+    t.magic.every((byte, i) => buffer[i] === byte)
+  );
+}
+
+async function externalTrainingsPrefix(organismeId: string) {
+  const { getStorageKey } = await import("@/lib/r2");
+  return getStorageKey(organismeId, "external-trainings", "");
+}
+
+/**
+ * Une clé de fichier venant du client doit désigner un fichier de son propre
+ * organisme : sinon la suppression de la formation effacerait n'importe quel
+ * objet du bucket (référentiel, certificat d'un autre organisme...).
+ */
+async function isOwnFileKey(key: string, organismeId: string) {
+  const prefix = await externalTrainingsPrefix(organismeId);
+  const name = key.slice(prefix.length);
+  return (
+    key.startsWith(prefix) &&
+    name.length > 0 &&
+    !name.includes("/") &&
+    !name.includes("..")
+  );
+}
+
+async function assertOwnFileKey(key: string, organismeId: string) {
+  if (!(await isOwnFileKey(key, organismeId))) {
+    throw new Error("Fichier non autorisé");
+  }
+}
+
+async function deleteOwnFile(key: string, organismeId: string) {
+  // Ignore les clés enregistrées avant validation qui sortiraient du dossier
+  if (!(await isOwnFileKey(key, organismeId))) return;
+  const { deleteFile } = await import("@/lib/r2");
+  await deleteFile(key);
+}
 
 async function checkInitialTrainingExists(
   traineeId: string,
@@ -43,7 +95,6 @@ export async function createExternalTraining(data: {
   obtainedAt: Date;
   isFC?: boolean;
   certificateNumber?: string;
-  fileUrl?: string;
   fileKey?: string;
 }) {
   const user = await requireOrganisme();
@@ -67,8 +118,20 @@ export async function createExternalTraining(data: {
     }
   }
 
+  if (data.fileKey) await assertOwnFileKey(data.fileKey, user.organismeId);
+
   return prisma.externalTraining.create({
-    data: { ...data, organismeId: user.organismeId },
+    data: {
+      traineeId: data.traineeId,
+      type: data.type,
+      name: data.name,
+      organisme: data.organisme,
+      obtainedAt: data.obtainedAt,
+      isFC: data.isFC ?? false,
+      certificateNumber: data.certificateNumber || null,
+      fileKey: data.fileKey ?? null,
+      organismeId: user.organismeId,
+    },
   });
 }
 
@@ -81,7 +144,6 @@ export async function updateExternalTraining(
     obtainedAt: Date;
     isFC?: boolean;
     certificateNumber?: string;
-    fileUrl?: string | null;
     fileKey?: string | null;
   }
 ) {
@@ -105,10 +167,13 @@ export async function updateExternalTraining(
     }
   }
 
+  if (data.fileKey && data.fileKey !== record.fileKey) {
+    await assertOwnFileKey(data.fileKey, user.organismeId);
+  }
+
   // Handle old file cleanup if fileKey has changed or removed
   if (record.fileKey && record.fileKey !== data.fileKey) {
-    const { deleteFile } = await import("@/lib/r2");
-    await deleteFile(record.fileKey);
+    await deleteOwnFile(record.fileKey, user.organismeId);
   }
 
   return prisma.externalTraining.update({
@@ -120,7 +185,6 @@ export async function updateExternalTraining(
       obtainedAt: data.obtainedAt,
       isFC: data.isFC ?? false,
       certificateNumber: data.certificateNumber || null,
-      fileUrl: data.fileUrl ?? null,
       fileKey: data.fileKey ?? null,
     },
   });
@@ -137,8 +201,7 @@ export async function deleteExternalTraining(id: string) {
   const deleted = await prisma.externalTraining.delete({ where: { id } });
 
   if (record.fileKey) {
-    const { deleteFile } = await import("@/lib/r2");
-    await deleteFile(record.fileKey);
+    await deleteOwnFile(record.fileKey, user.organismeId);
   }
 
   return deleted;
@@ -149,15 +212,32 @@ export async function uploadExternalTrainingFile(formData: FormData) {
 
   const file = formData.get("file");
   if (!(file instanceof File)) throw new Error("Aucun fichier fourni");
+  if (file.size > MAX_CERTIFICATE_BYTES) {
+    throw new Error("Fichier trop volumineux (max 5 Mo)");
+  }
 
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
+  const type = detectCertificateType(buffer);
+  if (!type) {
+    throw new Error("Format non supporté. Utilisez PDF, JPG ou PNG.");
+  }
+
+  // Nom limité à [A-Za-z0-9_-] : pas de "/" ni ".." dans la clé R2
+  const baseName =
+    file.name
+      .replace(/\.[^.]*$/, "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\w-]+/g, "_")
+      .slice(0, 80) || "certificat";
+
   const { uploadFile, getStorageKey } = await import("@/lib/r2");
   const key = getStorageKey(
     user.organismeId,
     "external-trainings",
-    `${Date.now()}-${file.name}`
+    `${Date.now()}-${baseName}.${type.ext}`
   );
-  await uploadFile(key, buffer, file.type, true);
+  await uploadFile(key, buffer, type.mime, true);
   return { key };
 }
