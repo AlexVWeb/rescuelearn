@@ -1,3 +1,7 @@
+import {
+  buildQuestionReference,
+  questionReferenceInclude,
+} from "@/lib/question-reference";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { answerIndex } from "@/lib/quiz-answers";
@@ -222,7 +226,9 @@ export class ProgressionPlayerService {
             question: {
               include: { options: { orderBy: { id: "asc" } } },
             },
-            learningCard: true,
+            learningCard: {
+              include: { referenciel: { select: { pdfUrl: true } } },
+            },
           },
         },
       },
@@ -316,7 +322,7 @@ export class ProgressionPlayerService {
 
     const exercise = await prisma.progressionNodeExercise.findUnique({
       where: { id: exerciseId },
-      include: { question: true },
+      include: { question: { include: questionReferenceInclude } },
     });
     if (
       !exercise ||
@@ -351,6 +357,7 @@ export class ProgressionPlayerService {
       isCorrect,
       correctAnswerIndex,
       explanation: exercise.question.explanation,
+      reference: buildQuestionReference(exercise.question),
       hearts: remainingHearts,
     };
   }

@@ -1,4 +1,5 @@
 import type { ProgressionExerciseType } from "@prisma/client";
+import { isR2PdfUrl } from "@/lib/referenciel-pdf";
 
 // Mise en forme côté joueur : statut des nœuds, couleurs et exercices
 // envoyés au client (sans les réponses).
@@ -97,6 +98,7 @@ type SessionExercise = {
     niveau: string;
     info: string;
     reference: string;
+    referenciel: { pdfUrl: string } | null;
   } | null;
   videoYoutubeId: string | null;
   videoTitle: string | null;
@@ -136,6 +138,12 @@ export function toClientExercise(
         niveau: ex.learningCard.niveau,
         info: ex.learningCard.info,
         reference: ex.learningCard.reference,
+        // PDF R2 uniquement (pas les anciens chemins locaux)
+        pdfUrl:
+          ex.learningCard.referenciel &&
+          isR2PdfUrl(ex.learningCard.referenciel.pdfUrl)
+            ? ex.learningCard.referenciel.pdfUrl
+            : null,
       },
     };
   }

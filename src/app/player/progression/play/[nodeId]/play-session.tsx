@@ -23,6 +23,12 @@ import { cn } from "@/lib/utils";
 import { marked } from "marked";
 import { PlaySessionExercise } from "@/types/progression";
 import { VideoExercise } from "./video-exercise";
+import { QuestionReferenceLink } from "@/components/question-reference-link";
+import {
+  openReferencielPdf,
+  pageFromReference,
+  type QuestionReference,
+} from "@/lib/open-referenciel-pdf";
 
 interface PlaySessionClientProps {
   sessionData: {
@@ -61,6 +67,7 @@ export default function PlaySessionClient({
   const [feedback, setFeedback] = useState<{
     correctAnswerIndex: number;
     explanation: string | null;
+    reference: QuestionReference | null;
   } | null>(null);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   // Vidéos validées par le serveur (visionnage complet)
@@ -145,6 +152,7 @@ export default function PlaySessionClient({
       setFeedback({
         correctAnswerIndex: res.data.correctAnswerIndex,
         explanation: res.data.explanation,
+        reference: res.data.reference,
       });
       setHearts(res.data.hearts);
       playSound(res.data.isCorrect ? "correct" : "incorrect");
@@ -376,9 +384,19 @@ export default function PlaySessionClient({
             </div>
 
             {/* Explanation box after submit */}
-            {isAnswered && feedback?.explanation && (
+            {isAnswered && (feedback?.explanation || feedback?.reference) && (
               <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-xs leading-relaxed text-blue-900">
-                <strong>💡 Explication :</strong> {feedback.explanation}
+                {feedback.explanation && (
+                  <p>
+                    <strong>💡 Explication :</strong> {feedback.explanation}
+                  </p>
+                )}
+                {feedback.reference && (
+                  <QuestionReferenceLink
+                    reference={feedback.reference}
+                    className={cn("text-xs", feedback.explanation && "mt-3")}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -439,9 +457,31 @@ export default function PlaySessionClient({
                   <p className="max-h-36 overflow-y-auto text-center text-sm font-bold text-purple-950">
                     {currentExercise.flashcard?.info}
                   </p>
-                  <div className="text-center text-[10px] font-bold text-purple-400">
-                    Réf: {currentExercise.flashcard?.reference}
-                  </div>
+                  {currentExercise.flashcard?.pdfUrl ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        // Ne retourne pas la carte
+                        e.stopPropagation();
+                        openReferencielPdf(
+                          currentExercise.flashcard!.pdfUrl!,
+                          pageFromReference(
+                            currentExercise.flashcard!.reference ?? ""
+                          )
+                        );
+                      }}
+                      className="flex cursor-pointer items-center justify-center gap-1 text-center text-[10px] font-bold text-blue-600 hover:text-blue-800"
+                    >
+                      <BookOpen className="h-3 w-3" />
+                      <span className="underline decoration-dotted">
+                        Réf: {currentExercise.flashcard.reference}
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="text-center text-[10px] font-bold text-purple-400">
+                      Réf: {currentExercise.flashcard?.reference}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

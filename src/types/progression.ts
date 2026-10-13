@@ -116,6 +116,7 @@ export interface PlaySessionExercise {
     theme: string;
     info: string;
     reference: string | null;
+    pdfUrl?: string | null;
   } | null;
   video?: PlaySessionVideo | null;
 }
