@@ -4,7 +4,7 @@ import React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { SessionStatusBadge } from "./session-status-badge";
-import { MapPin, Users, Settings } from "lucide-react";
+import { MapPin, Users, Settings, GraduationCap } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -17,9 +17,11 @@ import { SlotsTab } from "../[id]/components/slots-tab";
 import { InscriptionsTab } from "../[id]/components/inscriptions-tab";
 import { EmargementTab } from "../[id]/components/emargement";
 import { FormationTab } from "../[id]/components/formation/formation-tab";
+import { FormateursCard } from "../[id]/components/formateurs-card";
 import { SessionForm } from "./session-form";
 import {
   Inscription,
+  SessionFormateurUser,
   Slot,
   Trainee,
   TrainingSession,
@@ -31,6 +33,7 @@ interface SessionTabsLayoutProps {
   allTrainees?: Trainee[];
   isNew?: boolean;
   formateur?: { lastName: string | null; firstName: string | null };
+  assignableFormateurs?: SessionFormateurUser[];
   organismeLogoBase64?: string | null;
 }
 
@@ -39,6 +42,7 @@ export function SessionTabsLayout({
   allTrainees = [],
   isNew = false,
   formateur = undefined,
+  assignableFormateurs = [],
   organismeLogoBase64,
 }: SessionTabsLayoutProps) {
   const router = useRouter();
@@ -56,6 +60,7 @@ export function SessionTabsLayout({
 
   const slots = session?.slots || [];
   const inscriptions = session?.inscriptions || [];
+  const assignedFormateurs = (session?.formateurs ?? []).map((f) => f.user);
 
   const mounted = useMounted();
 
@@ -91,6 +96,18 @@ export function SessionTabsLayout({
                 <Users className="h-4 w-4" /> {inscriptions.length} /{" "}
                 {session.maxTrainees} inscrits
               </span>
+              {assignedFormateurs.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <GraduationCap className="h-4 w-4" />{" "}
+                  {assignedFormateurs
+                    .map(
+                      (u) =>
+                        `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() ||
+                        u.email
+                    )
+                    .join(", ")}
+                </span>
+              )}
               <SessionStatusBadge status={session.status} />
             </div>
           )}
@@ -239,6 +256,15 @@ export function SessionTabsLayout({
               />
             </CardContent>
           </Card>
+          {!isNew && session && (
+            <FormateursCard
+              key={assignedFormateurs.map((u) => u.id).join(",")}
+              sessionId={session.id}
+              sessionStatus={session.status}
+              assigned={assignedFormateurs}
+              assignable={assignableFormateurs}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
