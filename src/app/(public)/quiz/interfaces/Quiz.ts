@@ -1,3 +1,5 @@
+import type { QuestionReference } from "@/lib/open-referenciel-pdf";
+
 // Interface pour l'API
 export interface ApiQuestionOption {
   "@id": string;
@@ -15,6 +17,7 @@ export interface ApiQuestion {
   options: ApiQuestionOption[];
   correctAnswer: string;
   explanation: string;
+  reference: QuestionReference | null;
 }
 
 export interface ApiQuiz {
@@ -43,6 +46,7 @@ export interface QuizQuestion {
   options: QuizOption[];
   correctAnswer: string;
   explanation: string;
+  reference: QuestionReference | null;
 }
 
 export interface QuizComponentData {

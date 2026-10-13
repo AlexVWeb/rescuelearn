@@ -28,6 +28,7 @@ import { shuffleArray } from "../utils/utils";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { useMounted } from "@/hooks/use-mounted";
+import { QuestionReferenceLink } from "@/components/question-reference-link";
 
 interface PageProps {
   params: Promise<{
@@ -123,6 +124,8 @@ function QuizPageContent({ params }: PageProps) {
       if (!quizData) return;
 
       setShowFeedback(true);
+      // Temps écoulé : un choix non validé ne compte pas
+      if (optionId === null) setSelectedOption(null);
 
       if (optionId === quizData.questions[currentQuestionIndex].correctAnswer) {
         setScore((prevScore) => prevScore + 1);
@@ -403,32 +406,45 @@ function QuizPageContent({ params }: PageProps) {
                 </motion.div>
               </AnimatePresence>
             </div>
-            {/* Feedback en overlay centré, sans décaler le bouton */}
+            {/* Feedback sous les options : les choix restent visibles */}
             <AnimatePresence>
               {showFeedback && difficulty !== "hard" && (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  key={currentQuestion.id}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  className={`absolute top-1/2 left-1/2 z-20 w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border p-6 text-center shadow-lg ${selectedOption === currentQuestion.correctAnswer ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
-                  style={{ pointerEvents: "none" }}
+                  exit={{ opacity: 0 }}
+                  className={`mt-2 w-full rounded-xl border p-4 ${selectedOption === currentQuestion.correctAnswer ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
+                  role="status"
                 >
-                  <div className="flex flex-col items-center">
+                  <div className="flex items-start gap-3">
                     {selectedOption === currentQuestion.correctAnswer ? (
-                      <CheckCircle className="mb-2 h-8 w-8 text-green-600" />
+                      <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
                     ) : (
-                      <XCircle className="mb-2 h-8 w-8 text-red-600" />
+                      <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
                     )}
-                    <p
-                      className={`font-medium ${selectedOption === currentQuestion.correctAnswer ? "text-green-800" : "text-red-800"} mb-1`}
-                    >
-                      {selectedOption === currentQuestion.correctAnswer
-                        ? "Bonne réponse !"
-                        : "Réponse incorrecte"}
-                    </p>
-                    <p className="text-sm text-gray-700">
-                      {currentQuestion.explanation}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`font-medium ${selectedOption === currentQuestion.correctAnswer ? "text-green-800" : "text-red-800"}`}
+                      >
+                        {selectedOption === currentQuestion.correctAnswer
+                          ? "Bonne réponse !"
+                          : selectedOption === null
+                            ? "Temps écoulé"
+                            : "Réponse incorrecte"}
+                      </p>
+                      {currentQuestion.explanation && (
+                        <p className="mt-1 text-sm text-gray-700">
+                          {currentQuestion.explanation}
+                        </p>
+                      )}
+                      {currentQuestion.reference && (
+                        <QuestionReferenceLink
+                          reference={currentQuestion.reference}
+                          className="mt-3"
+                        />
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               )}

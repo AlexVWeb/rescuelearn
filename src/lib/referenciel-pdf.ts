@@ -13,3 +13,9 @@ export async function loadReferencielPdf(pdfUrl: string): Promise<Uint8Array> {
     await readFile(path.join(process.cwd(), "public", pdfUrl))
   );
 }
+
+// Seuls les PDF stockés sur R2 sont exposés aux joueurs (pas les anciens chemins locaux)
+export function isR2PdfUrl(pdfUrl: string): boolean {
+  const r2PublicUrl = process.env.R2_PUBLIC_URL;
+  return !!r2PublicUrl && pdfUrl.startsWith(`${r2PublicUrl}/`);
+}

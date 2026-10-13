@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import {
+  buildQuestionReference,
+  questionReferenceInclude,
+} from "@/lib/question-reference";
 
 const LETTER_TO_INDEX: Record<string, string> = {
   A: "0",
@@ -27,6 +31,7 @@ export async function GET(
         questions: {
           include: {
             options: true,
+            ...questionReferenceInclude,
           },
         },
       },
@@ -64,6 +69,7 @@ export async function GET(
           text: q.text,
           correctAnswer,
           explanation: q.explanation || "",
+          reference: buildQuestionReference(q),
           options: q.options.map((opt) => ({
             "@id": `/api/question_options/${opt.id}`,
             "@type": "QuestionOption",
