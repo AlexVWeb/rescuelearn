@@ -40,6 +40,13 @@ export interface Slot {
   updatedAt?: Date;
 }
 
+export interface SessionFormateurUser {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+}
+
 export interface TrainingSession {
   id: string;
   type: SessionType;
@@ -55,6 +62,7 @@ export interface TrainingSession {
   createdAt: Date;
   updatedAt: Date;
   slots?: Slot[];
+  formateurs?: { user: SessionFormateurUser }[];
   _count?: {
     inscriptions: number;
   };
@@ -117,6 +125,7 @@ export type CreateTrainingSessionInput = Omit<
   | "formateurId"
   | "organismeId"
   | "slots"
+  | "formateurs"
   | "_count"
 > & {
   status: string;

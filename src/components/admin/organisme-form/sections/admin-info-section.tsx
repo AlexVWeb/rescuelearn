@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
+import {
+  OrganismeFormValues,
+  OrganismeFormInput,
+} from "@/lib/schemas/organisme.schema";
 
 import { useState } from "react";
 import {
@@ -23,7 +26,7 @@ import {
 } from "@/components/ui/select";
 
 interface AdminInfoSectionProps {
-  form: UseFormReturn<OrganismeFormValues>;
+  form: UseFormReturn<OrganismeFormInput, unknown, OrganismeFormValues>;
 }
 
 const PREDEFINED_FEDERATIONS = [

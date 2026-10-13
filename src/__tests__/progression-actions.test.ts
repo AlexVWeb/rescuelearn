@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Prisma } from "@prisma/client";
 import { UserRole } from "@/lib/roles";
 
@@ -528,12 +528,29 @@ describe("progression server actions", () => {
       expect(res.error).toBe("Tentative introuvable.");
     });
 
+    const R2 = "https://r2.example.com";
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
     const mockQuizExercise = (nodeId = "node-1") => {
+      vi.stubEnv("R2_PUBLIC_URL", R2);
       mockPrisma.progressionNodeExercise.findUnique.mockResolvedValue({
         id: "ex-1",
         nodeId,
         type: "QUIZ_QUESTION",
-        question: { correctAnswer: "B", explanation: "Parce que." },
+        question: {
+          correctAnswer: "B",
+          explanation: "Parce que.",
+          topic: {
+            title: "PLS",
+            pageStart: 12,
+            pageEnd: 13,
+            referenciel: { title: "PSE", pdfUrl: `${R2}/pse.pdf` },
+          },
+          quiz: { referenciel: null },
+        },
       });
     };
 
@@ -555,6 +572,13 @@ describe("progression server actions", () => {
         isCorrect: true,
         correctAnswerIndex: 1,
         explanation: "Parce que.",
+        reference: {
+          title: "PLS",
+          referencielTitle: "PSE",
+          pdfUrl: `${R2}/pse.pdf`,
+          pageStart: 12,
+          pageEnd: 13,
+        },
         hearts: 5,
       });
       expect(mockPrisma.progressionAttemptAnswer.create).toHaveBeenCalledWith({

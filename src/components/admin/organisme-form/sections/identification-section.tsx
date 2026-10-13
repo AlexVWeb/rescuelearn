@@ -12,14 +12,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
+import {
+  OrganismeFormValues,
+  OrganismeFormInput,
+} from "@/lib/schemas/organisme.schema";
 import { SiretService } from "@/services/siret.service";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
 interface IdentificationSectionProps {
-  form: UseFormReturn<OrganismeFormValues>;
+  form: UseFormReturn<OrganismeFormInput, unknown, OrganismeFormValues>;
 }
 
 export function IdentificationSection({ form }: IdentificationSectionProps) {

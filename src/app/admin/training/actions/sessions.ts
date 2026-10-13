@@ -70,6 +70,16 @@ export async function deleteTrainingSession(id: string) {
   return TrainingSessionService.deleteSession(id, user.organismeId);
 }
 
+export async function getAssignableFormateurs() {
+  const user = await requireOrganisme();
+  return TrainingSessionService.listAssignableFormateurs(user.organismeId);
+}
+
+export async function setSessionFormateurs(id: string, userIds: string[]) {
+  const user = await requireOrganisme();
+  return TrainingSessionService.setFormateurs(id, userIds, user.organismeId);
+}
+
 export async function getFormateur() {
   const user = await getUserContext();
   return {

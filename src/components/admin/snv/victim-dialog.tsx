@@ -45,8 +45,10 @@ const victimSchema = z.object({
   explanation: z
     .string()
     .min(10, "L'explication doit faire au moins 10 caractères."),
-  correctAnswer: z.coerce.number().min(0).max(3),
-  scenarioId: z.coerce.number().min(1, "Veuillez sélectionner un scénario."),
+  correctAnswer: z.coerce.number<number>().min(0).max(3),
+  scenarioId: z.coerce
+    .number<number>()
+    .min(1, "Veuillez sélectionner un scénario."),
 });
 
 interface SNVVictimDialogProps {
@@ -71,7 +73,11 @@ export function SNVVictimDialog({
     getAllScenariosSimpleAction().then((data) => setScenarios(data));
   }, []);
 
-  const form = useForm<z.infer<typeof victimSchema>>({
+  const form = useForm<
+    z.input<typeof victimSchema>,
+    unknown,
+    z.output<typeof victimSchema>
+  >({
     resolver: zodResolver(victimSchema),
     defaultValues: {
       description: "",

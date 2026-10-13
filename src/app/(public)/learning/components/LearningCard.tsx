@@ -3,8 +3,10 @@
 import { motion } from "framer-motion";
 import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-import { logger } from "@/lib/logger";
+import {
+  openReferencielPdf,
+  pageFromReference,
+} from "@/lib/open-referenciel-pdf";
 
 interface LearningCardProps {
   theme: string;
@@ -23,25 +25,10 @@ export function LearningCard({
   pdfUrl,
   className,
 }: LearningCardProps) {
-  const handleReferenceClick = async (
-    e: React.MouseEvent,
-    reference: string
-  ) => {
+  const handleReferenceClick = (e: React.MouseEvent, reference: string) => {
     if (!pdfUrl) return;
     e.stopPropagation();
-    const pageMatch = reference.match(/pages?\s*(\d+)/i);
-    const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
-    let url = pdfUrl;
-    if (url.startsWith("http")) {
-      try {
-        const { getPresignedUrlAction } =
-          await import("@/app/actions/referenciel-actions");
-        url = await getPresignedUrlAction(url);
-      } catch (err) {
-        logger.error("Failed to get presigned URL", err);
-      }
-    }
-    window.open(`${url}#page=${pageNumber}`, "_blank");
+    openReferencielPdf(pdfUrl, pageFromReference(reference));
   };
 
   return (

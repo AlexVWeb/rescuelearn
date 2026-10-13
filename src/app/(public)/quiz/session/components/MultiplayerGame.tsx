@@ -2,7 +2,9 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CheckCircle, XCircle } from "lucide-react";
+import { QuestionReferenceLink } from "@/components/question-reference-link";
+import type { QuestionReference } from "@/lib/open-referenciel-pdf";
 
 interface QuestionOption {
   id: number;
@@ -21,6 +23,15 @@ interface QuizSessionState {
   difficulty: string;
 }
 
+export interface AnswerFeedback {
+  isCorrect: boolean;
+  points: number;
+  // Correction : absente en mode difficile
+  correctOptionId: number | null;
+  explanation: string | null;
+  reference: QuestionReference | null;
+}
+
 interface MultiplayerGameProps {
   session: QuizSessionState;
   currentQuestion: Question;
@@ -31,7 +42,7 @@ interface MultiplayerGameProps {
   totalPlayers: number;
   hasAnswered: boolean;
   selectedOptionId: number | null;
-  answerFeedback: { isCorrect: boolean; points: number } | null;
+  answerFeedback: AnswerFeedback | null;
   handleSubmitAnswer: (optId: number) => Promise<void>;
   handleNextQuestion: () => Promise<void>;
 }
@@ -140,6 +151,10 @@ export function MultiplayerGame({
               ];
               const keyLetters = ["A", "B", "C", "D"];
               const isSelected = selectedOptionId === opt.id;
+              const correctOptionId = answerFeedback?.correctOptionId ?? null;
+              const isRevealed = correctOptionId !== null;
+              const isCorrectOption = isRevealed && opt.id === correctOptionId;
+              const isWrongPick = isRevealed && isSelected && !isCorrectOption;
 
               return (
                 <button
@@ -147,9 +162,17 @@ export function MultiplayerGame({
                   onClick={() => handleSubmitAnswer(opt.id)}
                   disabled={hasAnswered || (!isEasyMode && timeRemaining === 0)}
                   className={`relative flex min-h-[90px] w-full items-center overflow-hidden rounded-2xl border-2 p-6 text-left text-lg font-semibold shadow-sm transition-all focus:ring-2 focus:ring-purple-500 focus:outline-none ${
-                    colors[index % colors.length]
-                  } ${hasAnswered && !isSelected ? "scale-95 opacity-50" : ""} ${
-                    isSelected
+                    isCorrectOption
+                      ? "border-green-500 bg-green-50 text-green-900 ring-2 ring-green-500"
+                      : isWrongPick
+                        ? "border-red-500 bg-red-50 text-red-900 ring-2 ring-red-500"
+                        : colors[index % colors.length]
+                  } ${
+                    hasAnswered && !isSelected && !isCorrectOption
+                      ? "scale-95 opacity-50"
+                      : ""
+                  } ${
+                    isSelected && !isRevealed
                       ? "scale-[1.02] border-purple-400 ring-2 ring-purple-600"
                       : ""
                   }`}
@@ -157,7 +180,13 @@ export function MultiplayerGame({
                   <span className="mr-4 text-2xl font-extrabold opacity-70">
                     {keyLetters[index]}.
                   </span>
-                  {opt.text}
+                  <span className="flex-1">{opt.text}</span>
+                  {isCorrectOption && (
+                    <CheckCircle className="ml-3 h-6 w-6 shrink-0 text-green-600" />
+                  )}
+                  {isWrongPick && (
+                    <XCircle className="ml-3 h-6 w-6 shrink-0 text-red-600" />
+                  )}
                 </button>
               );
             })}
@@ -196,14 +225,29 @@ export function MultiplayerGame({
             <p className="animate-pulse text-gray-600">
               Réponse soumise, en attente des autres joueurs...
             </p>
-          ) : answerFeedback.isCorrect ? (
-            <p className="text-green-700">
-              Correct ! +{answerFeedback.points} points 🎉
-            </p>
           ) : (
-            <p className="text-red-700">
-              Incorrect. Retentez votre chance à la prochaine question !
-            </p>
+            <>
+              {answerFeedback.isCorrect ? (
+                <p className="text-green-700">
+                  Correct ! +{answerFeedback.points} points 🎉
+                </p>
+              ) : (
+                <p className="text-red-700">
+                  Incorrect. Retentez votre chance à la prochaine question !
+                </p>
+              )}
+              {answerFeedback.explanation && (
+                <p className="mt-2 text-sm font-normal text-gray-700">
+                  {answerFeedback.explanation}
+                </p>
+              )}
+              {answerFeedback.reference && (
+                <QuestionReferenceLink
+                  reference={answerFeedback.reference}
+                  className="mt-3"
+                />
+              )}
+            </>
           )}
         </motion.div>
       )}

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { archiveWhere, bulkContentSchema } from "@/lib/content-archive";
 import type { CardFilters } from "@/lib/card-filters";
+import { isR2PdfUrl } from "@/lib/referenciel-pdf";
 
 const learningCardSchema = z.object({
   theme: z.string().min(1, "Le thème est requis"),
@@ -146,7 +147,10 @@ export async function getPublicLearningCardsAction() {
         niveau: card.niveau,
         info: card.info,
         reference: card.reference,
-        pdfUrl: card.referenciel?.pdfUrl || undefined,
+        pdfUrl:
+          card.referenciel && isR2PdfUrl(card.referenciel.pdfUrl)
+            ? card.referenciel.pdfUrl
+            : undefined,
       })),
     };
   } catch (error) {

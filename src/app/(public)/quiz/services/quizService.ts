@@ -16,6 +16,7 @@ const transformApiQuizToComponentData = (
       })),
       correctAnswer: question.correctAnswer,
       explanation: question.explanation,
+      reference: question.reference ?? null,
     })),
     timePerQuestion: apiQuiz.timePerQuestion,
     passingScore: apiQuiz.passingScore,

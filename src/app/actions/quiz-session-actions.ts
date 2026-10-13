@@ -2,6 +2,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import {
+  buildQuestionReference,
+  questionReferenceInclude,
+} from "@/lib/question-reference";
 
 // --- Types ---
 export type QuizSessionStatus = "LOBBY" | "IN_PROGRESS" | "FINISHED";
@@ -305,7 +309,7 @@ export async function submitAnswerAction(
     // Fetch the correct answer from the database
     const question = await prisma.question.findUnique({
       where: { id: questionId },
-      include: { options: true },
+      include: { options: true, ...questionReferenceInclude },
     });
 
     if (!question) {
@@ -317,10 +321,9 @@ export async function submitAnswerAction(
       (opt) => opt.id === optionId
     );
     const correctLetters = ["A", "B", "C", "D"];
+    const correctIndex = correctLetters.indexOf(question.correctAnswer);
     const isCorrect =
-      !isTimeout &&
-      optionIndex !== -1 &&
-      correctLetters[optionIndex] === question.correctAnswer;
+      !isTimeout && optionIndex !== -1 && optionIndex === correctIndex;
 
     // Calculate score
     let points = 0;
@@ -354,7 +357,20 @@ export async function submitAnswerAction(
       }),
     ]);
 
-    return { success: true, isCorrect, points };
+    // Correction révélée au joueur une fois sa réponse enregistrée (sauf
+    // mode difficile, comme en solo)
+    const reveal = session.difficulty !== "hard";
+
+    return {
+      success: true,
+      isCorrect,
+      points,
+      correctOptionId: reveal
+        ? (question.options[correctIndex]?.id ?? null)
+        : null,
+      explanation: reveal ? question.explanation : null,
+      reference: reveal ? buildQuestionReference(question) : null,
+    };
   } catch (error) {
     logger.error("Erreur lors de la soumission de la réponse :", error);
     return { success: false, error: "Erreur interne du serveur" };

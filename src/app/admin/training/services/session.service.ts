@@ -15,6 +15,7 @@ export class TrainingSessionService {
         ...data,
         organismeId,
         formateurId,
+        formateurs: { create: { userId: formateurId } },
       },
     });
   }
@@ -109,10 +110,76 @@ export class TrainingSessionService {
             emargements: true,
           },
         },
+        formateurs: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 
     if (!session) throw new Error("Session introuvable");
     return session;
+  }
+
+  static async setFormateurs(
+    id: string,
+    userIds: string[],
+    organismeId: string
+  ) {
+    const session = await prisma.trainingSession.findFirst({
+      where: { id, organismeId },
+    });
+    if (!session) throw new Error("Session introuvable");
+
+    if (session.status === "terminée" || session.status === "annulée") {
+      throw new Error(
+        "Impossible de modifier les formateurs d'une session clôturée"
+      );
+    }
+
+    const uniqueIds = [...new Set(userIds)];
+    if (uniqueIds.length === 0) {
+      throw new Error("Au moins un formateur doit être affecté");
+    }
+
+    const members = await prisma.member.findMany({
+      where: { organizationId: organismeId, userId: { in: uniqueIds } },
+      select: { userId: true },
+    });
+    const memberIds = new Set(members.map((m) => m.userId));
+    if (uniqueIds.some((userId) => !memberIds.has(userId))) {
+      throw new Error("Formateur invalide pour cet organisme");
+    }
+
+    await prisma.$transaction([
+      prisma.trainingSessionFormateur.deleteMany({
+        where: { trainingSessionId: id },
+      }),
+      prisma.trainingSessionFormateur.createMany({
+        data: uniqueIds.map((userId) => ({ trainingSessionId: id, userId })),
+      }),
+    ]);
+  }
+
+  static async listAssignableFormateurs(organismeId: string) {
+    const members = await prisma.member.findMany({
+      where: { organizationId: organismeId },
+      select: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+      },
+      orderBy: { user: { lastName: "asc" } },
+    });
+    return members.map((m) => m.user);
   }
 }

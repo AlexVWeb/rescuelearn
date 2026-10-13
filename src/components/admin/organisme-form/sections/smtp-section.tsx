@@ -18,10 +18,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
+import {
+  OrganismeFormValues,
+  OrganismeFormInput,
+} from "@/lib/schemas/organisme.schema";
 
 interface SMTPSectionProps {
-  form: UseFormReturn<OrganismeFormValues>;
+  form: UseFormReturn<OrganismeFormInput, unknown, OrganismeFormValues>;
 }
 
 export function SMTPSection({ form }: SMTPSectionProps) {

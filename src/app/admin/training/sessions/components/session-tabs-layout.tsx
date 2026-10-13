@@ -17,9 +17,11 @@ import { SlotsTab } from "../[id]/components/slots-tab";
 import { InscriptionsTab } from "../[id]/components/inscriptions-tab";
 import { EmargementTab } from "../[id]/components/emargement";
 import { FormationTab } from "../[id]/components/formation/formation-tab";
+import { FormateursCard } from "../[id]/components/formateurs-card";
 import { SessionForm } from "./session-form";
 import {
   Inscription,
+  SessionFormateurUser,
   Slot,
   Trainee,
   TrainingSession,
@@ -31,6 +33,7 @@ interface SessionTabsLayoutProps {
   allTrainees?: Trainee[];
   isNew?: boolean;
   formateur?: { lastName: string | null; firstName: string | null };
+  assignableFormateurs?: SessionFormateurUser[];
   organismeLogoBase64?: string | null;
 }
 
@@ -39,6 +42,7 @@ export function SessionTabsLayout({
   allTrainees = [],
   isNew = false,
   formateur = undefined,
+  assignableFormateurs = [],
   organismeLogoBase64,
 }: SessionTabsLayoutProps) {
   const router = useRouter();
@@ -56,6 +60,7 @@ export function SessionTabsLayout({
 
   const slots = session?.slots || [];
   const inscriptions = session?.inscriptions || [];
+  const assignedFormateurs = (session?.formateurs ?? []).map((f) => f.user);
 
   const mounted = useMounted();
 
@@ -101,6 +106,16 @@ export function SessionTabsLayout({
           )}
         </div>
       </div>
+
+      {!isNew && session && (
+        <FormateursCard
+          key={assignedFormateurs.map((u) => u.id).join(",")}
+          sessionId={session.id}
+          sessionStatus={session.status}
+          assigned={assignedFormateurs}
+          assignable={assignableFormateurs}
+        />
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full max-w-[1000px] grid-cols-2 sm:grid-cols-5">
