@@ -16,7 +16,10 @@ import {
 } from "@/app/actions/quiz-session-actions";
 import { EcgLine } from "../../components/EcgLine";
 import { MultiplayerLobby } from "../components/MultiplayerLobby";
-import { MultiplayerGame } from "../components/MultiplayerGame";
+import {
+  MultiplayerGame,
+  type AnswerFeedback,
+} from "../components/MultiplayerGame";
 import { MultiplayerLeaderboard } from "../components/MultiplayerLeaderboard";
 import { useMounted } from "@/hooks/use-mounted";
 
@@ -90,10 +93,9 @@ export default function QuizSessionPage() {
   const [timeRemaining, setTimeRemaining] = useState<number>(30);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
-  const [answerFeedback, setAnswerFeedback] = useState<{
-    isCorrect: boolean;
-    points: number;
-  } | null>(null);
+  const [answerFeedback, setAnswerFeedback] = useState<AnswerFeedback | null>(
+    null
+  );
 
   // Refs for tracking presence & channel
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -484,6 +486,9 @@ export default function QuizSessionPage() {
         setAnswerFeedback({
           isCorrect: res.isCorrect,
           points: res.points,
+          correctOptionId: res.correctOptionId ?? null,
+          explanation: res.explanation ?? null,
+          reference: res.reference ?? null,
         });
       } else {
         alert(res.error || "Erreur lors de l'enregistrement de la réponse");

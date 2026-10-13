@@ -279,7 +279,10 @@ describe("quiz-session-actions", () => {
       mockPrisma.question.findUnique.mockResolvedValue({
         id: 1,
         correctAnswer: "B",
+        explanation: "Parce que.",
         options: [{ id: 10 }, { id: 11 }, { id: 12 }], // 11 is B (index 1)
+        topic: null,
+        quiz: { referenciel: null },
       });
 
       // Submit correct answer (11)
@@ -303,6 +306,39 @@ describe("quiz-session-actions", () => {
       expect(resultIncorrect.success).toBe(true);
       expect(resultIncorrect.isCorrect).toBe(false);
       expect(resultIncorrect.points).toBe(0);
+      // Correction révélée après réponse
+      expect(resultIncorrect.correctOptionId).toBe(11);
+      expect(resultIncorrect.explanation).toBe("Parce que.");
+    });
+
+    it("should not reveal the correction in hard mode", async () => {
+      mockPrisma.quizSession.findUnique.mockResolvedValue({
+        id: "session-1",
+        status: "IN_PROGRESS",
+        difficulty: "hard",
+        currentQuestionId: 1,
+        currentQuestionStartedAt: new Date(),
+        quiz: { timePerQuestion: 30 },
+      });
+      mockPrisma.quizParticipant.findUnique.mockResolvedValue({
+        id: "part-1",
+        sessionId: "session-1",
+      });
+      mockPrisma.quizAnswer.findUnique.mockResolvedValue(null);
+      mockPrisma.question.findUnique.mockResolvedValue({
+        id: 1,
+        correctAnswer: "B",
+        explanation: "Parce que.",
+        options: [{ id: 10 }, { id: 11 }],
+        topic: null,
+        quiz: { referenciel: null },
+      });
+
+      const res = await submitAnswerAction("session-1", "part-1", 1, 10);
+      expect(res.success).toBe(true);
+      expect(res.correctOptionId).toBeNull();
+      expect(res.explanation).toBeNull();
+      expect(res.reference).toBeNull();
     });
   });
 
