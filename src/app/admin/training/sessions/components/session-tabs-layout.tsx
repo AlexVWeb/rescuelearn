@@ -4,7 +4,7 @@ import React from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { SessionStatusBadge } from "./session-status-badge";
-import { MapPin, Users, Settings, GraduationCap } from "lucide-react";
+import { MapPin, Users, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -96,18 +96,6 @@ export function SessionTabsLayout({
                 <Users className="h-4 w-4" /> {inscriptions.length} /{" "}
                 {session.maxTrainees} inscrits
               </span>
-              {assignedFormateurs.length > 0 && (
-                <span className="flex items-center gap-1">
-                  <GraduationCap className="h-4 w-4" />{" "}
-                  {assignedFormateurs
-                    .map(
-                      (u) =>
-                        `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() ||
-                        u.email
-                    )
-                    .join(", ")}
-                </span>
-              )}
               <SessionStatusBadge status={session.status} />
             </div>
           )}
@@ -118,6 +106,16 @@ export function SessionTabsLayout({
           )}
         </div>
       </div>
+
+      {!isNew && session && (
+        <FormateursCard
+          key={assignedFormateurs.map((u) => u.id).join(",")}
+          sessionId={session.id}
+          sessionStatus={session.status}
+          assigned={assignedFormateurs}
+          assignable={assignableFormateurs}
+        />
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full max-w-[1000px] grid-cols-2 sm:grid-cols-5">
@@ -256,15 +254,6 @@ export function SessionTabsLayout({
               />
             </CardContent>
           </Card>
-          {!isNew && session && (
-            <FormateursCard
-              key={assignedFormateurs.map((u) => u.id).join(",")}
-              sessionId={session.id}
-              sessionStatus={session.status}
-              assigned={assignedFormateurs}
-              assignable={assignableFormateurs}
-            />
-          )}
         </TabsContent>
       </Tabs>
     </div>

@@ -3,21 +3,17 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import Link from "next/link";
+import { GraduationCap, UserPlus, X } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { setSessionFormateurs } from "@/app/admin/training/actions/sessions";
@@ -81,23 +77,89 @@ export function FormateursCard({
     );
   }
 
+  const assignedCount = selectedIds.length;
+  const hasOtherMembers = assignable.some((u) => !selectedIds.includes(u.id));
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Formateurs</CardTitle>
-        <CardDescription>
-          Formateurs affectés à la session, repris sur les documents
-          (attestations, FISE, fiches d&apos;évaluation).
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-wrap items-center gap-2">
+    <section
+      aria-labelledby="session-formateurs-title"
+      className="border-primary/20 bg-primary/5 rounded-xl border p-4"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+            <GraduationCap className="h-5 w-5" />
+          </div>
+          <div>
+            <h2
+              id="session-formateurs-title"
+              className="text-base font-semibold"
+            >
+              Formateurs de la session
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Leurs noms figurent sur les attestations, FISE, PV et fiches
+              d&apos;évaluation.
+            </p>
+          </div>
+        </div>
+
+        {!isClosed && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" disabled={isPending} className="shrink-0">
+                <UserPlus className="mr-1 h-4 w-4" />
+                Ajouter un formateur
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-72 w-72">
+              <DropdownMenuLabel>Membres de l&apos;organisme</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {assignable.map((user) => (
+                <DropdownMenuCheckboxItem
+                  key={user.id}
+                  checked={selectedIds.includes(user.id)}
+                  onCheckedChange={(checked) => toggle(user.id, checked)}
+                  onSelect={(e) => e.preventDefault()}
+                  disabled={
+                    isPending ||
+                    (assignedCount === 1 && selectedIds.includes(user.id))
+                  }
+                >
+                  {displayName(user)}
+                </DropdownMenuCheckboxItem>
+              ))}
+              {!hasOtherMembers && (
+                <>
+                  <DropdownMenuSeparator />
+                  <p className="text-muted-foreground px-2 py-1.5 text-xs">
+                    Aucun autre membre dans votre organisme.{" "}
+                    <Link
+                      href="/admin/training/dashboard"
+                      className="text-primary underline"
+                    >
+                      Inviter un formateur
+                    </Link>
+                  </p>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 sm:pl-12">
         {selectedIds.map((id) => {
           const user = usersById.get(id);
           if (!user) return null;
           return (
-            <Badge key={id} variant="secondary" className="gap-1 py-1">
+            <Badge
+              key={id}
+              variant="outline"
+              className="bg-background gap-1 py-1 text-sm"
+            >
               {displayName(user)}
-              {!isClosed && selectedIds.length > 1 && (
+              {!isClosed && assignedCount > 1 && (
                 <button
                   type="button"
                   onClick={() => toggle(id, false)}
@@ -111,31 +173,20 @@ export function FormateursCard({
             </Badge>
           );
         })}
-
-        {!isClosed && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={isPending}>
-                <Plus className="mr-1 h-4 w-4" />
-                Gérer
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-72 w-64">
-              {assignable.map((user) => (
-                <DropdownMenuCheckboxItem
-                  key={user.id}
-                  checked={selectedIds.includes(user.id)}
-                  onCheckedChange={(checked) => toggle(user.id, checked)}
-                  onSelect={(e) => e.preventDefault()}
-                  disabled={isPending}
-                >
-                  {displayName(user)}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {isClosed ? (
+          <span className="text-muted-foreground text-xs">
+            Session clôturée : la liste n&apos;est plus modifiable.
+          </span>
+        ) : (
+          assignedCount === 1 &&
+          hasOtherMembers && (
+            <span className="text-muted-foreground text-xs">
+              Plusieurs formateurs animent la session ? Ajoutez-les pour
+              qu&apos;ils apparaissent sur les documents.
+            </span>
+          )
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
