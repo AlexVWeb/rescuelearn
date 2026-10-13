@@ -7,6 +7,10 @@ import { BookOpen, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { ApiLearningCard } from "@/app/(public)/learning/interfaces/LearningCard";
 import { learningCardService } from "@/app/(public)/learning/services/learningCardService";
 import { shuffleArray } from "@/app/(public)/quiz/utils/utils";
+import {
+  openReferencielPdf,
+  pageFromReference,
+} from "@/lib/open-referenciel-pdf";
 
 export function LearningBar() {
   const [cards, setCards] = useState<ApiLearningCard[]>([]);
@@ -48,11 +52,10 @@ export function LearningBar() {
     }
   }, [cards]);
 
-  const handleReferenceClick = (e: React.MouseEvent, reference: string) => {
+  const handleReferenceClick = (e: React.MouseEvent, card: ApiLearningCard) => {
+    if (!card.pdfUrl) return;
     e.stopPropagation();
-    const pageMatch = reference.match(/pages?\s*(\d+)/i);
-    const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
-    window.open(`/referenciels/PSE1_PSE2.pdf#page=${pageNumber}`, "_blank");
+    openReferencielPdf(card.pdfUrl, pageFromReference(card.reference));
   };
 
   if (
@@ -98,10 +101,12 @@ export function LearningBar() {
                 </div>
                 <p className="mt-1 text-sm text-gray-600">{currentCard.info}</p>
                 <p
-                  className="mt-1 cursor-pointer text-xs text-blue-600 hover:text-blue-800"
-                  onClick={(e) =>
-                    handleReferenceClick(e, currentCard.reference)
+                  className={
+                    currentCard.pdfUrl
+                      ? "mt-1 cursor-pointer text-xs text-blue-600 hover:text-blue-800"
+                      : "mt-1 text-xs text-gray-500"
                   }
+                  onClick={(e) => handleReferenceClick(e, currentCard)}
                 >
                   {currentCard.reference}
                 </p>

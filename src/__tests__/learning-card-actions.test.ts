@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { UserRole } from "@/lib/roles";
 
 // --- Mocks ---
@@ -146,17 +146,28 @@ describe("learning-card-actions", () => {
   });
 
   describe("getPublicLearningCardsAction", () => {
+    const R2 = "https://r2.example.com";
+    const card = (pdfUrl: string) => ({
+      id: 1,
+      theme: "Cardio",
+      niveau: "PSE1",
+      info: "PLS text info",
+      reference: "Page 10",
+      referencielId: 2,
+      referenciel: { pdfUrl },
+    });
+
+    beforeEach(() => {
+      vi.stubEnv("R2_PUBLIC_URL", R2);
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
     it("should fetch all learning cards for public without auth check", async () => {
       mockPrisma.learningCard.findMany.mockResolvedValue([
-        {
-          id: 1,
-          theme: "Cardio",
-          niveau: "PSE1",
-          info: "PLS text info",
-          reference: "Page 10",
-          referencielId: 2,
-          referenciel: { pdfUrl: "/pdf.pdf" },
-        },
+        card(`${R2}/referenciels/pse.pdf`),
       ]);
 
       const res = await getPublicLearningCardsAction();
@@ -168,9 +179,18 @@ describe("learning-card-actions", () => {
           niveau: "PSE1",
           info: "PLS text info",
           reference: "Page 10",
-          pdfUrl: "/pdf.pdf",
+          pdfUrl: `${R2}/referenciels/pse.pdf`,
         },
       ]);
+    });
+
+    it("should not expose legacy local PDF paths", async () => {
+      mockPrisma.learningCard.findMany.mockResolvedValue([
+        card("referenciels/PSE1_PSE2.pdf"),
+      ]);
+
+      const res = await getPublicLearningCardsAction();
+      expect(res.data![0].pdfUrl).toBeUndefined();
     });
   });
 
