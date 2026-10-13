@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   organismeSchema,
   OrganismeFormValues,
+  OrganismeFormInput,
 } from "@/lib/schemas/organisme.schema";
 import { IdentificationSection } from "./organisme-form/sections/identification-section";
 import { LegalRepSection } from "./organisme-form/sections/legal-rep-section";
@@ -44,7 +45,7 @@ export function OrganismeForm({
       )
     : {};
 
-  const form = useForm<OrganismeFormValues>({
+  const form = useForm<OrganismeFormInput, unknown, OrganismeFormValues>({
     resolver: zodResolver(organismeSchema),
     defaultValues: {
       name: "",
@@ -82,7 +83,7 @@ export function OrganismeForm({
   const isProfil = !showOnly || showOnly === "profil";
   const isConfig = !showOnly || showOnly === "config";
 
-  const onError = (errors: FieldErrors<OrganismeFormValues>) => {
+  const onError = (errors: FieldErrors<OrganismeFormInput>) => {
     logger.error("Form validation errors:", errors);
     const errorValues = Object.values(errors);
     if (errorValues.length > 0) {

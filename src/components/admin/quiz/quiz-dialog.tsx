@@ -41,8 +41,8 @@ import { logger } from "@/lib/logger";
 
 const quizSchema = z.object({
   title: z.string().min(3, "Le titre doit faire au moins 3 caractères."),
-  timePerQuestion: z.coerce.number().min(5, "Minimum 5 secondes"),
-  passingScore: z.coerce.number().min(0).max(100),
+  timePerQuestion: z.coerce.number<number>().min(5, "Minimum 5 secondes"),
+  passingScore: z.coerce.number<number>().min(0).max(100),
   modeRandom: z.boolean(),
   status: z.enum(["DRAFT", "PUBLISHED"]),
 });
@@ -57,7 +57,11 @@ export function QuizDialog({ open, onOpenChange, quiz }: QuizDialogProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<z.infer<typeof quizSchema>>({
+  const form = useForm<
+    z.input<typeof quizSchema>,
+    unknown,
+    z.output<typeof quizSchema>
+  >({
     resolver: zodResolver(quizSchema),
     defaultValues: {
       title: "",

@@ -35,17 +35,17 @@ export const organismeSchema = z
     qualiopiCertifiedBy: z.string().optional().or(z.literal("")),
 
     retentionYearsActive: z.coerce
-      .number()
+      .number<number>()
       .min(1, "Minimum 1 an")
       .max(10, "Maximum 10 ans"),
     retentionYearsArchive: z.coerce
-      .number()
+      .number<number>()
       .min(5, "Minimum 5 ans")
       .max(20, "Maximum 20 ans"),
 
     // Configuration SMTP
     smtpHost: z.string().optional().or(z.literal("")),
-    smtpPort: z.coerce.number().optional(),
+    smtpPort: z.coerce.number<number>().optional(),
     smtpUser: z.string().optional().or(z.literal("")),
     smtpPassword: z.string().optional().or(z.literal("")),
     smtpFrom: z.string().email("Email invalide").optional().or(z.literal("")),
@@ -100,3 +100,4 @@ export const organismeSchema = z
   });
 
 export type OrganismeFormValues = z.infer<typeof organismeSchema>;
+export type OrganismeFormInput = z.input<typeof organismeSchema>;

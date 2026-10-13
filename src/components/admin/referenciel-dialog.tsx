@@ -39,7 +39,7 @@ const referencielSchema = z.object({
   title: z.string().min(2, {
     message: "Title must be at least 2 characters.",
   }),
-  yearEdition: z.coerce.number().min(1900).max(2100),
+  yearEdition: z.coerce.number<number>().min(1900).max(2100),
   levels: z.array(z.string()),
 });
 
@@ -59,7 +59,11 @@ export function ReferencielDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [analyzeAfterImport, setAnalyzeAfterImport] = useState(true);
 
-  const form = useForm<z.infer<typeof referencielSchema>>({
+  const form = useForm<
+    z.input<typeof referencielSchema>,
+    unknown,
+    z.output<typeof referencielSchema>
+  >({
     resolver: zodResolver(referencielSchema),
     defaultValues: {
       title: "",

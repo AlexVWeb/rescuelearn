@@ -70,7 +70,11 @@ export function QuestionDialog({
     getAllQuizzesSimpleAction().then((data) => setQuizzes(data));
   }, []);
 
-  const form = useForm<z.infer<typeof questionSchema>>({
+  const form = useForm<
+    z.input<typeof questionSchema>,
+    unknown,
+    z.output<typeof questionSchema>
+  >({
     resolver: zodResolver(questionSchema),
     defaultValues: {
       text: "",

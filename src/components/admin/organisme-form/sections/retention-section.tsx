@@ -10,10 +10,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
+import {
+  OrganismeFormValues,
+  OrganismeFormInput,
+} from "@/lib/schemas/organisme.schema";
 
 interface RetentionSectionProps {
-  form: UseFormReturn<OrganismeFormValues>;
+  form: UseFormReturn<OrganismeFormInput, unknown, OrganismeFormValues>;
 }
 
 export function RetentionSection({ form }: RetentionSectionProps) {

@@ -12,10 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
+import {
+  OrganismeFormValues,
+  OrganismeFormInput,
+} from "@/lib/schemas/organisme.schema";
 
 interface QualiopiSectionProps {
-  form: UseFormReturn<OrganismeFormValues>;
+  form: UseFormReturn<OrganismeFormInput, unknown, OrganismeFormValues>;
 }
 
 export function QualiopiSection({ form }: QualiopiSectionProps) {

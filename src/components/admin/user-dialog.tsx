@@ -77,7 +77,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const form = useForm<UserFormValues>({
+  const form = useForm<z.input<typeof userSchema>, unknown, UserFormValues>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       name: "",
