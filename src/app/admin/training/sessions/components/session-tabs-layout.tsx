@@ -27,6 +27,7 @@ import {
   TrainingSession,
 } from "@/app/admin/training/types";
 import { useMounted } from "@/hooks/use-mounted";
+import { formatFormateurName } from "@/app/admin/training/lib/formateurs";
 
 interface SessionTabsLayoutProps {
   session?: TrainingSession & { slots: Slot[]; inscriptions: Inscription[] };
@@ -217,10 +218,14 @@ export function SessionTabsLayout({
                 location: session.location,
                 startDate: session.startDate,
                 slots: slots,
+                type: session.type,
                 status: session.status,
               }}
               inscriptions={inscriptions}
               formateur={formateur}
+              equipePedagogique={assignedFormateurs
+                .map(formatFormateurName)
+                .filter(Boolean)}
               organismeLogoBase64={organismeLogoBase64}
             />
           )}

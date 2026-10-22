@@ -4,6 +4,7 @@ import {
   removeTraineeFromSession,
   updateInscriptionStatus,
   updateAttestationResult,
+  updateAttestationResults,
 } from "./inscriptions";
 import { requireOrganisme, getTenantPrisma } from "@/lib/context";
 
@@ -12,6 +13,7 @@ import { requireOrganisme, getTenantPrisma } from "@/lib/context";
 const mockPrisma = vi.hoisted(() => ({
   trainingSession: {
     findFirst: vi.fn(),
+    findUnique: vi.fn(),
   },
   trainee: {
     findFirst: vi.fn(),
@@ -21,6 +23,7 @@ const mockPrisma = vi.hoisted(() => ({
     findUnique: vi.fn(),
     delete: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
   },
 }));
 
@@ -198,6 +201,61 @@ describe("Inscription Actions", () => {
       await expect(updateAttestationResult("ins-1", "acquis")).rejects.toThrow(
         "Inscription introuvable ou non autorisée"
       );
+    });
+  });
+
+  describe("updateAttestationResults", () => {
+    it("updates every selected inscription of the session", async () => {
+      mockPrisma.trainingSession.findUnique.mockResolvedValue({
+        id: "session-1",
+        organismeId: "org-1",
+        status: "en_cours",
+      });
+      mockPrisma.inscription.updateMany.mockResolvedValue({ count: 2 });
+
+      const result = await updateAttestationResults(
+        "session-1",
+        ["ins-1", "ins-2"],
+        "acquis"
+      );
+
+      expect(result.count).toBe(2);
+      expect(mockPrisma.inscription.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: { in: ["ins-1", "ins-2"] },
+          trainingSessionId: "session-1",
+        },
+        data: {
+          attestationResult: "acquis",
+          attestationValidatedAt: expect.any(Date),
+        },
+      });
+    });
+
+    it("throws error if session belongs to another organisme", async () => {
+      mockPrisma.trainingSession.findUnique.mockResolvedValue({
+        id: "session-1",
+        organismeId: "org-other",
+        status: "en_cours",
+      });
+
+      await expect(
+        updateAttestationResults("session-1", ["ins-1"], "acquis")
+      ).rejects.toThrow("Session introuvable ou non autorisée");
+      expect(mockPrisma.inscription.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("throws error if session is closed", async () => {
+      mockPrisma.trainingSession.findUnique.mockResolvedValue({
+        id: "session-1",
+        organismeId: "org-1",
+        status: "terminée",
+      });
+
+      await expect(
+        updateAttestationResults("session-1", ["ins-1"], "non_acquis")
+      ).rejects.toThrow("Impossible de modifier une session clôturée");
+      expect(mockPrisma.inscription.updateMany).not.toHaveBeenCalled();
     });
   });
 });
