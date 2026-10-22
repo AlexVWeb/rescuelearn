@@ -39,19 +39,44 @@ type FindFirstDelegate = {
   findFirst: (args: Record<string, unknown>) => Promise<unknown>;
 };
 
-function encryptData(
+const ENCRYPTED_FORMAT = /^[0-9a-f]{24}:[0-9a-f]{32}:[0-9a-f]*$/;
+
+function tryDecrypt(value: string): string | null {
+  if (!ENCRYPTED_FORMAT.test(value)) return null;
+  try {
+    return decrypt(value);
+  } catch {
+    return null;
+  }
+}
+
+// Peels every layer: a ciphertext echoed back by a form used to be encrypted again
+function decryptAll(value: string): string {
+  let current = value;
+  let next = tryDecrypt(current);
+  while (next !== null) {
+    current = next;
+    next = tryDecrypt(current);
+  }
+  return current;
+}
+
+export function encryptData(
   data: Record<string, unknown> | null | undefined,
   fields: string[]
 ) {
   if (!data) return data;
   const res = { ...data };
   for (const field of fields) {
-    if (res[field] !== undefined && res[field] !== null) {
+    if (res[field] === "") {
+      // Forms send "" for cleared fields
+      res[field] = null;
+    } else if (res[field] !== undefined && res[field] !== null) {
       const val =
         res[field] instanceof Date
           ? (res[field] as Date).toISOString()
           : String(res[field]);
-      res[field] = encrypt(val);
+      res[field] = encrypt(decryptAll(val));
     }
   }
   return res;
@@ -65,16 +90,8 @@ export function decryptData<T>(data: T, fields: string[]): T {
   const res = { ...(data as Record<string, unknown>) };
 
   for (const field of fields) {
-    if (
-      res[field] &&
-      typeof res[field] === "string" &&
-      (res[field] as string).split(":").length === 3
-    ) {
-      try {
-        res[field] = decrypt(res[field] as string);
-      } catch {
-        // Ignore
-      }
+    if (res[field] && typeof res[field] === "string") {
+      res[field] = decryptAll(res[field] as string);
     }
   }
 
