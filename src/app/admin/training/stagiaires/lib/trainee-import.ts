@@ -14,6 +14,13 @@ export function str(value: unknown): string {
   return String(value).trim();
 }
 
+// Excel stores "0612345678" as the number 612345678, dropping the leading zero
+export function parsePhone(value: unknown): string | undefined {
+  const phone = str(value);
+  if (!phone) return undefined;
+  return /^[1-9]\d{8}$/.test(phone) ? `0${phone}` : phone;
+}
+
 export function parseDate(value: string | undefined): Date | undefined {
   if (!value) return undefined;
   const match = String(value).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -44,7 +51,7 @@ export function parseRows(rows: Record<string, unknown>[]): ParsedTrainee[] {
         firstName: str(row["Prénom"]),
         lastName: str(row["Nom"]),
         email: str(row["Email"]) || undefined,
-        phone: str(row["Téléphone"]) || undefined,
+        phone: parsePhone(row["Téléphone"]),
         dateOfBirth: parseDate(str(row["Date de naissance"])),
         address: address || undefined,
       };
