@@ -41,6 +41,10 @@ describe("Encryption Library", () => {
     expect(() => decrypt("invalid-format")).toThrow();
   });
 
+  it("should encrypt and decrypt an empty string", () => {
+    expect(decrypt(encrypt(""))).toBe("");
+  });
+
   it("should handle special characters and long strings", () => {
     const longString = "A".repeat(1000) + "👋 Special Characters!";
     const encrypted = encrypt(longString);

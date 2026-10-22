@@ -48,7 +48,8 @@ export function encrypt(text: string): string {
  */
 export function decrypt(encrypted: string): string {
   const [ivHex, authTagHex, encryptedData] = encrypted.split(":");
-  if (!ivHex || !authTagHex || !encryptedData) {
+  // encryptedData is "" when the plaintext was ""
+  if (!ivHex || !authTagHex || encryptedData === undefined) {
     throw new Error("Invalid encrypted data format");
   }
 

@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { decryptData, TRAINEE_ENCRYPTED_FIELDS, withOrganisme } from "./prisma";
-import { encrypt } from "./encryption";
+import {
+  decryptData,
+  encryptData,
+  TRAINEE_ENCRYPTED_FIELDS,
+  withOrganisme,
+} from "./prisma";
+import { encrypt, decrypt } from "./encryption";
 
 describe("Prisma Extension - Recursive Decryption", () => {
   const mockKey =
@@ -103,6 +108,46 @@ describe("Prisma Extension - Recursive Decryption", () => {
       const data = { firstName: "iv:tag:badhex" };
       const decrypted = decryptData(data, ["firstName"]);
       expect(decrypted.firstName).toBe("iv:tag:badhex");
+    });
+
+    it("should unwrap values encrypted several times", () => {
+      const data = { phone: encrypt(encrypt("0659211160")) };
+      const decrypted = decryptData(data, ["phone"]);
+      expect(decrypted.phone).toBe("0659211160");
+    });
+
+    it("should keep ISO dates intact", () => {
+      const iso = "1995-03-15T00:00:00.000Z";
+      const decrypted = decryptData({ dateOfBirth: encrypt(iso) }, [
+        "dateOfBirth",
+      ]);
+      expect(decrypted.dateOfBirth).toBe(iso);
+    });
+  });
+
+  describe("encryptData", () => {
+    it("should store a single layer when given an already encrypted value", () => {
+      const res = encryptData({ phone: encrypt(encrypt("0659211160")) }, [
+        "phone",
+      ]);
+      expect(decrypt(res?.phone as string)).toBe("0659211160");
+    });
+
+    it("should store empty strings as null", () => {
+      const res = encryptData({ phone: "", address: "" }, ["phone", "address"]);
+      expect(res?.phone).toBeNull();
+      expect(res?.address).toBeNull();
+    });
+
+    it("should decrypt a stored encrypted empty string", () => {
+      const decrypted = decryptData({ phone: encrypt("") }, ["phone"]);
+      expect(decrypted.phone).toBe("");
+    });
+
+    it("should encrypt plain values", () => {
+      const res = encryptData({ phone: "0659211160" }, ["phone"]);
+      expect(res?.phone).not.toBe("0659211160");
+      expect(decryptData(res, ["phone"])?.phone).toBe("0659211160");
     });
   });
 });

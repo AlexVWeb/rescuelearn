@@ -115,3 +115,34 @@ export async function updateAttestationResult(
     },
   });
 }
+
+export async function updateAttestationResults(
+  sessionId: string,
+  inscriptionIds: string[],
+  result: (typeof ATTESTATION_RESULT)[keyof typeof ATTESTATION_RESULT]
+) {
+  const user = await requireOrganisme();
+
+  const session = await prisma.trainingSession.findUnique({
+    where: { id: sessionId },
+  });
+
+  if (!session || session.organismeId !== user.organismeId) {
+    throw new Error("Session introuvable ou non autorisée");
+  }
+
+  if (isSessionClosed(session.status)) {
+    throw new Error("Impossible de modifier une session clôturée");
+  }
+
+  if (inscriptionIds.length === 0) return { count: 0 };
+
+  // Le filtre sur la session empêche de toucher aux inscriptions d'une autre session
+  return prisma.inscription.updateMany({
+    where: { id: { in: inscriptionIds }, trainingSessionId: sessionId },
+    data: {
+      attestationResult: result,
+      attestationValidatedAt: new Date(),
+    },
+  });
+}

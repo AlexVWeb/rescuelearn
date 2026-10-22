@@ -6,10 +6,12 @@ import {
   Text,
   Image,
   StyleSheet,
-  PDFDownloadLink,
 } from "@react-pdf/renderer";
 import dayjs from "dayjs";
 import { Slot, Inscription } from "../types";
+import { FisePsePages } from "./pdf-fise-pse";
+import { formatFormateurName } from "./formateurs";
+import { downloadPdfDocument } from "./pdf-download";
 
 // ──────────────────────────────────────────────────────────────────────────
 // STYLES
@@ -120,6 +122,7 @@ const styles = StyleSheet.create({
 interface FisePageProps {
   session: {
     title: string;
+    type?: string;
     location: string;
     startDate: Date | null;
     slots: Slot[];
@@ -129,6 +132,8 @@ interface FisePageProps {
     lastName: string | null;
     firstName: string | null;
   };
+  /** Noms des formateurs affectés (FISE PSE : équipe pédagogique) */
+  equipePedagogique?: string[];
   organismeLogoBase64?: string | null;
 }
 
@@ -399,11 +404,35 @@ const FisePage: React.FC<FisePageProps> = ({
 // ──────────────────────────────────────────────────────────────────────────
 
 /**
+ * FISE pages for one participant, in the format matching the session type
+ */
+const FiseContent: React.FC<FisePageProps> = ({
+  equipePedagogique,
+  ...props
+}) => {
+  const level = props.session.type;
+  if (level === "PSE1" || level === "PSE2") {
+    const equipe = equipePedagogique?.length
+      ? equipePedagogique
+      : [formatFormateurName(props.formateur)].filter(Boolean);
+    return (
+      <FisePsePages
+        level={level}
+        session={props.session}
+        inscription={props.inscription}
+        equipePedagogique={equipe}
+      />
+    );
+  }
+  return <FisePage {...props} />;
+};
+
+/**
  * Single FISE PDF Document
  */
 const SingleFiseDocument: React.FC<FisePageProps> = (props) => (
   <Document>
-    <FisePage {...props} />
+    <FiseContent {...props} />
   </Document>
 );
 
@@ -413,6 +442,7 @@ const SingleFiseDocument: React.FC<FisePageProps> = (props) => (
 interface MultipleFiseDocumentProps {
   session: {
     title: string;
+    type?: string;
     location: string;
     startDate: Date | null;
     slots: Slot[];
@@ -422,6 +452,8 @@ interface MultipleFiseDocumentProps {
     lastName: string | null;
     firstName: string | null;
   };
+  /** Noms des formateurs affectés (FISE PSE : équipe pédagogique) */
+  equipePedagogique?: string[];
   organismeLogoBase64?: string | null;
 }
 
@@ -429,15 +461,17 @@ const MultipleFiseDocument: React.FC<MultipleFiseDocumentProps> = ({
   session,
   inscriptions,
   formateur,
+  equipePedagogique,
   organismeLogoBase64,
 }) => (
   <Document>
     {inscriptions.map((inscription, index) => (
-      <FisePage
+      <FiseContent
         key={index}
         session={session}
         inscription={inscription}
         formateur={formateur}
+        equipePedagogique={equipePedagogique}
         organismeLogoBase64={organismeLogoBase64}
       />
     ))}
@@ -445,60 +479,28 @@ const MultipleFiseDocument: React.FC<MultipleFiseDocumentProps> = ({
 );
 
 // ──────────────────────────────────────────────────────────────────────────
-// EXPORT FUNCTIONS (React components with PDFDownloadLink)
+// EXPORT FUNCTIONS (generated on demand)
 // ──────────────────────────────────────────────────────────────────────────
 
-type PDFDownloadChildren =
-  React.ReactNode | ((props: { loading: boolean }) => React.ReactNode);
+/**
+ * Download a single FISE PDF
+ */
+export function downloadFisePDF(props: FisePageProps) {
+  return downloadPdfDocument(
+    <SingleFiseDocument {...props} />,
+    `FISE_${props.inscription.trainee?.lastName}_${props.inscription.trainee?.firstName}.pdf`
+  );
+}
 
 /**
- * Component to download a single FISE PDF
+ * Download every FISE of the session in one file
  */
-export const SingleFisePDFDownload: React.FC<
-  FisePageProps & { children?: PDFDownloadChildren; className?: string }
-> = ({ children, className, ...props }) => (
-  <PDFDownloadLink
-    document={<SingleFiseDocument {...props} />}
-    fileName={`FISE_${props.inscription.trainee?.lastName}_${props.inscription.trainee?.firstName}.pdf`}
-    className={className}
-  >
-    {({ loading }) =>
-      children
-        ? typeof children === "function"
-          ? children({ loading })
-          : children
-        : loading
-          ? "Génération..."
-          : "Télécharger"
-    }
-  </PDFDownloadLink>
-);
-
-/**
- * Component to download multiple FISE PDFs in one file
- */
-export const MultipleFisePDFDownload: React.FC<
-  MultipleFiseDocumentProps & {
-    children?: PDFDownloadChildren;
-    className?: string;
-  }
-> = ({ children, className, ...props }) => (
-  <PDFDownloadLink
-    document={<MultipleFiseDocument {...props} />}
-    fileName={`FISE_${props.session.title.replace(/\s+/g, "_")}.pdf`}
-    className={className}
-  >
-    {({ loading }) =>
-      children
-        ? typeof children === "function"
-          ? children({ loading })
-          : children
-        : loading
-          ? "Génération..."
-          : "Télécharger"
-    }
-  </PDFDownloadLink>
-);
+export function downloadAllFisePDF(props: MultipleFiseDocumentProps) {
+  return downloadPdfDocument(
+    <MultipleFiseDocument {...props} />,
+    `FISE_${props.session.title.replace(/\s+/g, "_")}.pdf`
+  );
+}
 
 // ──────────────────────────────────────────────────────────────────────────
 // ALTERNATIVE: Direct generation functions (if you prefer programmatic export)

@@ -1,9 +1,9 @@
 "use client";
 import { logger } from "@/lib/logger";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -19,23 +19,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Download,
   FileDown,
   ClipboardList,
   Files,
   FileText,
+  CheckCheck,
+  X,
 } from "lucide-react";
-import { updateAttestationResult } from "../../../../actions";
+import {
+  updateAttestationResult,
+  updateAttestationResults,
+} from "../../../../actions";
 import {
   generateAttestationPDF,
   generateAllAttestationsPDF,
 } from "../../../../lib/pdf-attestation-fin-formation-psc-export";
-import {
-  SingleFisePDFDownload,
-  MultipleFisePDFDownload,
-} from "../../../../lib/pdf-fise";
-import { PvPDFDownload } from "../../../../lib/pdf-pv";
+import { downloadFisePDF, downloadAllFisePDF } from "../../../../lib/pdf-fise";
+import { downloadPvPDF } from "../../../../lib/pdf-pv";
 import {
   Inscription,
   Slot,
@@ -47,6 +50,7 @@ interface FormationTabProps {
   sessionId: string;
   session: {
     title: string;
+    type?: string;
     location: string;
     startDate: Date | null;
     slots: Slot[];
@@ -57,39 +61,107 @@ interface FormationTabProps {
     lastName: string | null;
     firstName: string | null;
   };
+  equipePedagogique?: string[];
   organismeLogoBase64?: string | null;
 }
 
+type AttestationResult =
+  (typeof ATTESTATION_RESULT)[keyof typeof ATTESTATION_RESULT];
+
 export function FormationTab({
+  sessionId,
   session,
   inscriptions,
   formateur,
+  equipePedagogique,
   organismeLogoBase64,
 }: FormationTabProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [, startRefresh] = useTransition();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Résultats affichés immédiatement, sans attendre l'aller-retour serveur
+  const [pendingResults, setPendingResults] = useState<
+    Record<string, AttestationResult>
+  >({});
+  // PDF en cours de génération : "all-fise", "pv" ou l'id d'une inscription
+  const [generating, setGenerating] = useState<string | null>(null);
 
   const isClosed =
     session.status === "terminée" || session.status === "annulée";
 
-  const inscriptionsWithResult = inscriptions.filter(
+  const displayedInscriptions = inscriptions.map((i) =>
+    i.id in pendingResults
+      ? { ...i, attestationResult: pendingResults[i.id] }
+      : i
+  );
+
+  const inscriptionsWithResult = displayedInscriptions.filter(
     (i) => !!i.attestationResult
   );
   const hasAnyResult = inscriptionsWithResult.length > 0;
 
-  async function handleUpdateResult(id: string, value: string) {
-    if (isClosed) return;
-    setLoading(true);
+  // Ignore les inscriptions retirées de la session depuis la sélection
+  const selectedCount = inscriptions.filter((i) =>
+    selectedIds.has(i.id)
+  ).length;
+  const allSelected =
+    inscriptions.length > 0 && selectedCount === inscriptions.length;
+
+  function toggleSelected(id: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleAll(checked: boolean) {
+    setSelectedIds(
+      checked ? new Set(inscriptions.map((i) => i.id)) : new Set()
+    );
+  }
+
+  async function applyResults(ids: string[], value: AttestationResult) {
+    if (isClosed || ids.length === 0) return;
+    setPendingResults((prev) => ({
+      ...prev,
+      ...Object.fromEntries(ids.map((id) => [id, value])),
+    }));
     try {
-      await updateAttestationResult(
-        id,
-        value as (typeof ATTESTATION_RESULT)[keyof typeof ATTESTATION_RESULT]
-      );
-      router.refresh();
+      if (ids.length === 1) {
+        await updateAttestationResult(ids[0], value);
+      } else {
+        await updateAttestationResults(sessionId, ids, value);
+      }
+      startRefresh(() => router.refresh());
+    } catch (e) {
+      logger.error(e);
+      // Retour à la valeur serveur pour les stagiaires concernés uniquement
+      setPendingResults((prev) => {
+        const next = { ...prev };
+        ids.forEach((id) => delete next[id]);
+        return next;
+      });
+    }
+  }
+
+  function handleBulkUpdateResult(value: AttestationResult) {
+    const ids = inscriptions
+      .filter((i) => selectedIds.has(i.id))
+      .map((i) => i.id);
+    setSelectedIds(new Set());
+    applyResults(ids, value);
+  }
+
+  async function generate(key: string, fn: () => Promise<void>) {
+    setGenerating(key);
+    try {
+      await fn();
     } catch (e) {
       logger.error(e);
     } finally {
-      setLoading(false);
+      setGenerating(null);
     }
   }
 
@@ -99,6 +171,44 @@ export function FormationTab({
 
   function handleDownloadAll() {
     generateAllAttestationsPDF(session, inscriptionsWithResult, formateur);
+  }
+
+  function handleDownloadAllFise() {
+    generate("all-fise", () =>
+      downloadAllFisePDF({
+        session,
+        inscriptions,
+        formateur,
+        equipePedagogique,
+        organismeLogoBase64,
+      })
+    );
+  }
+
+  function handleDownloadFise(inscription: Inscription) {
+    generate(inscription.id, () =>
+      downloadFisePDF({
+        session,
+        inscription,
+        formateur,
+        equipePedagogique,
+        organismeLogoBase64,
+      })
+    );
+  }
+
+  function handleDownloadPv() {
+    const times = session.slots.map((s) => new Date(s.date).getTime());
+    generate("pv", () =>
+      downloadPvPDF({
+        session: {
+          ...session,
+          endDate: times.length > 0 ? new Date(Math.max(...times)) : null,
+        },
+        inscriptions: displayedInscriptions,
+        formateur,
+      })
+    );
   }
 
   const getStatusBadge = (status: string) => {
@@ -131,64 +241,27 @@ export function FormationTab({
           <Button
             variant="outline"
             onClick={handleDownloadAll}
-            disabled={!hasAnyResult || loading}
+            disabled={!hasAnyResult}
           >
             <Download className="mr-2 h-4 w-4" />
             Attestations de fin de formation
           </Button>
-          {inscriptions.length === 0 || loading ? (
-            <Button variant="outline" disabled>
-              <Files className="mr-2 h-4 w-4" />
-              Toutes les FISE
-            </Button>
-          ) : (
-            <MultipleFisePDFDownload
-              session={session}
-              inscriptions={inscriptions}
-              formateur={formateur}
-              organismeLogoBase64={organismeLogoBase64}
-              className={buttonVariants({ variant: "outline" })}
-            >
-              {({ loading: pdfLoading }) => (
-                <>
-                  <Files className="mr-2 h-4 w-4" />
-                  {pdfLoading ? "Génération..." : "Toutes les FISE"}
-                </>
-              )}
-            </MultipleFisePDFDownload>
-          )}
-          {inscriptions.length === 0 || loading ? (
-            <Button variant="outline" disabled>
-              <FileText className="mr-2 h-4 w-4" />
-              PV de formation
-            </Button>
-          ) : (
-            <PvPDFDownload
-              session={{
-                ...session,
-                endDate:
-                  session.slots.length > 0
-                    ? new Date(
-                        Math.max(
-                          ...session.slots.map((s) =>
-                            new Date(s.date).getTime()
-                          )
-                        )
-                      )
-                    : null,
-              }}
-              inscriptions={inscriptions}
-              formateur={formateur}
-              className={buttonVariants({ variant: "outline" })}
-            >
-              {({ loading: pdfLoading }) => (
-                <>
-                  <FileText className="mr-2 h-4 w-4" />
-                  {pdfLoading ? "Génération..." : "PV de formation"}
-                </>
-              )}
-            </PvPDFDownload>
-          )}
+          <Button
+            variant="outline"
+            onClick={handleDownloadAllFise}
+            disabled={inscriptions.length === 0 || generating !== null}
+          >
+            <Files className="mr-2 h-4 w-4" />
+            {generating === "all-fise" ? "Génération..." : "Toutes les FISE"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleDownloadPv}
+            disabled={inscriptions.length === 0 || generating !== null}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            {generating === "pv" ? "Génération..." : "PV de formation"}
+          </Button>
         </div>
       </CardHeader>
 
@@ -199,87 +272,125 @@ export function FormationTab({
               Aucun stagiaire inscrit
             </p>
           ) : (
-            inscriptions.map((inscription) => (
-              <div
-                key={inscription.id}
-                className="flex flex-col justify-between gap-4 rounded-lg border p-3 sm:flex-row sm:items-center"
-              >
-                <div className="flex flex-col">
-                  <p className="font-medium">
-                    {inscription.trainee?.firstName}{" "}
-                    {inscription.trainee?.lastName}
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    {inscription.trainee?.email || "Pas d'email"}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  {getStatusBadge(inscription.status)}
-
-                  <Select
-                    value={inscription.attestationResult ?? ""}
-                    onValueChange={(val) =>
-                      handleUpdateResult(inscription.id, val)
+            <>
+              <div className="bg-muted/30 flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+                <label className="flex items-center gap-3 text-sm font-medium">
+                  <Checkbox
+                    checked={
+                      allSelected
+                        ? true
+                        : selectedCount > 0
+                          ? "indeterminate"
+                          : false
                     }
-                    disabled={loading || isClosed}
-                  >
-                    <SelectTrigger className="h-8 w-[140px]">
-                      <SelectValue placeholder="Non défini" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ATTESTATION_RESULT.ACQUIS}>
-                        Acquis
-                      </SelectItem>
-                      <SelectItem value={ATTESTATION_RESULT.NON_ACQUIS}>
-                        Non Acquis
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-
+                    onCheckedChange={(checked) => toggleAll(checked === true)}
+                    disabled={isClosed}
+                    aria-label="Sélectionner tous les stagiaires"
+                  />
+                  {selectedCount > 0
+                    ? `${selectedCount} stagiaire${selectedCount > 1 ? "s" : ""} sélectionné${selectedCount > 1 ? "s" : ""}`
+                    : "Tout sélectionner"}
+                </label>
+                <div className="flex gap-2 self-end sm:self-auto">
                   <Button
                     variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleDownloadOne(inscription)}
-                    disabled={!inscription.attestationResult || loading}
-                    title="Télécharger l'attestation de fin de formation"
+                    size="sm"
+                    onClick={() =>
+                      handleBulkUpdateResult(ATTESTATION_RESULT.ACQUIS)
+                    }
+                    disabled={selectedCount === 0 || isClosed}
                   >
-                    <FileDown className="h-4 w-4" />
+                    <CheckCheck className="mr-2 h-4 w-4" />
+                    Acquis
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleBulkUpdateResult(ATTESTATION_RESULT.NON_ACQUIS)
+                    }
+                    disabled={selectedCount === 0 || isClosed}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Non acquis
+                  </Button>
+                </div>
+              </div>
+              {displayedInscriptions.map((inscription) => (
+                <div
+                  key={inscription.id}
+                  className="flex flex-col justify-between gap-4 rounded-lg border p-3 sm:flex-row sm:items-center"
+                >
+                  <label className="flex items-center gap-3">
+                    <Checkbox
+                      checked={selectedIds.has(inscription.id)}
+                      onCheckedChange={(checked) =>
+                        toggleSelected(inscription.id, checked === true)
+                      }
+                      disabled={isClosed}
+                      aria-label={`Sélectionner ${inscription.trainee?.firstName ?? ""} ${inscription.trainee?.lastName ?? ""}`}
+                    />
+                    <div className="flex flex-col">
+                      <p className="font-medium">
+                        {inscription.trainee?.firstName}{" "}
+                        {inscription.trainee?.lastName}
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        {inscription.trainee?.email || "Pas d'email"}
+                      </p>
+                    </div>
+                  </label>
 
-                  {loading ? (
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    {getStatusBadge(inscription.status)}
+
+                    <Select
+                      value={inscription.attestationResult ?? ""}
+                      onValueChange={(val) =>
+                        applyResults([inscription.id], val as AttestationResult)
+                      }
+                      disabled={isClosed}
+                    >
+                      <SelectTrigger className="h-8 w-[140px]">
+                        <SelectValue placeholder="Non défini" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ATTESTATION_RESULT.ACQUIS}>
+                          Acquis
+                        </SelectItem>
+                        <SelectItem value={ATTESTATION_RESULT.NON_ACQUIS}>
+                          Non Acquis
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+
                     <Button
                       variant="outline"
                       size="icon"
                       className="h-8 w-8"
-                      disabled
+                      onClick={() => handleDownloadOne(inscription)}
+                      disabled={!inscription.attestationResult}
+                      title="Télécharger l'attestation de fin de formation"
+                    >
+                      <FileDown className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDownloadFise(inscription)}
+                      disabled={generating !== null}
                       title="Télécharger la FISE"
                     >
-                      <ClipboardList className="h-4 w-4" />
+                      <ClipboardList
+                        className={`h-4 w-4 ${generating === inscription.id ? "animate-pulse" : ""}`}
+                      />
                     </Button>
-                  ) : (
-                    <SingleFisePDFDownload
-                      session={session}
-                      inscription={inscription}
-                      formateur={formateur}
-                      organismeLogoBase64={organismeLogoBase64}
-                      className={buttonVariants({
-                        variant: "outline",
-                        size: "icon",
-                        className: "h-8 w-8",
-                      })}
-                    >
-                      {({ loading: pdfLoading }) => (
-                        <ClipboardList
-                          className={`h-4 w-4 ${pdfLoading ? "animate-pulse" : ""}`}
-                        />
-                      )}
-                    </SingleFisePDFDownload>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </>
           )}
         </div>
       </CardContent>

@@ -1,14 +1,8 @@
 import React from "react";
-import {
-  Document,
-  Page,
-  View,
-  Text,
-  StyleSheet,
-  PDFDownloadLink,
-} from "@react-pdf/renderer";
+import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import dayjs from "dayjs";
 import { Slot, Inscription } from "../types";
+import { downloadPdfDocument } from "./pdf-download";
 
 // ──────────────────────────────────────────────────────────────────────────
 // STYLES
@@ -365,26 +359,9 @@ const PvDocument: React.FC<PvPageProps> = (props) => (
   </Document>
 );
 
-export const PvPDFDownload: React.FC<
-  PvPageProps & {
-    children?:
-      React.ReactNode | ((props: { loading: boolean }) => React.ReactNode);
-    className?: string;
-  }
-> = ({ children, className, ...props }) => (
-  <PDFDownloadLink
-    document={<PvDocument {...props} />}
-    fileName={`PV_${props.session.title.replace(/\s+/g, "_")}.pdf`}
-    className={className}
-  >
-    {({ loading }) =>
-      children
-        ? typeof children === "function"
-          ? children({ loading })
-          : children
-        : loading
-          ? "Génération..."
-          : "Télécharger"
-    }
-  </PDFDownloadLink>
-);
+export function downloadPvPDF(props: PvPageProps) {
+  return downloadPdfDocument(
+    <PvDocument {...props} />,
+    `PV_${props.session.title.replace(/\s+/g, "_")}.pdf`
+  );
+}

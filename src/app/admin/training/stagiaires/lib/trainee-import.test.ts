@@ -166,6 +166,24 @@ describe("parseRows", () => {
     expect(result[0].address).toBe("12 rue des Acacias, 69003, Lyon");
   });
 
+  it("restores the leading zero of phone numbers parsed as numbers", () => {
+    const rows = [
+      { Prénom: "Lucas", Nom: "Bertrand", Téléphone: 659211160 },
+      { Prénom: "Camille", Nom: "Durand", Téléphone: "769406328" },
+      { Prénom: "Léa", Nom: "Martin", Téléphone: "06 78 45 12 90" },
+      { Prénom: "Tom", Nom: "Petit", Téléphone: "+33678451290" },
+    ];
+
+    const result = parseRows(rows);
+
+    expect(result.map((t) => t.phone)).toEqual([
+      "0659211160",
+      "0769406328",
+      "06 78 45 12 90",
+      "+33678451290",
+    ]);
+  });
+
   it("filters rows missing Prénom or Nom", () => {
     const rows = [
       { Prénom: "", Nom: "Bertrand" },
