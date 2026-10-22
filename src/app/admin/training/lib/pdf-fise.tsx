@@ -9,7 +9,7 @@ import {
 } from "@react-pdf/renderer";
 import dayjs from "dayjs";
 import { Slot, Inscription } from "../types";
-import { FisePse1Pages } from "./pdf-fise-pse1";
+import { FisePsePages } from "./pdf-fise-pse";
 import { formatFormateurName } from "./formateurs";
 import { downloadPdfDocument } from "./pdf-download";
 
@@ -132,7 +132,7 @@ interface FisePageProps {
     lastName: string | null;
     firstName: string | null;
   };
-  /** Noms des formateurs affectés (FISE PSE 1 : équipe pédagogique) */
+  /** Noms des formateurs affectés (FISE PSE : équipe pédagogique) */
   equipePedagogique?: string[];
   organismeLogoBase64?: string | null;
 }
@@ -410,12 +410,14 @@ const FiseContent: React.FC<FisePageProps> = ({
   equipePedagogique,
   ...props
 }) => {
-  if (props.session.type === "PSE1") {
+  const level = props.session.type;
+  if (level === "PSE1" || level === "PSE2") {
     const equipe = equipePedagogique?.length
       ? equipePedagogique
       : [formatFormateurName(props.formateur)].filter(Boolean);
     return (
-      <FisePse1Pages
+      <FisePsePages
+        level={level}
         session={props.session}
         inscription={props.inscription}
         equipePedagogique={equipe}
@@ -450,7 +452,7 @@ interface MultipleFiseDocumentProps {
     lastName: string | null;
     firstName: string | null;
   };
-  /** Noms des formateurs affectés (FISE PSE 1 : équipe pédagogique) */
+  /** Noms des formateurs affectés (FISE PSE : équipe pédagogique) */
   equipePedagogique?: string[];
   organismeLogoBase64?: string | null;
 }
