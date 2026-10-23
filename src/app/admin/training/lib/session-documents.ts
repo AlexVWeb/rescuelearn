@@ -81,3 +81,25 @@ export function safeFileBaseName(fileName: string): string {
       .slice(0, 80) || "document"
   );
 }
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * Valeur d'un <input type="datetime-local"> (AAAA-MM-JJTHH:mm), dans le
+ * fuseau du navigateur : celui du formateur qui saisit l'heure.
+ */
+export function toDateTimeLocalValue(date: Date | null): string {
+  if (!date) return "";
+  const d = new Date(date);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** « 12 nov. à 14h00 », dans le fuseau du navigateur. */
+export function formatVisibleFrom(date: Date): string {
+  const d = new Date(date);
+  const day = new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "short",
+  }).format(d);
+  return `${day} à ${d.getHours()}h${pad(d.getMinutes())}`;
+}

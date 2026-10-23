@@ -27,18 +27,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { deleteDocument, updateDocument } from "@/app/admin/training/actions";
 import type { SessionDocument } from "@/app/admin/training/types";
-
-const dayFormat = new Intl.DateTimeFormat("fr-FR", {
-  day: "numeric",
-  month: "short",
-});
-
-// <input type="date"> attend AAAA-MM-JJ, en heure locale
-function toDateInput(date: Date | null) {
-  if (!date) return "";
-  const d = new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+import {
+  formatVisibleFrom,
+  toDateTimeLocalValue,
+} from "@/app/admin/training/lib/session-documents";
 
 export function DocumentRow({
   document,
@@ -59,13 +51,13 @@ export function DocumentRow({
 
   function save(formData: FormData) {
     const title = String(formData.get("title") ?? "");
-    const date = String(formData.get("visibleFrom") ?? "");
+    const visibleAt = String(formData.get("visibleFrom") ?? "");
     startTransition(async () => {
       try {
         await updateDocument(document.id, {
           title,
-          // Minuit local du jour choisi
-          visibleFrom: date ? new Date(`${date}T00:00:00`) : null,
+          // « AAAA-MM-JJTHH:mm » sans fuseau : interprété en heure locale du formateur
+          visibleFrom: visibleAt ? new Date(visibleAt) : null,
         });
         setEditOpen(false);
         router.refresh();
@@ -102,7 +94,7 @@ export function DocumentRow({
       <div className="flex shrink-0 items-center gap-1">
         {hidden && (
           <Badge variant="outline">
-            Visible le {dayFormat.format(visibleFrom!)}
+            Visible le {formatVisibleFrom(visibleFrom!)}
           </Badge>
         )}
         <Button
@@ -145,21 +137,21 @@ export function DocumentRow({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor={`visible-${document.id}`}>
-                Visible à partir du
+                Visible à partir de
               </Label>
               <Input
                 id={`visible-${document.id}`}
                 name="visibleFrom"
-                type="date"
-                defaultValue={toDateInput(visibleFrom)}
+                type="datetime-local"
+                defaultValue={toDateTimeLocalValue(visibleFrom)}
                 aria-describedby={`visible-hint-${document.id}`}
               />
               <p
                 id={`visible-hint-${document.id}`}
                 className="text-muted-foreground text-xs"
               >
-                Laissez vide pour le rendre visible tout de suite (ex. : le
-                corrigé d&apos;un QCM, le dernier jour).
+                Date et heure. Laissez vide pour le rendre visible tout de suite
+                (ex. : le corrigé d&apos;un QCM, le dernier jour à 16h).
               </p>
             </div>
             <DialogFooter>

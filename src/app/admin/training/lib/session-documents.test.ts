@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   MAX_DOCUMENT_BYTES,
   defaultDocumentTitle,
+  formatVisibleFrom,
+  toDateTimeLocalValue,
   matchesDocumentSignature,
   safeFileBaseName,
   validateDocumentUpload,
@@ -66,6 +68,30 @@ describe("noms de fichiers", () => {
   it("produit un nom sûr pour la clé de stockage", () => {
     expect(safeFileBaseName("Recos PSE ../2024 é.pdf")).toBe(
       "Recos_PSE_2024_e"
+    );
+  });
+});
+
+describe("visibilité à date et heure", () => {
+  it("produit une valeur lisible par <input type=datetime-local>", () => {
+    const value = toDateTimeLocalValue(new Date(2026, 10, 12, 14, 5));
+    expect(value).toBe("2026-11-12T14:05");
+  });
+
+  it("fait l'aller-retour saisie → Date → saisie sans décalage", () => {
+    const original = new Date(2026, 9, 25, 9, 30); // jour du passage à l'heure d'hiver
+    expect(toDateTimeLocalValue(new Date(toDateTimeLocalValue(original)))).toBe(
+      toDateTimeLocalValue(original)
+    );
+  });
+
+  it("vide si aucune date", () => {
+    expect(toDateTimeLocalValue(null)).toBe("");
+  });
+
+  it("affiche le jour et l'heure", () => {
+    expect(formatVisibleFrom(new Date(2026, 10, 12, 14, 0))).toBe(
+      "12 nov. à 14h00"
     );
   });
 });

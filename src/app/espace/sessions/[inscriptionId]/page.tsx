@@ -42,28 +42,36 @@ export default async function EspaceSessionPage({
   const session = inscription.trainingSession;
   const now = new Date();
 
-  const [slots, documents, otherInscriptions] = await Promise.all([
-    prisma.slot.findMany({
-      where: { trainingSessionId: session.id },
-      orderBy: [{ date: "asc" }, { startTime: "asc" }],
-      include: { emargements: { where: { inscriptionId: inscription.id } } },
-    }),
-    prisma.sessionDocument.findMany({
-      where: {
-        trainingSessionId: session.id,
-        OR: [{ visibleFrom: null }, { visibleFrom: { lte: now } }],
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.inscription.findMany({
-      where: {
-        traineeId: inscription.traineeId,
-        accessTokenHash: { not: null },
-        id: { not: inscription.id },
-      },
-      include: { trainee: true, trainingSession: true },
-    }),
-  ]);
+  const [slots, documents, nextDocument, otherInscriptions] = await Promise.all(
+    [
+      prisma.slot.findMany({
+        where: { trainingSessionId: session.id },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+        include: { emargements: { where: { inscriptionId: inscription.id } } },
+      }),
+      prisma.sessionDocument.findMany({
+        where: {
+          trainingSessionId: session.id,
+          OR: [{ visibleFrom: null }, { visibleFrom: { lte: now } }],
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      // Prochain document programmé : la page se rafraîchit à son heure
+      prisma.sessionDocument.findFirst({
+        where: { trainingSessionId: session.id, visibleFrom: { gt: now } },
+        orderBy: { visibleFrom: "asc" },
+        select: { visibleFrom: true },
+      }),
+      prisma.inscription.findMany({
+        where: {
+          traineeId: inscription.traineeId,
+          accessTokenHash: { not: null },
+          id: { not: inscription.id },
+        },
+        include: { trainee: true, trainingSession: true },
+      }),
+    ]
+  );
 
   // Mêmes règles que /espace : sinon « Mes formations » redirigerait ici en boucle
   const hasOtherSessions = otherInscriptions.some(
@@ -97,9 +105,11 @@ export default async function EspaceSessionPage({
   );
   const currentSlot = currentIndex >= 0 ? slotViews[currentIndex] : null;
 
-  // Prochaine ouverture ou fermeture de créneau : la page se rafraîchit à ce moment
+  // Prochaine ouverture ou fermeture de créneau, ou prochain document programmé :
+  // la page se rafraîchit à ce moment
   const nextChange = windows
     .flatMap(({ opensAt, closesAt }) => [opensAt, closesAt])
+    .concat(nextDocument?.visibleFrom ? [nextDocument.visibleFrom] : [])
     .filter((date) => date > now)
     .sort((a, b) => a.getTime() - b.getTime())[0];
 
