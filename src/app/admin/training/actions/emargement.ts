@@ -16,6 +16,25 @@ function generatePin() {
   return randomInt(100000, 1000000).toString();
 }
 
+type Tenant = Awaited<ReturnType<typeof getTenantPrisma>>;
+
+// Hors validation, l'origine de la signature n'a plus de sens
+function statusUpdate(status: string) {
+  return status === "validé" ? { status } : { status, signedVia: null };
+}
+
+// Seuls les émargements sans origine passent à "formateur" : une signature
+// faite par le stagiaire (portail, PIN) garde sa preuve d'origine
+async function markValidatedByFormateur(
+  tenant: Tenant,
+  where: { slotId: string; inscriptionId?: string }
+) {
+  await tenant.emargement.updateMany({
+    where: { ...where, status: "validé", signedVia: null },
+    data: { signedVia: "formateur", validatedAt: new Date() },
+  });
+}
+
 export async function generateSlotPin(slotId: string) {
   const user = await requireOrganisme();
   const tenant = await getTenantPrisma();
@@ -139,11 +158,12 @@ export async function updateEmargementStatus(
 
   const emargement = await tenant.emargement.upsert({
     where: { inscriptionId_slotId: { inscriptionId, slotId } },
-    update: { status },
+    update: statusUpdate(status),
     create: { inscriptionId, slotId, status },
   });
 
   if (status === "validé") {
+    await markValidatedByFormateur(tenant, { inscriptionId, slotId });
     await tenant.inscription.update({
       where: { id: inscriptionId },
       data: { status: "présent" },
@@ -181,13 +201,14 @@ export async function bulkUpdateEmargementStatus(
     inscriptions.map((ins: Inscription) =>
       tenant.emargement.upsert({
         where: { inscriptionId_slotId: { inscriptionId: ins.id, slotId } },
-        update: { status },
+        update: statusUpdate(status),
         create: { inscriptionId: ins.id, slotId, status },
       })
     )
   );
 
   if (status === "validé" && inscriptions.length > 0) {
+    await markValidatedByFormateur(tenant, { slotId });
     await tenant.inscription.updateMany({
       where: {
         id: { in: inscriptions.map((ins: Inscription) => ins.id) },

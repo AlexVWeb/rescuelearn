@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // --- Mocks ---
 
 vi.mock("next/headers", () => ({
-  headers: vi.fn().mockResolvedValue({}),
+  headers: vi.fn().mockResolvedValue({
+    get: (name: string) => (name === "x-forwarded-for" ? "203.0.113.7" : null),
+  }),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -26,9 +28,15 @@ const mockPrisma = vi.hoisted(() => ({
   },
   emargement: {
     upsert: vi.fn(),
+    updateMany: vi.fn(),
     findMany: vi.fn(),
     update: vi.fn(),
     findFirst: vi.fn(),
+  },
+  rateLimit: {
+    findUnique: vi.fn(),
+    upsert: vi.fn(),
+    update: vi.fn(),
   },
   $transaction: vi.fn(),
 }));
@@ -67,6 +75,7 @@ beforeEach(() => {
     Array.isArray(ops) ? Promise.all(ops) : ops
   );
   mockPrisma.emargement.upsert.mockResolvedValue({});
+  mockPrisma.rateLimit.findUnique.mockResolvedValue(null);
 });
 
 import {
@@ -74,9 +83,10 @@ import {
   generateSessionPin,
   updateEmargementStatus,
   bulkUpdateEmargementStatus,
-  getTraineesByPin,
   getSessionDetailsByPin,
   getTraineesByPinAndName,
+  getTraineesByPinNameAndDob,
+  validatePresencePublic,
 } from "@/app/admin/training/actions";
 import { EMARGEMENT_STATUS } from "@/app/admin/training/types";
 
@@ -309,7 +319,7 @@ describe("updateEmargementStatus", () => {
     await updateEmargementStatus("ins-1", "slot-1", EMARGEMENT_STATUS.ABSENT);
     expect(mockPrisma.emargement.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: { status: EMARGEMENT_STATUS.ABSENT },
+        update: { status: EMARGEMENT_STATUS.ABSENT, signedVia: null },
         create: expect.objectContaining({ status: EMARGEMENT_STATUS.ABSENT }),
       })
     );
@@ -327,6 +337,29 @@ describe("updateEmargementStatus", () => {
     expect(mockPrisma.inscription.update).toHaveBeenCalledWith({
       where: { id: "ins-1" },
       data: { status: "présent" },
+    });
+  });
+
+  it("marque la validation comme faite par le formateur sans écraser une signature du stagiaire", async () => {
+    mockAuthenticatedUser("org-1");
+    mockPrisma.inscription.findUnique.mockResolvedValue({
+      id: "ins-1",
+      trainingSession: { organismeId: "org-1", status: "planifiée" },
+    });
+
+    await updateEmargementStatus("ins-1", "slot-1", EMARGEMENT_STATUS.VALIDE);
+
+    expect(mockPrisma.emargement.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: { status: EMARGEMENT_STATUS.VALIDE } })
+    );
+    expect(mockPrisma.emargement.updateMany).toHaveBeenCalledWith({
+      where: {
+        slotId: "slot-1",
+        inscriptionId: "ins-1",
+        status: EMARGEMENT_STATUS.VALIDE,
+        signedVia: null,
+      },
+      data: { signedVia: "formateur", validatedAt: expect.any(Date) },
     });
   });
 });
@@ -375,6 +408,15 @@ describe("bulkUpdateEmargementStatus", () => {
     await bulkUpdateEmargementStatus("slot-1", EMARGEMENT_STATUS.VALIDE);
 
     expect(mockPrisma.emargement.upsert).toHaveBeenCalledTimes(3);
+    // Les signatures déjà faites via le portail ou le PIN gardent leur origine
+    expect(mockPrisma.emargement.updateMany).toHaveBeenCalledWith({
+      where: {
+        slotId: "slot-1",
+        status: EMARGEMENT_STATUS.VALIDE,
+        signedVia: null,
+      },
+      data: { signedVia: "formateur", validatedAt: expect.any(Date) },
+    });
     expect(mockPrisma.inscription.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ["ins-1", "ins-2", "ins-3"] } },
       data: { status: "présent" },
@@ -382,23 +424,96 @@ describe("bulkUpdateEmargementStatus", () => {
   });
 });
 
-describe("getSessionDetailsByPin", () => {
-  it("throw 'Code PIN invalide' si aucun émargement trouvé", async () => {
-    mockPrisma.emargement.findFirst.mockResolvedValue(null);
+// --- Actions publiques (/validation) ---
+
+function pinEmargement(
+  id: string,
+  trainee: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth?: string | null;
+  },
+  status: string = EMARGEMENT_STATUS.EN_ATTENTE
+) {
+  return {
+    id,
+    status,
+    inscriptionId: `ins-${trainee.id}`,
+    slot: { label: "Matin J1", trainingSession: { title: "PSC Mars" } },
+    inscription: { trainee },
+  };
+}
+
+const alice = pinEmargement("em-1", {
+  id: "t-1",
+  firstName: "Alice",
+  lastName: "Évrard",
+  dateOfBirth: "1990-01-01",
+});
+const marc = pinEmargement("em-2", {
+  id: "t-2",
+  firstName: "Marc",
+  lastName: "Martin",
+  dateOfBirth: "1992-05-10",
+});
+const julie = pinEmargement("em-3", {
+  id: "t-3",
+  firstName: "Julie",
+  lastName: "Martinez",
+  dateOfBirth: "1995-03-20",
+});
+
+describe("recherche par PIN", () => {
+  it("throw 'Code PIN invalide' et compte l'échec si aucun émargement", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([]);
     await expect(getSessionDetailsByPin("000000")).rejects.toThrow(
       "Code PIN invalide"
     );
+    expect(mockPrisma.rateLimit.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { key: "validation:pin:203.0.113.7" },
+      })
+    );
   });
 
-  it("retourne les détails de la session et du créneau", async () => {
-    mockPrisma.emargement.findFirst.mockResolvedValue({
-      id: "em-1",
-      slot: {
-        label: "Matin J1",
-        trainingSession: { title: "PSC Mars" },
-      },
-    });
+  it("rejette un PIN mal formé sans interroger la base", async () => {
+    await expect(getSessionDetailsByPin("12ab")).rejects.toThrow(
+      "Code PIN invalide"
+    );
+    expect(mockPrisma.emargement.findMany).not.toHaveBeenCalled();
+  });
 
+  it("bloque après trop d'échecs depuis la même IP", async () => {
+    mockPrisma.rateLimit.findUnique.mockResolvedValue({
+      key: "validation:pin:203.0.113.7",
+      count: 30,
+      lastRequest: BigInt(Date.now()),
+    });
+    await expect(getSessionDetailsByPin("123456")).rejects.toThrow(
+      "Trop de tentatives"
+    );
+    expect(mockPrisma.emargement.findMany).not.toHaveBeenCalled();
+  });
+
+  it("ignore les sessions clôturées ou annulées", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([alice]);
+    await getSessionDetailsByPin("123456");
+    expect(mockPrisma.emargement.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          slot: {
+            trainingSession: { status: { notIn: ["terminée", "annulée"] } },
+          },
+        }),
+      })
+    );
+  });
+});
+
+describe("getSessionDetailsByPin", () => {
+  it("retourne les détails de la session et du créneau", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([alice]);
     const result = await getSessionDetailsByPin("123456");
     expect(result).toEqual({
       sessionTitle: "PSC Mars",
@@ -408,100 +523,146 @@ describe("getSessionDetailsByPin", () => {
 });
 
 describe("getTraineesByPinAndName", () => {
-  it("throw 'Code PIN invalide' si aucun émargement trouvé", async () => {
-    mockPrisma.emargement.findMany.mockResolvedValue([]);
-    await expect(getTraineesByPinAndName("000000", "dup")).rejects.toThrow(
-      "Code PIN invalide"
-    );
-  });
+  it("retourne le stagiaire unique, sans date de naissance", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([alice, marc]);
 
-  it("retourne la liste filtrée et normalisée des stagiaires", async () => {
-    mockPrisma.emargement.findMany.mockResolvedValue([
-      {
-        id: "em-1",
-        status: "en_attente",
-        slot: {
-          label: "Matin J1",
-          trainingSession: { title: "PSC Mars" },
-        },
-        inscription: {
-          trainee: {
-            id: "t-1",
-            firstName: "Alice",
-            lastName: "Évrard",
-            dateOfBirth: "1990-01-01",
-          },
-        },
-      },
-      {
-        id: "em-2",
-        status: "en_attente",
-        slot: {
-          label: "Matin J1",
-          trainingSession: { title: "PSC Mars" },
-        },
-        inscription: {
-          trainee: {
-            id: "t-2",
-            firstName: "Bob",
-            lastName: "Martin",
-            dateOfBirth: "1992-05-10",
-          },
-        },
-      },
-    ]);
-
-    // Test case insensitive, accent insensitive, trimmed search
+    // Insensible à la casse, aux accents et aux espaces
     const result = await getTraineesByPinAndName("123456", " EVR ");
 
-    expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({
-      emargementId: "em-1",
-      slotLabel: "Matin J1",
-      sessionTitle: "PSC Mars",
-      traineeId: "t-1",
-      firstName: "Alice",
-      lastName: "Évrard",
-      status: "en_attente",
-      dateOfBirth: "1990-01-01",
+    expect(result).toEqual({
+      requiresDob: false,
+      trainees: [
+        {
+          emargementId: "em-1",
+          slotLabel: "Matin J1",
+          sessionTitle: "PSC Mars",
+          traineeId: "t-1",
+          firstName: "Alice",
+          lastName: "Évrard",
+          status: EMARGEMENT_STATUS.EN_ATTENTE,
+        },
+      ],
     });
+  });
+
+  it("exige la date de naissance sans divulguer les noms si le préfixe est ambigu", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([alice, marc, julie]);
+    const result = await getTraineesByPinAndName("123456", "mar");
+    expect(result).toEqual({ requiresDob: true, trainees: [] });
+  });
+
+  it("refuse un préfixe de moins de 3 lettres", async () => {
+    await expect(getTraineesByPinAndName("123456", "m")).rejects.toThrow(
+      "3 premières lettres"
+    );
   });
 });
 
-describe("getTraineesByPin", () => {
-  it("throw 'Code PIN invalide' si aucun émargement trouvé", async () => {
-    mockPrisma.emargement.findMany.mockResolvedValue([]);
-    await expect(getTraineesByPin("000000")).rejects.toThrow(
-      "Code PIN invalide"
+describe("getTraineesByPinNameAndDob", () => {
+  it("retourne le stagiaire correspondant à la date de naissance", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([alice, marc, julie]);
+    const result = await getTraineesByPinNameAndDob(
+      "123456",
+      "MAR",
+      "1995-03-20"
     );
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ emargementId: "em-3" });
+    expect(result[0]).not.toHaveProperty("dateOfBirth");
   });
 
-  it("retourne la liste des stagiaires avec la bonne forme", async () => {
-    mockPrisma.emargement.findMany.mockResolvedValue([
-      {
-        id: "em-1",
-        status: "en_attente",
-        slot: {
-          label: "Matin J1",
-          trainingSession: { title: "PSC Mars" },
-        },
-        inscription: {
-          trainee: { id: "t-1", firstName: "Alice", lastName: "Dupont" },
-        },
-      },
-    ]);
+  it("compte l'échec par PIN et préfixe si la date est fausse", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([alice, marc, julie]);
+    await expect(
+      getTraineesByPinNameAndDob("123456", "mar", "2000-01-01")
+    ).rejects.toThrow("Date de naissance incorrecte.");
+    expect(mockPrisma.rateLimit.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { key: "validation:dob:123456:mar" },
+      })
+    );
+  });
+});
 
-    const result = await getTraineesByPin("123456");
+describe("validatePresencePublic", () => {
+  it("valide la présence avec PIN et préfixe corrects", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([alice, marc]);
 
-    expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({
+    const result = await validatePresencePublic({
+      pin: "123456",
       emargementId: "em-1",
-      slotLabel: "Matin J1",
-      sessionTitle: "PSC Mars",
-      traineeId: "t-1",
-      firstName: "Alice",
-      lastName: "Dupont",
-      status: EMARGEMENT_STATUS.EN_ATTENTE,
+      lastNamePrefix: "evr",
     });
+
+    expect(result).toEqual({ status: EMARGEMENT_STATUS.VALIDE });
+    expect(mockPrisma.emargement.update).toHaveBeenCalledWith({
+      where: { id: "em-1" },
+      data: expect.objectContaining({ status: EMARGEMENT_STATUS.VALIDE }),
+    });
+    expect(mockPrisma.inscription.update).toHaveBeenCalledWith({
+      where: { id: "ins-t-1" },
+      data: { status: "présent" },
+    });
+  });
+
+  it("refuse un emargementId qui ne correspond pas au PIN (régression)", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([alice]);
+    await expect(
+      validatePresencePublic({
+        pin: "123456",
+        emargementId: "em-autre-session",
+        lastNamePrefix: "evr",
+      })
+    ).rejects.toThrow("Stagiaire introuvable");
+    expect(mockPrisma.emargement.update).not.toHaveBeenCalled();
+  });
+
+  it("refuse un stagiaire dont le nom ne correspond pas au préfixe", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([alice, marc]);
+    await expect(
+      validatePresencePublic({
+        pin: "123456",
+        emargementId: "em-2",
+        lastNamePrefix: "evr",
+      })
+    ).rejects.toThrow("Stagiaire introuvable");
+    expect(mockPrisma.emargement.update).not.toHaveBeenCalled();
+  });
+
+  it("exige la bonne date de naissance si le préfixe est ambigu", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([marc, julie]);
+
+    await expect(
+      validatePresencePublic({
+        pin: "123456",
+        emargementId: "em-3",
+        lastNamePrefix: "mar",
+      })
+    ).rejects.toThrow("Date de naissance incorrecte.");
+
+    await validatePresencePublic({
+      pin: "123456",
+      emargementId: "em-3",
+      lastNamePrefix: "mar",
+      dateOfBirth: "1995-03-20",
+    });
+    expect(mockPrisma.emargement.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("est idempotent si la présence est déjà validée", async () => {
+    mockPrisma.emargement.findMany.mockResolvedValue([
+      pinEmargement(
+        "em-1",
+        { id: "t-1", firstName: "Alice", lastName: "Évrard" },
+        EMARGEMENT_STATUS.VALIDE
+      ),
+    ]);
+    const result = await validatePresencePublic({
+      pin: "123456",
+      emargementId: "em-1",
+      lastNamePrefix: "evr",
+    });
+    expect(result).toEqual({ status: EMARGEMENT_STATUS.VALIDE });
+    expect(mockPrisma.emargement.update).not.toHaveBeenCalled();
   });
 });
