@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UserRole } from "@/lib/roles";
+import { UserRole, getRoleLabel } from "@/lib/roles";
 import {
   inviteMemberSchema,
   InviteMemberInput,
@@ -115,10 +115,10 @@ export function InviteMemberDialog({ organismeId }: InviteMemberDialogProps) {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value={UserRole.FORMATEUR}>
-                        Formateur
+                        {getRoleLabel(UserRole.FORMATEUR)}
                       </SelectItem>
                       <SelectItem value={UserRole.ADMIN_ORGANISME}>
-                        Administrateur Organisme
+                        {getRoleLabel(UserRole.ADMIN_ORGANISME)}
                       </SelectItem>
                     </SelectContent>
                   </Select>

@@ -17,6 +17,9 @@ import {
   AcceptInvitationInput,
 } from "@/lib/schemas/invitation.schema";
 
+const INVITATION_EMAIL_FAILED =
+  "L'invitation est créée, mais l'email n'a pas pu être envoyé. Vérifiez la configuration SMTP de l'organisme, puis renvoyez-la.";
+
 /**
  * Invite un nouveau membre ou rattache un utilisateur existant.
  */
@@ -161,7 +164,7 @@ export async function inviteMemberAction(input: InviteMemberInput) {
 
       const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invitation/${token}`;
 
-      await EmailService.sendInvitationEmail({
+      const sent = await EmailService.sendInvitationEmail({
         to: email,
         organismeName: organisme.name,
         invitationUrl,
@@ -174,6 +177,12 @@ export async function inviteMemberAction(input: InviteMemberInput) {
           secure: organisme.smtpSecure,
         },
       });
+
+      // L'invitation existe (renvoyable depuis la liste) mais le mail n'est pas parti
+      if (!sent.success) {
+        revalidatePath(`/admin/organismes/${organismeId}`);
+        return { success: false, error: INVITATION_EMAIL_FAILED };
+      }
     }
 
     revalidatePath(`/admin/organismes/${organismeId}`);
@@ -256,6 +265,15 @@ export async function acceptInvitationAction(input: AcceptInvitationInput) {
 
     const hashedPassword = await hashPassword(password);
 
+    // Les invitations créées via Better-Auth (ADMIN_ORGANISME) stockent le rôle
+    // org ("admin" | "member") et non notre rôle système : on le remappe.
+    const isAdminInvitation =
+      invitation.role === UserRole.ADMIN_ORGANISME ||
+      invitation.role === "admin";
+    const systemRole = isAdminInvitation
+      ? UserRole.ADMIN_ORGANISME
+      : UserRole.FORMATEUR;
+
     // Création atomique (si possible, ici via transaction manuelle ou simple suite)
     const user = await prisma.user.create({
       data: {
@@ -264,17 +282,13 @@ export async function acceptInvitationAction(input: AcceptInvitationInput) {
         firstName,
         lastName,
         organismeId: invitation.organizationId,
-        roles: [invitation.role],
+        roles: [systemRole],
         emailVerified: true,
       },
     });
 
     // Création du membre de l'organisation
-    const finalMemberRole =
-      invitation.role === UserRole.ADMIN_ORGANISME ||
-      invitation.role === "admin"
-        ? "admin"
-        : "member";
+    const finalMemberRole = isAdminInvitation ? "admin" : "member";
 
     await prisma.member.create({
       data: {
@@ -413,7 +427,7 @@ export async function resendInvitationAction(invitationId: string) {
     const { organization: organisme } = invitation;
     const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invitation/${token}`;
 
-    await EmailService.sendInvitationEmail({
+    const sent = await EmailService.sendInvitationEmail({
       to: invitation.email,
       organismeName: organisme.name,
       invitationUrl,
@@ -428,6 +442,8 @@ export async function resendInvitationAction(invitationId: string) {
     });
 
     revalidatePath(`/admin/organismes/${invitation.organizationId}`);
+    if (!sent.success)
+      return { success: false, error: INVITATION_EMAIL_FAILED };
     return { success: true, message: "Invitation renvoyée avec succès." };
   } catch (error) {
     logger.error("Failed to resend invitation:", error);

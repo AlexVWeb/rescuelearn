@@ -48,7 +48,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { User } from "@/app/actions/user-actions";
-import { UserRole } from "@/lib/roles";
+import { UserRole, getRoleLabel } from "@/lib/roles";
 
 interface UsersTableProps {
   data: User[];
@@ -61,13 +61,6 @@ interface UsersTableProps {
   onDelete: (id: string) => void;
   onEdit: (user: User) => void;
 }
-
-const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: "Super Admin",
-  ADMIN_ORGANISME: "Admin Organisme",
-  FORMATEUR: "Formateur",
-  PLAYER: "Apprenant",
-};
 
 export function UsersTable({ data, meta, onDelete, onEdit }: UsersTableProps) {
   "use no memo";
@@ -184,7 +177,7 @@ export function UsersTable({ data, meta, onDelete, onEdit }: UsersTableProps) {
       cell: ({ row }) => {
         const roles = row.getValue("roles") as UserRole[];
         const displayRoles = Array.isArray(roles)
-          ? roles.map((r) => ROLE_LABELS[r] || r).join(", ")
+          ? roles.map((r) => getRoleLabel(r)).join(", ")
           : "Aucun";
 
         return (
@@ -313,10 +306,11 @@ export function UsersTable({ data, meta, onDelete, onEdit }: UsersTableProps) {
               </SelectTrigger>
               <SelectContent side="top">
                 <SelectItem value="all">Tous les rôles</SelectItem>
-                <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
-                <SelectItem value="ADMIN_ORGANISME">Admin Organisme</SelectItem>
-                <SelectItem value="FORMATEUR">Formateur</SelectItem>
-                <SelectItem value="PLAYER">Apprenant</SelectItem>
+                {Object.values(UserRole).map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {getRoleLabel(r)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

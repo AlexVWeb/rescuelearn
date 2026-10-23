@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import {
   getSessionDetailsByPin,
   getTraineesByPinAndName,
+  getTraineesByPinNameAndDob,
   validatePresencePublic,
 } from "../../admin/training/actions";
 import {
@@ -33,7 +34,7 @@ export interface UseValidationReturn {
     e: React.KeyboardEvent<HTMLInputElement>
   ) => void;
   filterTrainees: (currentLetters: string[]) => Promise<void>;
-  handleConfirmDob: (e: React.FormEvent) => void;
+  handleConfirmDob: (e: React.FormEvent) => Promise<void>;
   resetLetters: () => void;
   handleValidatePresence: (emargementId: string) => Promise<void>;
   goBack: () => void;
@@ -51,7 +52,7 @@ export function useValidation(): UseValidationReturn {
   const [pin, setPin] = useState(searchParams.get("pin") || "");
   const [letters, setLetters] = useState<string[]>(emptyLetters);
   const [dob, setDob] = useState("");
-  const [trainees, setTrainees] = useState<TraineeEntry[]>([]);
+  const [requiresDob, setRequiresDob] = useState(false);
   const [filteredTrainees, setFilteredTrainees] = useState<TraineeEntry[]>([]);
   const [sessionDetails, setSessionDetails] = useState<SessionDetails>({
     title: "",
@@ -149,18 +150,18 @@ export function useValidation(): UseValidationReturn {
     setError("");
     try {
       const data = await getTraineesByPinAndName(pin, query);
-      if (data.length === 0) {
+      setRequiresDob(data.requiresDob);
+      if (data.requiresDob) {
+        setDob("");
+        setStep("enter_dob");
+        return;
+      }
+      if (data.trainees.length === 0) {
         setError("Aucun stagiaire trouvé. Vérifiez les lettres saisies.");
         return;
       }
-      setTrainees(data);
-      if (data.length === 1) {
-        setFilteredTrainees(data);
-        setStep("confirm_trainee");
-      } else {
-        setDob("");
-        setStep("enter_dob");
-      }
+      setFilteredTrainees(data.trainees);
+      setStep("confirm_trainee");
     } catch (err: unknown) {
       setError(
         err instanceof Error
@@ -172,20 +173,29 @@ export function useValidation(): UseValidationReturn {
     }
   }
 
-  function handleConfirmDob(e: React.FormEvent) {
+  async function handleConfirmDob(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (!dob) return;
 
-    // Find trainee with matching DOB
-    const match = trainees.find((t) => t.dateOfBirth === dob);
-    if (!match) {
-      setError("Date de naissance incorrecte.");
-      return;
+    // La comparaison se fait côté serveur : les dates de naissance ne sont
+    // jamais envoyées au navigateur
+    setLoading(true);
+    try {
+      const matches = await getTraineesByPinNameAndDob(
+        pin,
+        letters.join(""),
+        dob
+      );
+      setFilteredTrainees(matches);
+      setStep("confirm_trainee");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Date de naissance incorrecte."
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setFilteredTrainees([match]);
-    setStep("confirm_trainee");
   }
 
   function resetLetters() {
@@ -198,10 +208,19 @@ export function useValidation(): UseValidationReturn {
     setLoading(true);
     setError("");
     try {
-      await validatePresencePublic(emargementId);
+      await validatePresencePublic({
+        pin,
+        emargementId,
+        lastNamePrefix: letters.join(""),
+        dateOfBirth: requiresDob ? dob : undefined,
+      });
       setStep("success");
-    } catch {
-      setError("Erreur lors de la validation. Veuillez réessayer.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erreur lors de la validation. Veuillez réessayer."
+      );
     } finally {
       setLoading(false);
     }
@@ -214,7 +233,7 @@ export function useValidation(): UseValidationReturn {
       resetLetters();
       setStep("enter_name");
     } else if (step === "confirm_trainee") {
-      if (trainees.length > 1) {
+      if (requiresDob) {
         setStep("enter_dob");
       } else {
         resetLetters();
@@ -227,7 +246,7 @@ export function useValidation(): UseValidationReturn {
     setPin("");
     setLetters(emptyLetters());
     setDob("");
-    setTrainees([]);
+    setRequiresDob(false);
     setFilteredTrainees([]);
     setError("");
     setStep("enter_pin");

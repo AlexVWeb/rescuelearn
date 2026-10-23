@@ -14,8 +14,16 @@ export interface SMTPConfig {
 }
 
 /**
- * Service d'envoi d'emails.
- * Supporte l'envoi via SMTP configuré ou console en fallback.
+ * Résultat d'un envoi. `success: false` signifie que l'email n'est pas parti :
+ * les appelants qui doivent le dire à l'utilisateur vérifient ce résultat.
+ */
+export type EmailSendResult =
+  | { success: true; method: "smtp" | "console" }
+  | { success: false; method: "smtp" | "none"; error: string };
+
+/**
+ * Service d'envoi d'emails : SMTP de l'organisme, sinon SMTP plateforme.
+ * Hors production et sans SMTP, l'email est simulé dans la console.
  */
 export const EmailService = {
   async send({
@@ -30,7 +38,7 @@ export const EmailService = {
     text: string;
     html?: string;
     smtp?: SMTPConfig;
-  }) {
+  }): Promise<EmailSendResult> {
     // Priorité 1 : SMTP de l'organisme (si configuré avec un hôte)
     // Priorité 2 : SMTP global (via env vars)
     const hasOrganismeSmtp = !!organismeSmtp?.host;
@@ -79,12 +87,29 @@ export const EmailService = {
 
         return { success: true, method: "smtp" };
       } catch (error) {
+        // Pas de repli sur la console : annoncer « envoyé » serait faux
         logger.error("❌ Erreur SMTP :", error);
-        // On continue vers le fallback console si le SMTP échoue en dev
+        return {
+          success: false,
+          method: "smtp",
+          error: error instanceof Error ? error.message : "Erreur SMTP",
+        };
       }
     }
 
-    // Fallback Console (Dev / Non configuré)
+    // En production, sans SMTP, aucun email ne part : c'est une erreur
+    if (process.env.NODE_ENV === "production") {
+      logger.error("❌ Aucun serveur SMTP configuré, email non envoyé", {
+        subject,
+      });
+      return {
+        success: false,
+        method: "none",
+        error: "Aucun serveur SMTP configuré",
+      };
+    }
+
+    // Simulation (développement et tests)
     logger.info("--- SIMULATION EMAIL (Fallback) ---");
     logger.info("Email Details", { to, subject, text });
 
@@ -378,4 +403,83 @@ export const EmailService = {
 
     return this.send({ to, subject, text, html });
   },
+
+  /**
+   * Envoie au stagiaire le lien personnel vers son espace de formation.
+   * Envoyé au nom de l'organisme : son nom est mis en avant, pas RescueLearn.
+   */
+  async sendTraineeAccess({
+    to,
+    firstName,
+    organismeName,
+    sessionTitle,
+    sessionDates,
+    sessionLocation,
+    accessUrl,
+    reason = "access",
+    smtp,
+  }: {
+    to: string;
+    firstName: string | null;
+    organismeName: string;
+    sessionTitle: string;
+    sessionDates: string;
+    sessionLocation: string;
+    accessUrl: string;
+    /** "attestation" : prévient que l'attestation est disponible */
+    reason?: "access" | "attestation";
+    smtp?: SMTPConfig;
+  }) {
+    const isAttestation = reason === "attestation";
+    const greeting = firstName ? `Bonjour ${firstName},` : "Bonjour,";
+    const subject = isAttestation
+      ? `Votre attestation ${sessionTitle} est disponible – ${organismeName}`
+      : `Votre espace de formation ${sessionTitle} – ${organismeName}`;
+    const heading = isAttestation
+      ? "Votre attestation est disponible"
+      : "Votre espace de formation est prêt";
+    const intro = isAttestation
+      ? `${organismeName} a publié votre attestation de fin de formation. Vous pouvez la télécharger depuis votre espace.`
+      : `${organismeName} vous ouvre l'accès à votre espace de formation. Vous pourrez y émarger pendant la formation (avec le code affiché en salle), télécharger les supports et, à la fin, votre attestation.`;
+    const cta = isAttestation
+      ? "Télécharger mon attestation"
+      : "Accéder à mon espace";
+    const text = `${greeting}\n\n${intro}\n\n${sessionTitle}\n${sessionDates} · ${sessionLocation}\n\n${cta} :\n${accessUrl}\n\nCe lien est personnel : ne le transférez pas. Seul le lien le plus récent fonctionne.\n\n${organismeName}`;
+
+    const e = escapeHtml;
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; max-width: 580px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden;">
+        <div style="padding: 28px 32px 0 32px; background-color: #ffffff;">
+          <p style="margin: 0; font-size: 15px; font-weight: 700; color: #111827;">${e(organismeName)}</p>
+        </div>
+        <div style="padding: 24px 32px 32px 32px; background-color: #ffffff;">
+          <h1 style="margin: 0 0 16px 0; color: #111827; font-size: 20px; font-weight: 700; line-height: 1.3;">${heading}</h1>
+          <p style="font-size: 15px; color: #4b5563; margin: 0 0 20px 0;">${e(greeting)}</p>
+          <div style="background-color: #f3f4f6; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;">
+            <p style="margin: 0; font-size: 16px; font-weight: 700; color: #111827;">${e(sessionTitle)}</p>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #4b5563;">${e(sessionDates)} · ${e(sessionLocation)}</p>
+          </div>
+          <p style="font-size: 15px; color: #4b5563; margin: 0 0 28px 0;">${e(intro)}</p>
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${e(accessUrl)}" style="background-color: #111827; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 15px;">${cta}</a>
+          </div>
+          <p style="font-size: 13px; color: #6b7280; margin: 0;">Ce lien est personnel : ne le transférez pas. Si vous recevez un nouveau message, seul le lien le plus récent fonctionne.</p>
+        </div>
+        <div style="background-color: #f9fafb; padding: 16px 32px; text-align: center; border-top: 1px solid #f3f4f6;">
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">Envoyé par ${e(organismeName)} avec RescueLearn</p>
+        </div>
+      </div>
+    `;
+
+    return this.send({ to, subject, text, html, smtp });
+  },
 };
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

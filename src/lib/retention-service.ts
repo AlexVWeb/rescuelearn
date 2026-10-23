@@ -73,13 +73,13 @@ export const RetentionService = {
       const { orgEmail, trainees: orgTrainees, smtp } = byOrg[orgId];
       const count = orgTrainees.length;
 
-      await EmailService.send({
+      const result = await EmailService.send({
         to: orgEmail,
         subject: `[RescueLearn] Alerte de purge de données - ${count} stagiaire(s)`,
         text: `Bonjour,\n\nConformément à votre politique de rétention, ${count} stagiaire(s) vont être purgés définitivement de vos archives dans moins de 6 mois.\n\nVous pouvez consulter la liste dans votre espace administration.\n\nCordialement,\nL'équipe RescueLearn`,
         smtp,
       });
-      emailsSent++;
+      if (result.success) emailsSent++;
     }
 
     return emailsSent;
@@ -115,6 +115,10 @@ export const RetentionService = {
             phone: null,
             address: null,
             isAnonymized: true,
+            // Révoque les liens d'accès à l'espace stagiaire
+            inscriptions: {
+              updateMany: { where: {}, data: { accessTokenHash: null } },
+            },
           },
         });
         totalAnonymized++;
@@ -142,6 +146,10 @@ export const RetentionService = {
         },
         include: {
           externalTrainings: true,
+          // La cascade supprime les lignes, pas les PDF signés sur R2
+          inscriptions: {
+            select: { signedAttestations: { select: { fileKey: true } } },
+          },
         },
       });
 
@@ -156,6 +164,20 @@ export const RetentionService = {
                 error
               );
             }
+          }
+        }
+
+        const attestationKeys = trainee.inscriptions.flatMap((i) =>
+          i.signedAttestations.map((a) => a.fileKey)
+        );
+        for (const fileKey of attestationKeys) {
+          try {
+            await deleteFile(fileKey);
+          } catch (error) {
+            logger.error(
+              `Erreur suppression attestation R2 ${fileKey}:`,
+              error
+            );
           }
         }
 

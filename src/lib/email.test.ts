@@ -40,11 +40,15 @@ describe("EmailService", () => {
       expect(nodemailer.createTransport).toHaveBeenCalled();
     });
 
-    it("should fallback to console if SMTP fails", async () => {
+    it("signale l'échec quand le SMTP configuré refuse l'envoi", async () => {
       const mockTransporter = {
-        sendMail: vi.fn().mockRejectedValue(new Error("SMTP Error")),
+        sendMail: vi
+          .fn()
+          .mockRejectedValue(new Error("550 Mailbox unavailable")),
       } as unknown as Transporter;
-      vi.mocked(nodemailer.createTransport).mockReturnValue(mockTransporter);
+      vi.mocked(nodemailer.createTransport).mockReturnValueOnce(
+        mockTransporter
+      );
 
       const result = await EmailService.send({
         to: "dest@test.com",
@@ -52,10 +56,59 @@ describe("EmailService", () => {
         text: "Hello",
       });
 
-      expect(result.success).toBe(true);
-      expect(result.method).toBe("console");
-      expect(logger.info).toHaveBeenCalledWith(
+      // Plus de repli silencieux sur la console : l'email n'est pas parti
+      expect(result).toEqual({
+        success: false,
+        method: "smtp",
+        error: "550 Mailbox unavailable",
+      });
+      expect(logger.info).not.toHaveBeenCalledWith(
         expect.stringContaining("SIMULATION EMAIL")
+      );
+      expect(logger.error).toHaveBeenCalled();
+    });
+
+    it("simule l'envoi en console hors production sans SMTP", async () => {
+      delete process.env.SMTP_HOST;
+
+      const result = await EmailService.send({
+        to: "dest@test.com",
+        subject: "Test",
+        text: "Hello",
+      });
+
+      expect(result).toEqual({ success: true, method: "console" });
+      expect(nodemailer.createTransport).not.toHaveBeenCalled();
+    });
+
+    it("échoue en production sans SMTP plutôt que de simuler", async () => {
+      delete process.env.SMTP_HOST;
+      vi.stubEnv("NODE_ENV", "production");
+
+      const result = await EmailService.send({
+        to: "dest@test.com",
+        subject: "Test",
+        text: "Hello",
+      });
+
+      expect(result).toEqual({
+        success: false,
+        method: "none",
+        error: "Aucun serveur SMTP configuré",
+      });
+      vi.unstubAllEnvs();
+    });
+
+    it("utilise le SMTP de l'organisme en priorité", async () => {
+      await EmailService.send({
+        to: "dest@test.com",
+        subject: "Test",
+        text: "Hello",
+        smtp: { host: "smtp.organisme.test", port: 465, secure: true },
+      });
+
+      expect(nodemailer.createTransport).toHaveBeenCalledWith(
+        expect.objectContaining({ host: "smtp.organisme.test", port: 465 })
       );
     });
   });

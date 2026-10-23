@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -29,6 +30,9 @@ import { Inscription, Trainee } from "../../../types";
 import { TraineeDialog } from "../../../stagiaires/components/trainee-dialog";
 import { TraineeImportDialog } from "../../../stagiaires/components/trainee-import-dialog";
 import { InscriptionStatusBadge } from "./inscription-status-badge";
+import { AccessMenu } from "./access/access-menu";
+import { AccessStatusBadge } from "./access/access-status-badge";
+import { SendAccessButton } from "./access/send-access-button";
 
 interface InscriptionsTabProps {
   sessionId: string;
@@ -116,9 +120,16 @@ export function InscriptionsTab({
         <CardHeader>
           <CardTitle>Stagiaires inscrits</CardTitle>
           <CardDescription>
-            {inscriptions.length} sur {maxTrainees} places. L&apos;issue de la
-            formation se saisit dans Clôturer › Résultats.
+            {inscriptions.length} sur {maxTrainees} places. Chaque stagiaire
+            reçoit un lien vers son espace (émargement, supports, attestation).
+            L&apos;issue de la formation se saisit dans Clôturer › Résultats.
           </CardDescription>
+          <CardAction>
+            <SendAccessButton
+              sessionId={sessionId}
+              inscriptions={inscriptions}
+            />
+          </CardAction>
         </CardHeader>
         <CardContent>
           {!isClosed && (
@@ -201,8 +212,10 @@ export function InscriptionsTab({
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <div className="flex flex-wrap items-center justify-end gap-2 self-end sm:self-auto">
+                    <AccessStatusBadge inscription={inscription} />
                     <InscriptionStatusBadge status={inscription.status} />
+                    <AccessMenu inscription={inscription} />
                     {!isClosed && (
                       <Button
                         variant="ghost"

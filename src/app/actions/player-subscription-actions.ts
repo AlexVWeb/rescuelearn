@@ -229,12 +229,15 @@ export async function testSendDailyQuizEmailAction() {
       </html>
     `;
 
-    await EmailService.send({
+    const result = await EmailService.send({
       to: user.email,
       subject: `🚑 [TEST] Défi Secourisme - Garde tes réflexes actifs !`,
       text: `Question de secourisme : ${question.text}\nRéponds sur ${dailyQuestionUrl}`,
       html: emailHtml,
     });
+    if (!result.success) {
+      return { success: false, error: "L'e-mail n'a pas pu être envoyé." };
+    }
 
     logger.info(`E-mail de test envoyé avec succès à ${user.email}`);
     return { success: true };

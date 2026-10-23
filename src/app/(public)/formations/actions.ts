@@ -124,6 +124,13 @@ Message : ${validatedData.message || "Aucun message supplémentaire"}
       html,
     });
 
+    if (!result.success) {
+      return {
+        success: false,
+        error:
+          "Votre demande n'a pas pu être envoyée. Réessayez ou écrivez-nous directement.",
+      };
+    }
     return { success: true, method: result.method };
   } catch (error) {
     logger.error("Failed to send demo request email", error);
