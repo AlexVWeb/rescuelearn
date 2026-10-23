@@ -75,6 +75,27 @@ describe("RetentionService", () => {
     );
   });
 
+  it("révoque les liens d'accès à l'espace stagiaire à l'anonymisation", async () => {
+    vi.mocked(prisma.organisme.findMany).mockResolvedValue([
+      { id: "o1", retentionYearsActive: 5 },
+    ] as unknown as Organisme[]);
+    vi.mocked(prisma.trainee.findMany).mockResolvedValue([
+      { id: "t1", lastActivityAt: dayjs().subtract(6, "years").toDate() },
+    ] as unknown as Trainee[]);
+
+    await RetentionService.anonymizeInactiveTrainees();
+
+    expect(prisma.trainee.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          inscriptions: {
+            updateMany: { where: {}, data: { accessTokenHash: null } },
+          },
+        }),
+      })
+    );
+  });
+
   it("should purge expired trainees", async () => {
     const mockOrg = { id: "o1", retentionYearsArchive: 10 };
     const mockTrainee = {

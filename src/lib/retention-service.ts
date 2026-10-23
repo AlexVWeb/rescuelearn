@@ -115,6 +115,10 @@ export const RetentionService = {
             phone: null,
             address: null,
             isAnonymized: true,
+            // Révoque les liens d'accès à l'espace stagiaire
+            inscriptions: {
+              updateMany: { where: {}, data: { accessTokenHash: null } },
+            },
           },
         });
         totalAnonymized++;
