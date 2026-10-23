@@ -48,9 +48,11 @@ export function generateEmargementPDF(
   const head = [
     [
       "Stagiaire",
+      // Date + plage horaire seulement : le libellé ("Jour 1 - Matin")
+      // rendait l'en-tête illisible avec les nombreux créneaux du PSE
       ...slots.map(
         (s) =>
-          `${s.label}\n${dayjs(s.date).startOf("day").format("DD/MM/YYYY")}\n${s.startTime} - ${s.endTime}`
+          `${dayjs(s.date).startOf("day").format("DD/MM/YYYY")}\n${s.startTime}-${s.endTime}`
       ),
     ],
   ];
@@ -91,8 +93,10 @@ export function generateEmargementPDF(
       fillColor: [41, 128, 185],
       textColor: 255,
       fontStyle: "bold",
-      fontSize: 9,
-      cellPadding: 4,
+      // 7,5 pt et marges latérales réduites : "09:00-12:30" tient sur une
+      // ligne jusqu'à une douzaine de créneaux en paysage
+      fontSize: 7.5,
+      cellPadding: { top: 3, bottom: 3, left: 1.5, right: 1.5 },
     },
     columnStyles: {
       0: { fontStyle: "bold", halign: "left", cellWidth: 55 },
