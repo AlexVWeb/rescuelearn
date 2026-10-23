@@ -20,12 +20,18 @@ const mockPrisma = vi.hoisted(() => ({
   trainingGroup: {
     updateMany: vi.fn(),
   },
+  sessionDocument: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
   $transaction: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: mockPrisma,
 }));
+
+const mockDeleteFile = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/r2", () => ({ deleteFile: mockDeleteFile }));
 
 describe("TrainingSessionService", () => {
   beforeEach(() => {
@@ -216,6 +222,24 @@ describe("TrainingSessionService", () => {
       );
     });
 
+    it("ne renvoie jamais le hash du lien d'accès stagiaire", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        slots: [],
+        inscriptions: [
+          { id: "ins-1", accessTokenHash: "abc" },
+          { id: "ins-2", accessTokenHash: null },
+        ],
+      });
+
+      const result = await TrainingSessionService.getSessionById("s1", "org-1");
+
+      expect(result.inscriptions).toEqual([
+        { id: "ins-1", hasAccessLink: true },
+        { id: "ins-2", hasAccessLink: false },
+      ]);
+    });
+
     it("throws error if session not found", async () => {
       mockPrisma.trainingSession.findFirst.mockResolvedValue(null);
       await expect(
@@ -244,6 +268,23 @@ describe("TrainingSessionService", () => {
       expect(mockPrisma.trainingSession.delete).toHaveBeenCalledWith({
         where: { id: "s1" },
       });
+    });
+
+    it("supprime les supports R2 de la session supprimée", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "planifiée",
+      });
+      mockPrisma.sessionDocument.findMany.mockResolvedValue([
+        { fileKey: "dev/organisme/org-1/session-documents/s1/1-livret.pdf" },
+      ]);
+      mockPrisma.trainingSession.delete.mockResolvedValue({ id: "s1" });
+
+      await TrainingSessionService.deleteSession("s1", "org-1");
+
+      expect(mockDeleteFile).toHaveBeenCalledWith(
+        "dev/organisme/org-1/session-documents/s1/1-livret.pdf"
+      );
     });
 
     it("throws error when trying to delete a completed session", async () => {

@@ -32,9 +32,12 @@ import { downloadFisePDF, downloadAllFisePDF } from "../../../../lib/pdf-fise";
 import { downloadPvPDF } from "../../../../lib/pdf-pv";
 import { generateEmargementPDF } from "../../../../lib/pdf-emargement";
 import type { Inscription, Slot } from "../../../../types";
+import { AttestationsPublication } from "./attestations-publication";
 
 interface DocumentsSectionProps {
   session: {
+    id: string;
+    attestationsPublishedAt: Date | null;
     title: string;
     type: string;
     location: string;
@@ -158,6 +161,11 @@ export function DocumentsSection({
 
   return (
     <div className="space-y-6">
+      <AttestationsPublication
+        sessionId={session.id}
+        publishedAt={session.attestationsPublishedAt}
+        inscriptions={inscriptions}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Documents de la session</CardTitle>

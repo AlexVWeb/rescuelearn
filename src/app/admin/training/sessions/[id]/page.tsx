@@ -11,7 +11,12 @@ import { getLogoAsBase64 } from "@/lib/organisme-logo";
 import { notFound } from "next/navigation";
 import { SessionWorkspace } from "../components/session-workspace";
 import { SessionDetailSkeleton } from "../components/session-detail-skeleton";
-import { TrainingSession, Slot, Inscription } from "../../types";
+import {
+  TrainingSession,
+  Slot,
+  Inscription,
+  SessionDocument,
+} from "../../types";
 
 export default async function SessionDetailsPage({
   params,
@@ -53,6 +58,7 @@ export default async function SessionDetailsPage({
           session as TrainingSession & {
             slots: Slot[];
             inscriptions: Inscription[];
+            documents: SessionDocument[];
           }
         }
         allTrainees={allTrainees}

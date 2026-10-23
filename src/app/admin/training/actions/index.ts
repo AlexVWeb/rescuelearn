@@ -7,3 +7,6 @@ export * from "./emargement";
 export * from "./public";
 export * from "./dashboard";
 export * from "./groups";
+export * from "./access";
+export * from "./documents";
+export * from "./attestations";

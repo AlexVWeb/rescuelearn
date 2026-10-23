@@ -212,20 +212,39 @@ function buildAttestationPage(
   doc.text("Signature du Formateur", 150, 260, { align: "center" });
 }
 
-export function generateAttestationPDF(
-  session: {
-    title: string;
-    location: string;
-    startDate: Date | null;
-    slots: Slot[];
-  },
+type AttestationSession = {
+  title: string;
+  location: string;
+  startDate: Date | null;
+  slots: Slot[];
+};
+type AttestationFormateur = {
+  lastName: string | null;
+  firstName: string | null;
+};
+
+export function attestationFileName(inscription: Inscription): string {
+  return `Attestation_${inscription.trainee?.lastName}_${inscription.trainee?.firstName}.pdf`;
+}
+
+/** Document d'une attestation, utilisable côté navigateur comme serveur. */
+export function buildAttestationDocument(
+  session: AttestationSession,
   inscription: Inscription,
-  formateur: { lastName: string | null; firstName: string | null }
-): void {
+  formateur: AttestationFormateur
+): jsPDF {
   const doc = new jsPDF("portrait", "mm", "a4");
   buildAttestationPage(doc, session, inscription, formateur);
-  doc.save(
-    `Attestation_${inscription.trainee?.lastName}_${inscription.trainee?.firstName}.pdf`
+  return doc;
+}
+
+export function generateAttestationPDF(
+  session: AttestationSession,
+  inscription: Inscription,
+  formateur: AttestationFormateur
+): void {
+  buildAttestationDocument(session, inscription, formateur).save(
+    attestationFileName(inscription)
   );
 }
 
