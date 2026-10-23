@@ -5,7 +5,7 @@ import { getTraineeAccess, getTraineeInscription } from "@/lib/trainee-session";
 import { toPdfFormateur } from "@/app/admin/training/lib/formateurs";
 import {
   attestationFileName,
-  buildAttestationDocument,
+  renderAttestationPDF,
 } from "@/app/admin/training/lib/pdf-attestation-fin-formation-psc-export";
 import type { Inscription } from "@/app/admin/training/types";
 
@@ -56,7 +56,7 @@ export async function GET(
     owner ?? { firstName: null, lastName: null }
   );
   const pdfInscription = inscription as unknown as Inscription;
-  const doc = buildAttestationDocument(
+  const pdf = await renderAttestationPDF(
     {
       title: session.title,
       location: session.location,
@@ -68,7 +68,7 @@ export async function GET(
     formateur
   );
 
-  return new NextResponse(doc.output("arraybuffer"), {
+  return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(attestationFileName(pdfInscription))}`,

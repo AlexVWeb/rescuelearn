@@ -241,10 +241,12 @@ export function DocumentsSection({
                           !inscription.attestationResult || generating !== null
                         }
                         onClick={() =>
-                          generateAttestationPDF(
-                            session,
-                            inscription,
-                            formateur
+                          generate(`${inscription.id}-attestation`, () =>
+                            generateAttestationPDF(
+                              session,
+                              inscription,
+                              formateur
+                            )
                           )
                         }
                         aria-label={`Attestation de ${name}`}

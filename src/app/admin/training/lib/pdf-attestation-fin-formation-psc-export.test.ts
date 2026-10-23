@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   attestationFileName,
-  buildAttestationDocument,
+  renderAttestationPDF,
   formatAttestationDate,
   formatAttestationHoraires,
   formatAttestationDuration,
@@ -152,8 +152,8 @@ describe("formatAttestationDuration", () => {
   });
 });
 
-describe("buildAttestationDocument", () => {
-  it("produit un PDF côté serveur pour une session multi-jours", () => {
+describe("renderAttestationPDF", () => {
+  it("produit un PDF côté serveur pour une session multi-jours", async () => {
     const slots = [
       {
         id: "s1",
@@ -173,7 +173,7 @@ describe("buildAttestationDocument", () => {
       },
     ] as Slot[];
 
-    const doc = buildAttestationDocument(
+    const bytes = await renderAttestationPDF(
       {
         title: "Formation PSC - 14h",
         location: "Lyon",
@@ -184,7 +184,6 @@ describe("buildAttestationDocument", () => {
       inscription,
       { lastName: "Bernard", firstName: "Hugo" }
     );
-    const bytes = Buffer.from(doc.output("arraybuffer"));
     expect(bytes.subarray(0, 4).toString("latin1")).toBe("%PDF");
   });
 
