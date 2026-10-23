@@ -24,6 +24,7 @@ import { boardKey } from "../[id]/components/groups/board-utils";
 import { ResultsSection } from "../[id]/components/close/results-section";
 import { DocumentsSection } from "../[id]/components/close/documents-section";
 import { SupportsTab } from "../[id]/components/supports/supports-tab";
+import { EvaluationsSection } from "../[id]/components/close/evaluations-section";
 import {
   Inscription,
   SessionDocument,
@@ -33,7 +34,10 @@ import {
   TrainingSession,
 } from "@/app/admin/training/types";
 import { formatFormateurName } from "@/app/admin/training/lib/formateurs";
-import type { AttestationSigning } from "@/app/admin/training/actions";
+import type {
+  AttestationSigning,
+  SessionEvaluationSummary,
+} from "@/app/admin/training/actions";
 import {
   checkGroups,
   isCountedInscription,
@@ -57,6 +61,7 @@ interface SessionWorkspaceProps {
   formateur: { lastName: string | null; firstName: string | null };
   assignableFormateurs: SessionFormateurUser[];
   attestationSigning: AttestationSigning;
+  evaluations: SessionEvaluationSummary[] | null;
   organismeLogoBase64?: string | null;
 }
 
@@ -70,6 +75,7 @@ export function SessionWorkspace({
   formateur,
   assignableFormateurs,
   attestationSigning,
+  evaluations,
   organismeLogoBase64,
 }: SessionWorkspaceProps) {
   const pathname = usePathname();
@@ -271,6 +277,7 @@ export function SessionWorkspace({
         organismeLogoBase64={organismeLogoBase64}
       />
     ),
+    evaluations: <EvaluationsSection evaluations={evaluations} />,
   };
 
   // Les contenus formatent des dates dans le fuseau du navigateur : rendus

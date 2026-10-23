@@ -6,6 +6,7 @@ import {
   getMonOrganisme,
   getAssignableFormateurs,
   getAttestationSigning,
+  getSessionEvaluations,
 } from "../../actions";
 import { toPdfFormateur } from "../../lib/formateurs";
 import { getLogoAsBase64 } from "@/lib/organisme-logo";
@@ -31,6 +32,7 @@ export default async function SessionDetailsPage({
   let formateur;
   let assignableFormateurs;
   let attestationSigning;
+  let evaluations;
   let organismeLogoBase64: string | null = null;
   try {
     [
@@ -39,12 +41,14 @@ export default async function SessionDetailsPage({
       formateur,
       assignableFormateurs,
       attestationSigning,
+      evaluations,
     ] = await Promise.all([
       getSessionDetails(id),
       getAllTrainees(),
       getFormateur(),
       getAssignableFormateurs(),
       getAttestationSigning(id),
+      getSessionEvaluations(id),
     ]);
     formateur = toPdfFormateur(
       session.formateurs.map((f) => f.user),
@@ -72,6 +76,7 @@ export default async function SessionDetailsPage({
         formateur={formateur ?? { lastName: null, firstName: null }}
         assignableFormateurs={assignableFormateurs}
         attestationSigning={attestationSigning}
+        evaluations={evaluations}
         organismeLogoBase64={organismeLogoBase64}
       />
     </Suspense>
