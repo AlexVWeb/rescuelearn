@@ -1,4 +1,6 @@
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { assertAttestationsNotSigned } from "@/lib/attestation-signature";
 import {
   CreateTrainingSessionInput,
   UpdateTrainingSessionInput,
@@ -125,10 +127,33 @@ export class TrainingSessionService {
     if (session.status === "terminée") {
       throw new Error("Impossible de supprimer une session terminée");
     }
+    // Sinon la cascade supprimerait les lignes, pas les PDF signés sur R2
+    await assertAttestationsNotSigned(id);
 
-    return prisma.trainingSession.delete({
+    // La cascade Prisma supprime les lignes, pas les fichiers R2
+    const documents = await prisma.sessionDocument.findMany({
+      where: { trainingSessionId: id },
+      select: { fileKey: true },
+    });
+
+    const deleted = await prisma.trainingSession.delete({
       where: { id },
     });
+
+    if (documents.length > 0) {
+      const { deleteFile } = await import("@/lib/r2");
+      const results = await Promise.allSettled(
+        documents.map(({ fileKey }) => deleteFile(fileKey))
+      );
+      const failures = results.filter((r) => r.status === "rejected").length;
+      if (failures > 0) {
+        logger.error(
+          `Suppression de session ${id} : ${failures} support(s) R2 non supprimé(s)`
+        );
+      }
+    }
+
+    return deleted;
   }
 
   static async getSessionById(id: string, organismeId: string) {
@@ -152,11 +177,24 @@ export class TrainingSessionService {
         groups: {
           orderBy: { position: "asc" },
         },
+        documents: {
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
     if (!session) throw new Error("Session introuvable");
-    return session;
+
+    // Le hash du lien d'accès ne quitte pas le serveur : seul son existence compte
+    return {
+      ...session,
+      inscriptions: session.inscriptions.map(
+        ({ accessTokenHash, ...inscription }) => ({
+          ...inscription,
+          hasAccessLink: accessTokenHash !== null,
+        })
+      ),
+    };
   }
 
   static async setFormateurs(
@@ -174,6 +212,7 @@ export class TrainingSessionService {
         "Impossible de modifier les formateurs d'une session clôturée"
       );
     }
+    await assertAttestationsNotSigned(id);
 
     const uniqueIds = [...new Set(userIds)];
     if (uniqueIds.length === 0) {

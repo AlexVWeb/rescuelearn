@@ -37,3 +37,17 @@ export function hasRole(roles: unknown, role: UserRole): boolean {
 
   return rolesArray.includes(role);
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  [UserRole.SUPER_ADMIN]: "Super Admin",
+  [UserRole.ADMIN_ORGANISME]: "Admin Organisme",
+  [UserRole.FORMATEUR]: "Formateur",
+  [UserRole.PLAYER]: "Apprenant",
+  // Rôles org Better-Auth stockés sur certaines invitations
+  admin: "Admin Organisme",
+  member: "Formateur",
+};
+
+export function getRoleLabel(role: string): string {
+  return ROLE_LABELS[role] ?? role;
+}

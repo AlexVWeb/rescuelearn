@@ -6,7 +6,6 @@ export interface TraineeEntry {
   firstName: string;
   lastName: string;
   status: string;
-  dateOfBirth?: string | null;
 }
 
 export interface SessionDetails {

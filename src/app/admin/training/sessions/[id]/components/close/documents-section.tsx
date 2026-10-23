@@ -32,19 +32,25 @@ import { downloadFisePDF, downloadAllFisePDF } from "../../../../lib/pdf-fise";
 import { downloadPvPDF } from "../../../../lib/pdf-pv";
 import { generateEmargementPDF } from "../../../../lib/pdf-emargement";
 import type { Inscription, Slot } from "../../../../types";
+import type { AttestationSigning } from "@/app/admin/training/actions";
+import { AttestationsPublication } from "./attestations-publication";
 
 interface DocumentsSectionProps {
   session: {
+    id: string;
+    attestationsPublishedAt: Date | null;
     title: string;
     type: string;
     location: string;
     startDate: Date | null;
+    endDate?: Date | null;
     slots: Slot[];
     isFC?: boolean;
     status?: string;
   };
   inscriptions: Inscription[];
   formateur: { lastName: string | null; firstName: string | null };
+  signing: AttestationSigning;
   equipePedagogique?: string[];
   responsablePedagogique?: string;
   organismeLogoBase64?: string | null;
@@ -54,6 +60,7 @@ export function DocumentsSection({
   session,
   inscriptions,
   formateur,
+  signing,
   equipePedagogique,
   responsablePedagogique,
   organismeLogoBase64,
@@ -64,6 +71,10 @@ export function DocumentsSection({
   const isPSC = session.type === "PSC";
   const withResult = inscriptions.filter((i) => !!i.attestationResult);
   const empty = inscriptions.length === 0;
+  // Signées : on sert les PDF figés, jamais un nouveau rendu
+  const signedIds = new Set(signing.signature?.inscriptionIds ?? []);
+  const signedUrl = (inscriptionId?: string) =>
+    `/api/admin/attestations/${session.id}${inscriptionId ? `?inscription=${inscriptionId}` : ""}`;
 
   async function generate(key: string, fn: () => unknown) {
     setGenerating(key);
@@ -125,17 +136,28 @@ export function DocumentsSection({
           organismeLogoBase64,
         }),
     },
-    {
-      key: "all-attestations",
-      icon: ScrollText,
-      title: "Attestations de fin de formation",
-      description:
-        withResult.length > 0
-          ? `${withResult.length} stagiaire${withResult.length > 1 ? "s" : ""} avec un résultat saisi.`
-          : "Saisissez d'abord les résultats dans l'onglet Résultats.",
-      disabled: withResult.length === 0,
-      run: () => generateAllAttestationsPDF(session, withResult, formateur),
-    },
+    signing.signature
+      ? {
+          key: "all-attestations",
+          icon: ScrollText,
+          title: "Attestations de fin de formation",
+          description: "Versions signées, en un seul PDF.",
+          disabled: signedIds.size === 0,
+          run: () => {
+            window.location.href = signedUrl();
+          },
+        }
+      : {
+          key: "all-attestations",
+          icon: ScrollText,
+          title: "Attestations (aperçu non signé)",
+          description:
+            withResult.length > 0
+              ? `${withResult.length} stagiaire${withResult.length > 1 ? "s" : ""} avec un résultat saisi.`
+              : "Saisissez d'abord les résultats dans l'onglet Résultats.",
+          disabled: withResult.length === 0,
+          run: () => generateAllAttestationsPDF(session, withResult, formateur),
+        },
     ...(isPSC
       ? [
           {
@@ -158,6 +180,12 @@ export function DocumentsSection({
 
   return (
     <div className="space-y-6">
+      <AttestationsPublication
+        sessionId={session.id}
+        publishedAt={session.attestationsPublishedAt}
+        inscriptions={inscriptions}
+        signing={signing}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Documents de la session</CardTitle>
@@ -218,6 +246,7 @@ export function DocumentsSection({
               {inscriptions.map((inscription) => {
                 const name =
                   `${inscription.trainee?.firstName ?? ""} ${inscription.trainee?.lastName ?? ""}`.trim();
+                const isSigned = signedIds.has(inscription.id);
                 return (
                   <li
                     key={inscription.id}
@@ -231,14 +260,24 @@ export function DocumentsSection({
                         disabled={
                           !inscription.attestationResult || generating !== null
                         }
-                        onClick={() =>
-                          generateAttestationPDF(
-                            session,
-                            inscription,
-                            formateur
-                          )
+                        onClick={() => {
+                          if (isSigned) {
+                            window.location.href = signedUrl(inscription.id);
+                            return;
+                          }
+                          generate(`${inscription.id}-attestation`, () =>
+                            generateAttestationPDF(
+                              session,
+                              inscription,
+                              formateur
+                            )
+                          );
+                        }}
+                        aria-label={
+                          isSigned
+                            ? `Attestation signée de ${name}`
+                            : `Aperçu non signé de l'attestation de ${name}`
                         }
-                        aria-label={`Attestation de ${name}`}
                         title={
                           inscription.attestationResult
                             ? undefined

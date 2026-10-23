@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireOrganisme, getTenantPrisma } from "@/lib/context";
+import { assertAttestationsNotSigned } from "@/lib/attestation-signature";
 import { ATTESTATION_RESULT, SESSION_STATUS } from "../types";
 
 function isSessionClosed(status: string) {
@@ -28,6 +29,7 @@ export async function addTraineeToSession(
   if (isSessionClosed(session.status)) {
     throw new Error("Impossible de modifier une session clôturée");
   }
+  await assertAttestationsNotSigned(sessionId);
 
   return tenant.inscription.create({
     data: { trainingSessionId: sessionId, traineeId },
@@ -53,6 +55,7 @@ export async function removeTraineeFromSession(inscriptionId: string) {
   if (isSessionClosed(inscription.trainingSession.status)) {
     throw new Error("Impossible de modifier une session clôturée");
   }
+  await assertAttestationsNotSigned(inscription.trainingSessionId);
 
   return prisma.inscription.delete({ where: { id: inscriptionId } });
 }
@@ -106,6 +109,7 @@ export async function updateAttestationResult(
   if (isSessionClosed(inscription.trainingSession.status)) {
     throw new Error("Impossible de modifier une session clôturée");
   }
+  await assertAttestationsNotSigned(inscription.trainingSessionId);
 
   return prisma.inscription.update({
     where: { id: inscriptionId },
@@ -134,6 +138,7 @@ export async function updateAttestationResults(
   if (isSessionClosed(session.status)) {
     throw new Error("Impossible de modifier une session clôturée");
   }
+  await assertAttestationsNotSigned(sessionId);
 
   if (inscriptionIds.length === 0) return { count: 0 };
 

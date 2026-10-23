@@ -59,6 +59,7 @@
         "react-dropzone": "^14.4.1",
         "react-hook-form": "^7.89.0",
         "recharts": "3.10.1",
+        "signature_pad": "5.0.4",
         "sonner": "^2.0.8",
         "tailwind-merge": "^3.7.0",
         "tailwindcss-animate": "^1.0.7",
@@ -1630,6 +1631,8 @@
     "siginfo": ["siginfo@2.0.0", "", {}, "sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g=="],
 
     "signal-exit": ["signal-exit@4.1.0", "", {}, "sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw=="],
+
+    "signature_pad": ["signature_pad@5.0.4", "", {}, "sha512-nngOixbwLAUOuH3QnZwlgwmynQblxmo4iWacKFwfymJfiY+Qt+9icNtcIe/okqXKun4hJ5QTFmHyC7dmv6lf2w=="],
 
     "sirv": ["sirv@3.0.2", "", { "dependencies": { "@polka/url": "^1.0.0-next.24", "mrmime": "^2.0.0", "totalist": "^3.0.0" } }, "sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g=="],
 

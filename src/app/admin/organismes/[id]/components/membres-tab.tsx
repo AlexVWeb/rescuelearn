@@ -42,7 +42,7 @@ import {
 import { InviteMemberDialog } from "@/components/admin/invite-member-dialog";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
-import { UserRole } from "@/lib/roles";
+import { UserRole, getRoleLabel } from "@/lib/roles";
 import { OrganismeMember } from "@/types/organisme";
 
 export interface InvitationInfo {
@@ -172,18 +172,20 @@ export function MembresTab({
                   </TableCell>
                   <TableCell>
                     <Select
-                      defaultValue={getMemberRoles(member)[0] ?? "formateur"}
+                      defaultValue={
+                        getMemberRoles(member)[0] ?? UserRole.FORMATEUR
+                      }
                       onValueChange={(role) =>
                         handleRoleChange(member.id, role)
                       }
                     >
-                      <SelectTrigger className="h-8 w-[130px]">
+                      <SelectTrigger className="h-8 w-[170px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {ROLES.map((r) => (
                           <SelectItem key={r} value={r}>
-                            {r.charAt(0).toUpperCase() + r.slice(1)}
+                            {getRoleLabel(r)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -233,7 +235,9 @@ export function MembresTab({
                   <TableRow key={inv.id}>
                     <TableCell className="font-medium">{inv.email}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{inv.role}</Badge>
+                      <Badge variant="secondary">
+                        {inv.role ? getRoleLabel(inv.role) : "—"}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {dayjs(inv.createdAt).format("DD/MM/YYYY")}

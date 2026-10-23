@@ -23,14 +23,17 @@ import { GroupsTab } from "../[id]/components/groups";
 import { boardKey } from "../[id]/components/groups/board-utils";
 import { ResultsSection } from "../[id]/components/close/results-section";
 import { DocumentsSection } from "../[id]/components/close/documents-section";
+import { SupportsTab } from "../[id]/components/supports/supports-tab";
 import {
   Inscription,
+  SessionDocument,
   SessionFormateurUser,
   Slot,
   Trainee,
   TrainingSession,
 } from "@/app/admin/training/types";
 import { formatFormateurName } from "@/app/admin/training/lib/formateurs";
+import type { AttestationSigning } from "@/app/admin/training/actions";
 import {
   checkGroups,
   isCountedInscription,
@@ -45,10 +48,15 @@ import {
 } from "@/app/admin/training/lib/session-progress";
 
 interface SessionWorkspaceProps {
-  session: TrainingSession & { slots: Slot[]; inscriptions: Inscription[] };
+  session: TrainingSession & {
+    slots: Slot[];
+    inscriptions: Inscription[];
+    documents?: SessionDocument[];
+  };
   allTrainees: Trainee[];
   formateur: { lastName: string | null; firstName: string | null };
   assignableFormateurs: SessionFormateurUser[];
+  attestationSigning: AttestationSigning;
   organismeLogoBase64?: string | null;
 }
 
@@ -61,6 +69,7 @@ export function SessionWorkspace({
   allTrainees,
   formateur,
   assignableFormateurs,
+  attestationSigning,
   organismeLogoBase64,
 }: SessionWorkspaceProps) {
   const pathname = usePathname();
@@ -176,6 +185,7 @@ export function SessionWorkspace({
       groupWarnings.length > 0
         ? `${groupWarnings.length} ⚠`
         : String(groups.length),
+    supports: String(session.documents?.length ?? 0),
   };
 
   const sectionContent: Record<SessionSection, ReactNode> = {
@@ -211,6 +221,9 @@ export function SessionWorkspace({
         formateurs={assignedFormateurs}
       />
     ),
+    supports: (
+      <SupportsTab sessionId={session.id} documents={session.documents ?? []} />
+    ),
     emargement: (
       <EmargementTab
         sessionId={session.id}
@@ -233,16 +246,20 @@ export function SessionWorkspace({
     documents: (
       <DocumentsSection
         session={{
+          id: session.id,
+          attestationsPublishedAt: session.attestationsPublishedAt ?? null,
           title: session.title,
           type: session.type,
           location: session.location,
           startDate: session.startDate,
+          endDate: session.endDate,
           slots,
           isFC: session.isFC,
           status: session.status,
         }}
         inscriptions={inscriptions}
         formateur={formateur}
+        signing={attestationSigning}
         equipePedagogique={assignedFormateurs
           .map(formatFormateurName)
           .filter(Boolean)}

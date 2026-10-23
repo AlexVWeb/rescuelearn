@@ -74,6 +74,7 @@ export interface TrainingSession {
   formateurs?: { user: SessionFormateurUser }[];
   responsablePedagogique?: SessionFormateurUser | null;
   groups?: TrainingGroup[];
+  attestationsPublishedAt?: Date | null;
   _count?: {
     inscriptions: number;
   };
@@ -105,6 +106,8 @@ export interface Emargement {
   codeSentAt?: Date | null;
   validatedAt: Date | null;
   status: EmargementStatus;
+  // "portail" | "pin" | "formateur"
+  signedVia?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -122,6 +125,19 @@ export interface Inscription {
   groupId?: string | null;
   trainee?: Trainee;
   emargements?: Emargement[];
+  // Espace stagiaire (le hash du lien ne quitte jamais le serveur)
+  hasAccessLink?: boolean;
+  accessSentAt?: Date | null;
+  accessLastUsedAt?: Date | null;
+}
+
+export interface SessionDocument {
+  id: string;
+  title: string;
+  mimeType: string;
+  size: number;
+  visibleFrom: Date | null;
+  createdAt: Date;
 }
 
 export interface TrainingSessionWithRelations extends TrainingSession {
