@@ -34,7 +34,7 @@ import {
   updateUserAction,
   createUserAction,
 } from "@/app/actions/user-actions";
-import { UserRole, userRoleSchema } from "@/lib/roles";
+import { UserRole, getRoleLabel, userRoleSchema } from "@/lib/roles";
 import { useRouter } from "next/navigation";
 
 // Schema
@@ -204,16 +204,16 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={UserRole.PLAYER}>Apprenant</SelectItem>
-                      <SelectItem value={UserRole.FORMATEUR}>
-                        Formateur
-                      </SelectItem>
-                      <SelectItem value={UserRole.ADMIN_ORGANISME}>
-                        Admin Organisme
-                      </SelectItem>
-                      <SelectItem value={UserRole.SUPER_ADMIN}>
-                        Super Admin
-                      </SelectItem>
+                      {[
+                        UserRole.PLAYER,
+                        UserRole.FORMATEUR,
+                        UserRole.ADMIN_ORGANISME,
+                        UserRole.SUPER_ADMIN,
+                      ].map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {getRoleLabel(r)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
