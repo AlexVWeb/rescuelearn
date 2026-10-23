@@ -15,6 +15,11 @@ const r2 = new S3Client({
     accessKeyId: process.env.R2_ACCESS_KEY_ID!,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
   },
+  // Depuis la 3.729, le SDK ajoute par défaut des sommes de contrôle CRC32.
+  // Dans une URL présignée, c'est celle d'un corps vide : R2 rejetterait le
+  // fichier envoyé par le navigateur. Recommandation Cloudflare pour R2.
+  requestChecksumCalculation: "WHEN_REQUIRED",
+  responseChecksumValidation: "WHEN_REQUIRED",
 });
 
 export async function uploadFile(
