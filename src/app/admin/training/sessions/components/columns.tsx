@@ -9,8 +9,41 @@ import { DeleteSessionButton } from "./delete-session-button";
 import dayjs from "dayjs";
 import Link from "next/link";
 import { SessionStatusBadge } from "./session-status-badge";
+import type { PositiveShare } from "@/lib/evaluation/quality";
 
-export const columns: ColumnDef<TrainingSession>[] = [
+export type SessionRow = TrainingSession & {
+  satisfaction: PositiveShare | null;
+};
+
+function SatisfactionCell({
+  satisfaction,
+}: {
+  satisfaction: PositiveShare | null;
+}) {
+  if (!satisfaction) return <span className="text-muted-foreground">—</span>;
+  const answers = `${satisfaction.count} rép.`;
+  if (satisfaction.share === null) {
+    // Sous le seuil d'anonymat : seul le nombre de réponses est montré
+    return (
+      <span
+        className="text-muted-foreground"
+        title="Résultat affiché à partir de 5 réponses"
+      >
+        {answers}
+      </span>
+    );
+  }
+  return (
+    <span className="tabular-nums">
+      <span className="font-semibold">
+        {Math.round(satisfaction.share * 100)} % satisfaits
+      </span>
+      <span className="text-muted-foreground"> · {answers}</span>
+    </span>
+  );
+}
+
+export const columns: ColumnDef<SessionRow>[] = [
   {
     accessorKey: "title",
     header: ({ column }) => {
@@ -77,6 +110,23 @@ export const columns: ColumnDef<TrainingSession>[] = [
         </div>
       );
     },
+  },
+  {
+    id: "satisfaction",
+    // Tri : sessions avec un résultat d'abord, puis celles sous le seuil
+    accessorFn: (row) => row.satisfaction?.share ?? -1,
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Satisfaction
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => (
+      <SatisfactionCell satisfaction={row.original.satisfaction} />
+    ),
   },
   {
     id: "actions",
