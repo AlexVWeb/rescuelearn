@@ -64,6 +64,7 @@ export function defaultDocumentTitle(fileName: string): string {
     fileName
       .replace(/\.[^.]*$/, "")
       .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
       .trim()
       .slice(0, 120) || "Document"
   );

@@ -57,6 +57,12 @@ describe("noms de fichiers", () => {
     );
   });
 
+  it("ne laisse pas de double espace autour des tirets", () => {
+    expect(
+      defaultDocumentTitle("6- RIC-RIF PICF version 5 février 2026.pdf")
+    ).toBe("6 RIC RIF PICF version 5 février 2026");
+  });
+
   it("produit un nom sûr pour la clé de stockage", () => {
     expect(safeFileBaseName("Recos PSE ../2024 é.pdf")).toBe(
       "Recos_PSE_2024_e"
