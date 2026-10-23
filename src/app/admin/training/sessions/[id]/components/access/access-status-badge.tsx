@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { Badge } from "@/components/ui/badge";
 import {
   getAccessStatus,
@@ -5,17 +6,12 @@ import {
 } from "@/app/admin/training/lib/access-status";
 import type { Inscription } from "@/app/admin/training/types";
 
-const dayFormat = new Intl.DateTimeFormat("fr-FR", {
-  day: "2-digit",
-  month: "2-digit",
-});
-
 function label(status: AccessStatus, inscription: Inscription) {
   switch (status) {
     case "opened":
-      return `Espace ouvert · ${dayFormat.format(new Date(inscription.accessLastUsedAt!))}`;
+      return `Espace ouvert · ${dayjs(inscription.accessLastUsedAt).format("DD/MM")}`;
     case "sent":
-      return `Envoyé · ${dayFormat.format(new Date(inscription.accessSentAt!))}`;
+      return `Envoyé · ${dayjs(inscription.accessSentAt).format("DD/MM")}`;
     case "link_created":
       return "Lien créé";
     case "no_email":

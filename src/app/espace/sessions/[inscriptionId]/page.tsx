@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, MapPin } from "lucide-react";
@@ -27,7 +28,9 @@ import type { DocumentView, SlotView } from "./types";
 
 export const dynamic = "force-dynamic";
 
-const parisDay = new Intl.DateTimeFormat("en-CA", { timeZone: SLOT_TIMEZONE });
+// Jour calendaire à Paris (plugins utc/timezone chargés par slot-window)
+const parisDay = (date: Date) =>
+  dayjs(date).tz(SLOT_TIMEZONE).format("YYYY-MM-DD");
 
 export default async function EspaceSessionPage({
   params,
@@ -78,7 +81,7 @@ export default async function EspaceSessionPage({
     (other) => !checkInscriptionAccess(other, null)
   );
 
-  const today = parisDay.format(now);
+  const today = parisDay(now);
   const windows = slots.map((slot) => getSlotWindow(slot));
   const slotViews: SlotView[] = slots.map((slot, index) => {
     const emargement = slot.emargements[0];
@@ -92,7 +95,7 @@ export default async function EspaceSessionPage({
         ? formatParisTime(emargement.validatedAt)
         : null,
       opensAtLabel: formatParisTime(windows[index].opensAt),
-      isToday: parisDay.format(windows[index].startsAt) === today,
+      isToday: parisDay(windows[index].startsAt) === today,
     };
   });
 

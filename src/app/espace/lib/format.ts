@@ -1,16 +1,16 @@
-// Dates @db.Date stockées à minuit UTC : formatées en UTC pour éviter un décalage d'un jour
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import "dayjs/locale/fr";
 
-const dateFormat = new Intl.DateTimeFormat("fr-FR", {
+dayjs.extend(utc);
+
+// Dates @db.Date stockées à minuit UTC : lues en UTC pour éviter un décalage d'un jour
+
+// dayjs ne sait pas formater un intervalle : Intl.formatRange donne « 12–16 novembre 2026 »
+const rangeFormat = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
   month: "long",
   year: "numeric",
-  timeZone: "UTC",
-});
-
-const slotDayFormat = new Intl.DateTimeFormat("fr-FR", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
   timeZone: "UTC",
 });
 
@@ -19,19 +19,18 @@ export function formatSessionDates(
   endDate: Date | null
 ) {
   if (!startDate) return "Dates à venir";
-  if (!endDate) return dateFormat.format(startDate);
-  return dateFormat.formatRange(startDate, endDate);
+  if (!endDate) return dayjs.utc(startDate).locale("fr").format("D MMMM YYYY");
+  return rangeFormat.formatRange(startDate, endDate);
 }
 
-/** « mar. 12 nov. » */
+/** « ven. 23 oct. » */
 export function formatSlotDay(date: Date) {
-  return slotDayFormat.format(date);
+  return dayjs.utc(date).locale("fr").format("ddd D MMM");
 }
 
 /** « 09:00 » → « 9h00 » */
 export function formatTimeLabel(time: string) {
-  const [hours, minutes] = time.split(":");
-  return `${Number(hours)}h${minutes}`;
+  return dayjs(`2000-01-01T${time}`).format("H[h]mm");
 }
 
 export function formatFileSize(bytes: number) {

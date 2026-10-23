@@ -3,6 +3,7 @@ import {
   MAX_DOCUMENT_BYTES,
   defaultDocumentTitle,
   formatVisibleFrom,
+  fromDateTimeLocalValue,
   toDateTimeLocalValue,
   matchesDocumentSignature,
   safeFileBaseName,
@@ -79,10 +80,14 @@ describe("visibilité à date et heure", () => {
   });
 
   it("fait l'aller-retour saisie → Date → saisie sans décalage", () => {
-    const original = new Date(2026, 9, 25, 9, 30); // jour du passage à l'heure d'hiver
-    expect(toDateTimeLocalValue(new Date(toDateTimeLocalValue(original)))).toBe(
-      toDateTimeLocalValue(original)
-    );
+    // Jour du passage à l'heure d'hiver
+    const value = "2026-10-25T09:30";
+    expect(toDateTimeLocalValue(fromDateTimeLocalValue(value))).toBe(value);
+    expect(fromDateTimeLocalValue(value)).toEqual(new Date(2026, 9, 25, 9, 30));
+  });
+
+  it("champ vidé : visible tout de suite", () => {
+    expect(fromDateTimeLocalValue("")).toBeNull();
   });
 
   it("vide si aucune date", () => {

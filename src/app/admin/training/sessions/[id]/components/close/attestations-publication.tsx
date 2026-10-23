@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
 import { CircleCheck, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -31,13 +32,6 @@ import {
 } from "@/app/admin/training/actions";
 import { getAttestationState } from "@/lib/trainee-attestation";
 import type { Inscription } from "@/app/admin/training/types";
-
-const publishedFormat = new Intl.DateTimeFormat("fr-FR", {
-  day: "2-digit",
-  month: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-});
 
 function plural(count: number, word: string) {
   return `${count} ${word}${count > 1 ? "s" : ""}`;
@@ -114,7 +108,7 @@ export function AttestationsPublication({
                 className="text-success h-4 w-4"
                 aria-hidden="true"
               />
-              Publiées le {publishedFormat.format(new Date(publishedAt))} ·{" "}
+              Publiées le {dayjs(publishedAt).format("DD/MM [à] HH:mm")} ·{" "}
               {plural(available.length, "attestation")} téléchargeable
               {available.length > 1 ? "s" : ""}
             </span>

@@ -1,3 +1,6 @@
+import dayjs from "dayjs";
+import "dayjs/locale/fr";
+
 // Supports de formation déposés par le formateur, visibles dans l'espace stagiaire.
 // Partagé client / serveur : aucune dépendance serveur ici.
 
@@ -82,24 +85,20 @@ export function safeFileBaseName(fileName: string): string {
   );
 }
 
-const pad = (n: number) => String(n).padStart(2, "0");
-
 /**
  * Valeur d'un <input type="datetime-local"> (AAAA-MM-JJTHH:mm), dans le
  * fuseau du navigateur : celui du formateur qui saisit l'heure.
  */
 export function toDateTimeLocalValue(date: Date | null): string {
-  if (!date) return "";
-  const d = new Date(date);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return date ? dayjs(date).format("YYYY-MM-DDTHH:mm") : "";
+}
+
+/** Lit la valeur d'un <input type="datetime-local"> en heure locale. */
+export function fromDateTimeLocalValue(value: string): Date | null {
+  return value ? dayjs(value).toDate() : null;
 }
 
 /** « 12 nov. à 14h00 », dans le fuseau du navigateur. */
 export function formatVisibleFrom(date: Date): string {
-  const d = new Date(date);
-  const day = new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "short",
-  }).format(d);
-  return `${day} à ${d.getHours()}h${pad(d.getMinutes())}`;
+  return dayjs(date).locale("fr").format("D MMM [à] H[h]mm");
 }

@@ -29,6 +29,7 @@ import { deleteDocument, updateDocument } from "@/app/admin/training/actions";
 import type { SessionDocument } from "@/app/admin/training/types";
 import {
   formatVisibleFrom,
+  fromDateTimeLocalValue,
   toDateTimeLocalValue,
 } from "@/app/admin/training/lib/session-documents";
 
@@ -56,8 +57,7 @@ export function DocumentRow({
       try {
         await updateDocument(document.id, {
           title,
-          // « AAAA-MM-JJTHH:mm » sans fuseau : interprété en heure locale du formateur
-          visibleFrom: visibleAt ? new Date(visibleAt) : null,
+          visibleFrom: fromDateTimeLocalValue(visibleAt),
         });
         setEditOpen(false);
         router.refresh();
