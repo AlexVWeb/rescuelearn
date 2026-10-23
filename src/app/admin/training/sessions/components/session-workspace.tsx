@@ -33,6 +33,7 @@ import {
   TrainingSession,
 } from "@/app/admin/training/types";
 import { formatFormateurName } from "@/app/admin/training/lib/formateurs";
+import type { AttestationSigning } from "@/app/admin/training/actions";
 import {
   checkGroups,
   isCountedInscription,
@@ -55,6 +56,7 @@ interface SessionWorkspaceProps {
   allTrainees: Trainee[];
   formateur: { lastName: string | null; firstName: string | null };
   assignableFormateurs: SessionFormateurUser[];
+  attestationSigning: AttestationSigning;
   organismeLogoBase64?: string | null;
 }
 
@@ -67,6 +69,7 @@ export function SessionWorkspace({
   allTrainees,
   formateur,
   assignableFormateurs,
+  attestationSigning,
   organismeLogoBase64,
 }: SessionWorkspaceProps) {
   const pathname = usePathname();
@@ -256,6 +259,7 @@ export function SessionWorkspace({
         }}
         inscriptions={inscriptions}
         formateur={formateur}
+        signing={attestationSigning}
         equipePedagogique={assignedFormateurs
           .map(formatFormateurName)
           .filter(Boolean)}

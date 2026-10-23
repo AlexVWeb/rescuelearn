@@ -146,6 +146,10 @@ export const RetentionService = {
         },
         include: {
           externalTrainings: true,
+          // La cascade supprime les lignes, pas les PDF signés sur R2
+          inscriptions: {
+            select: { signedAttestations: { select: { fileKey: true } } },
+          },
         },
       });
 
@@ -160,6 +164,20 @@ export const RetentionService = {
                 error
               );
             }
+          }
+        }
+
+        const attestationKeys = trainee.inscriptions.flatMap((i) =>
+          i.signedAttestations.map((a) => a.fileKey)
+        );
+        for (const fileKey of attestationKeys) {
+          try {
+            await deleteFile(fileKey);
+          } catch (error) {
+            logger.error(
+              `Erreur suppression attestation R2 ${fileKey}:`,
+              error
+            );
           }
         }
 

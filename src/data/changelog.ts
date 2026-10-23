@@ -10,6 +10,21 @@ export interface ChangelogItem {
 
 export const changelogData: ChangelogItem[] = [
   {
+    id: "attestation-signature-formateur",
+    title: "Signature des Attestations par le Formateur",
+    description:
+      "Le formateur de la session signe électroniquement les attestations de fin de formation au moment de les publier dans l'espace stagiaire.",
+    date: "2026-10-23",
+    status: "completed",
+    category: "feature",
+    details: [
+      "Tracé de la signature au doigt, au stylet ou à la souris, réservé aux formateurs affectés à la session.",
+      "Attestation figée à la signature : le stagiaire télécharge exactement le document signé, avec date, heure et référence.",
+      "Empreinte numérique conservée pour chaque attestation, preuve de son intégrité.",
+      "Résultats, inscrits et formateurs verrouillés tant que les attestations signées restent publiées.",
+    ],
+  },
+  {
     id: "espace-stagiaire-documents",
     title: "Portail Stagiaire & Partage Sécurisé de Documents",
     description:

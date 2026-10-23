@@ -25,6 +25,9 @@ const mockPrisma = vi.hoisted(() => ({
     update: vi.fn(),
     updateMany: vi.fn(),
   },
+  attestationSignature: {
+    findFirst: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/context", () => ({
@@ -55,6 +58,7 @@ describe("Inscription Actions", () => {
     vi.mocked(getTenantPrisma).mockResolvedValue(
       mockPrisma as unknown as Awaited<ReturnType<typeof getTenantPrisma>>
     );
+    mockPrisma.attestationSignature.findFirst.mockResolvedValue(null);
   });
 
   describe("addTraineeToSession", () => {
@@ -256,6 +260,53 @@ describe("Inscription Actions", () => {
         updateAttestationResults("session-1", ["ins-1"], "non_acquis")
       ).rejects.toThrow("Impossible de modifier une session clôturée");
       expect(mockPrisma.inscription.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("signed attestations lock", () => {
+    beforeEach(() => {
+      mockPrisma.attestationSignature.findFirst.mockResolvedValue({
+        id: "sig",
+      });
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "session-1",
+        status: "en_cours",
+      });
+      mockPrisma.trainingSession.findUnique.mockResolvedValue({
+        id: "session-1",
+        organismeId: "org-1",
+        status: "en_cours",
+      });
+      mockPrisma.trainee.findFirst.mockResolvedValue({ id: "trainee-1" });
+      mockPrisma.inscription.findUnique.mockResolvedValue({
+        id: "ins-1",
+        trainingSessionId: "session-1",
+        trainingSession: { organismeId: "org-1", status: "en_cours" },
+      });
+    });
+
+    it.each([
+      [
+        "updateAttestationResult",
+        () => updateAttestationResult("ins-1", "acquis"),
+      ],
+      [
+        "updateAttestationResults",
+        () => updateAttestationResults("session-1", ["ins-1"], "acquis"),
+      ],
+      [
+        "addTraineeToSession",
+        () => addTraineeToSession("session-1", "trainee-1"),
+      ],
+      ["removeTraineeFromSession", () => removeTraineeFromSession("ins-1")],
+    ])("%s refuses while attestations are signed", async (_, run) => {
+      await expect(run()).rejects.toThrow(
+        "Attestations signées : dépubliez-les pour modifier."
+      );
+      expect(mockPrisma.inscription.update).not.toHaveBeenCalled();
+      expect(mockPrisma.inscription.updateMany).not.toHaveBeenCalled();
+      expect(mockPrisma.inscription.create).not.toHaveBeenCalled();
+      expect(mockPrisma.inscription.delete).not.toHaveBeenCalled();
     });
   });
 });

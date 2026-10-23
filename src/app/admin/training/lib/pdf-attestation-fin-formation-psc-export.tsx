@@ -3,6 +3,7 @@ import {
   Document,
   Page,
   Text,
+  Image,
   Svg,
   G,
   Rect,
@@ -10,6 +11,7 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import dayjs from "dayjs";
+import { SLOT_TIMEZONE, formatParisTime } from "@/lib/slot-window";
 import { Slot, Inscription } from "../types";
 import { downloadPdfDocument } from "./pdf-download";
 
@@ -108,6 +110,7 @@ function TextAt({
   size = 11,
   bold = false,
   center = false,
+  width = 100,
   children,
 }: {
   x: number;
@@ -116,9 +119,11 @@ function TextAt({
   bold?: boolean;
   /** Centre le texte sur `x`. */
   center?: boolean;
+  /** Largeur du bloc centré, en mm. */
+  width?: number;
   children: React.ReactNode;
 }) {
-  const centeredWidth = 100;
+  const centeredWidth = width;
   return (
     <Text
       style={{
@@ -211,13 +216,16 @@ function AttestationPage({
   session,
   inscription,
   formateur,
+  signer,
 }: {
   session: AttestationSession;
   inscription: Inscription;
   formateur: AttestationFormateur;
+  signer?: AttestationSigner;
 }) {
   const x = 20;
   const formateurName =
+    signer?.name ||
     `${formateur.lastName ?? ""} ${formateur.firstName ?? ""}`.trim() ||
     "Non renseigné";
   const traineeName =
@@ -225,9 +233,12 @@ function AttestationPage({
   const totalHours = formatAttestationDuration(session.slots);
   const hoursLabel = totalHours > 1 ? "heures" : "heure";
   const isAcquis = inscription.attestationResult === "acquis";
-  const validatedAt = inscription.attestationValidatedAt
-    ? dayjs(inscription.attestationValidatedAt).format("DD/MM/YYYY")
-    : dayjs().format("DD/MM/YYYY");
+  // Signée : la date est celle de la signature, pas celle du téléchargement
+  const validatedAt = signer
+    ? dayjs(signer.signedAt).tz(SLOT_TIMEZONE).format("DD/MM/YYYY")
+    : inscription.attestationValidatedAt
+      ? dayjs(inscription.attestationValidatedAt).format("DD/MM/YYYY")
+      : dayjs().format("DD/MM/YYYY");
 
   return (
     <Page size="A4">
@@ -378,6 +389,28 @@ function AttestationPage({
       <TextAt x={150} y={260} bold center>
         Signature du Formateur
       </TextAt>
+      {signer && (
+        <>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- Image react-pdf, pas un <img> */}
+          <Image
+            src={signer.imageDataUrl}
+            style={{
+              position: "absolute",
+              left: mm(120),
+              top: mm(263),
+              width: mm(60),
+              height: mm(22),
+              objectFit: "contain",
+            }}
+          />
+          <TextAt x={PAGE_WIDTH / 2} y={287} size={8} center width={170}>
+            {`Signé électroniquement par ${signer.name} le ${dayjs(signer.signedAt).tz(SLOT_TIMEZONE).format("DD/MM/YYYY")} à ${formatParisTime(signer.signedAt)}`}
+          </TextAt>
+          <TextAt x={PAGE_WIDTH / 2} y={291} size={8} center width={170}>
+            {`Réf. ${signer.signatureId}`}
+          </TextAt>
+        </>
+      )}
     </Page>
   );
 }
@@ -393,16 +426,25 @@ export type AttestationFormateur = {
   lastName: string | null;
   firstName: string | null;
 };
+export type AttestationSigner = {
+  name: string;
+  signedAt: Date;
+  signatureId: string;
+  /** data:image/png;base64,… */
+  imageDataUrl: string;
+};
 
 /** Une page par inscription. */
 export function AttestationDocument({
   session,
   inscriptions,
   formateur,
+  signer,
 }: {
   session: AttestationSession;
   inscriptions: Inscription[];
   formateur: AttestationFormateur;
+  signer?: AttestationSigner;
 }) {
   return (
     <Document>
@@ -412,6 +454,7 @@ export function AttestationDocument({
           session={session}
           inscription={inscription}
           formateur={formateur}
+          signer={signer}
         />
       ))}
     </Document>
@@ -433,6 +476,22 @@ export async function renderAttestationPDF(
       session={session}
       inscriptions={[inscription]}
       formateur={formateur}
+    />
+  );
+}
+
+/** PDF signé : rendu une seule fois, à la signature, puis stocké. */
+export async function renderSignedAttestationPDF(
+  session: AttestationSession,
+  inscription: Inscription,
+  signer: AttestationSigner
+): Promise<Buffer> {
+  return await renderToBuffer(
+    <AttestationDocument
+      session={session}
+      inscriptions={[inscription]}
+      formateur={{ lastName: signer.name, firstName: null }}
+      signer={signer}
     />
   );
 }

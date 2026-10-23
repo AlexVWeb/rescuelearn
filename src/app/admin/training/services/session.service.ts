@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { assertAttestationsNotSigned } from "@/lib/attestation-signature";
 import {
   CreateTrainingSessionInput,
   UpdateTrainingSessionInput,
@@ -126,6 +127,8 @@ export class TrainingSessionService {
     if (session.status === "terminée") {
       throw new Error("Impossible de supprimer une session terminée");
     }
+    // Sinon la cascade supprimerait les lignes, pas les PDF signés sur R2
+    await assertAttestationsNotSigned(id);
 
     // La cascade Prisma supprime les lignes, pas les fichiers R2
     const documents = await prisma.sessionDocument.findMany({
@@ -209,6 +212,7 @@ export class TrainingSessionService {
         "Impossible de modifier les formateurs d'une session clôturée"
       );
     }
+    await assertAttestationsNotSigned(id);
 
     const uniqueIds = [...new Set(userIds)];
     if (uniqueIds.length === 0) {

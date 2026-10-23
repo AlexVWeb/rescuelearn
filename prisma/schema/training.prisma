@@ -65,6 +65,7 @@ model TrainingSession {
   // Publication explicite des attestations dans l'espace stagiaire
   attestationsPublishedAt  DateTime?
   documents                SessionDocument[]
+  attestationSignatures    AttestationSignature[]
 
   @@index([responsablePedagogiqueId])
 }
@@ -152,24 +153,25 @@ model ExternalTraining {
 }
 
 model Inscription {
-  id                     String          @id @default(cuid())
-  status                 String          @default("inscrit")
+  id                     String              @id @default(cuid())
+  status                 String              @default("inscrit")
   traineeId              String
   trainingSessionId      String
   attestationResult      String?
   attestationValidatedAt DateTime?
   emargements            Emargement[]
-  trainee                Trainee         @relation(fields: [traineeId], references: [id], onDelete: Cascade)
-  trainingSession        TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  trainee                Trainee             @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+  trainingSession        TrainingSession     @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
   groupId                String?
-  group                  TrainingGroup?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  group                  TrainingGroup?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
   // Espace stagiaire : SHA-256 du token du lien, jamais le token en clair
-  accessTokenHash        String?         @unique
+  accessTokenHash        String?             @unique
   accessSentAt           DateTime?
   accessLastUsedAt       DateTime?
   // Verrou anti-devinette du PIN depuis l'espace stagiaire
-  pinFailedCount         Int             @default(0)
+  pinFailedCount         Int                 @default(0)
   pinLockedUntil         DateTime?
+  signedAttestations     SignedAttestation[]
 
   @@unique([traineeId, trainingSessionId])
   @@index([groupId])
@@ -205,4 +207,42 @@ model SessionDocument {
   trainingSession   TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
 
   @@index([trainingSessionId])
+}
+
+model AttestationSignature {
+  id                String              @id @default(cuid())
+  trainingSessionId String
+  signerId          String
+  // Figé au moment de signer : un renommage ultérieur ne change pas l'attestation
+  signerName        String
+  signedAt          DateTime            @default(now())
+  ipAddress         String?
+  userAgent         String?
+  // PNG du tracé sur R2, chiffré
+  signatureImageKey String
+  // Dépublication : la ligne reste comme trace
+  revokedAt         DateTime?
+  revokedById       String?
+  trainingSession   TrainingSession     @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  signer            User                @relation("AttestationSigner", fields: [signerId], references: [id])
+  revokedBy         User?               @relation("AttestationRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
+  attestations      SignedAttestation[]
+
+  @@index([trainingSessionId])
+}
+
+model SignedAttestation {
+  id            String               @id @default(cuid())
+  signatureId   String
+  inscriptionId String
+  // PDF sur R2, chiffré
+  fileKey       String
+  // SHA-256 du PDF en clair, tel que téléchargé par le stagiaire
+  sha256        String
+  size          Int
+  signature     AttestationSignature @relation(fields: [signatureId], references: [id], onDelete: Cascade)
+  inscription   Inscription          @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([signatureId, inscriptionId])
+  @@index([inscriptionId])
 }

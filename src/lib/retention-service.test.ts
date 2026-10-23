@@ -102,6 +102,7 @@ describe("RetentionService", () => {
       id: "t1",
       lastActivityAt: dayjs().subtract(11, "years").toDate(),
       externalTrainings: [{ fileKey: "key1" }],
+      inscriptions: [],
     };
 
     vi.mocked(prisma.organisme.findMany).mockResolvedValue([
@@ -118,6 +119,24 @@ describe("RetentionService", () => {
         where: { id: "t1" },
       })
     );
+  });
+
+  it("deletes signed attestation files when purging a trainee", async () => {
+    vi.mocked(prisma.organisme.findMany).mockResolvedValue([
+      { id: "o1", retentionYearsArchive: 10 },
+    ] as unknown as Organisme[]);
+    vi.mocked(prisma.trainee.findMany).mockResolvedValue([
+      {
+        id: "t1",
+        externalTrainings: [],
+        inscriptions: [{ signedAttestations: [{ fileKey: "att/i1.pdf" }] }],
+      },
+    ] as unknown as Trainee[]);
+
+    await RetentionService.purgeExpiredTrainees();
+
+    expect(deleteFile).toHaveBeenCalledWith("att/i1.pdf");
+    expect(prisma.trainee.delete).toHaveBeenCalledWith({ where: { id: "t1" } });
   });
 
   it("should send retention alerts with SMTP config from organism", async () => {
@@ -161,6 +180,7 @@ describe("RetentionService", () => {
       id: "t1",
       lastActivityAt: dayjs().subtract(11, "years").toDate(),
       externalTrainings: [{ fileKey: "key1" }],
+      inscriptions: [],
     };
 
     vi.mocked(prisma.organisme.findMany).mockResolvedValue([

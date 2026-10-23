@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
-import { CircleCheck, RefreshCw, Send } from "lucide-react";
+import { CircleCheck, PenLine, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -27,11 +27,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
-  publishAttestations,
+  signAndPublishAttestations,
   unpublishAttestations,
+  type AttestationSigning,
 } from "@/app/admin/training/actions";
 import { getAttestationState } from "@/lib/trainee-attestation";
 import type { Inscription } from "@/app/admin/training/types";
+import { SignaturePad } from "./signature-pad";
 
 function plural(count: number, word: string) {
   return `${count} ${word}${count > 1 ? "s" : ""}`;
@@ -41,15 +43,19 @@ export function AttestationsPublication({
   sessionId,
   publishedAt,
   inscriptions,
+  signing,
 }: {
   sessionId: string;
   publishedAt: Date | null;
   inscriptions: Inscription[];
+  signing: AttestationSigning;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [unpublishOpen, setUnpublishOpen] = useState(false);
   const [notify, setNotify] = useState(true);
+  const [signaturePng, setSignaturePng] = useState<string | null>(null);
 
   // Simulation de la publication : qui pourra télécharger, qui sera recontacté
   const available = inscriptions.filter(
@@ -61,20 +67,34 @@ export function AttestationsPublication({
   );
   const missingResult = inscriptions.filter((i) => !i.attestationResult);
   const notifiable = available.filter((i) => i.trainee?.email).length;
+  const blockedReason = !signing.isSessionFormateur
+    ? "Seul un formateur affecté à la session peut signer les attestations."
+    : missingResult.length > 0
+      ? `${plural(missingResult.length, "stagiaire")} sans résultat : complétez Clôturer › Résultats.`
+      : null;
+
+  function handleConfirmOpenChange(open: boolean) {
+    setConfirmOpen(open);
+    if (!open) setSignaturePng(null);
+  }
 
   function publish() {
+    if (!signaturePng) return;
     startTransition(async () => {
       try {
-        const { sent, missingEmail, failed } = await publishAttestations(
+        const { sent, missingEmail, failed } = await signAndPublishAttestations(
           sessionId,
-          { notify }
+          {
+            signaturePng,
+            notify,
+          }
         );
-        if (!notify) toast.success("Attestations publiées");
+        if (!notify) toast.success("Attestations signées et publiées");
         else {
           const parts = [plural(sent, "stagiaire prévenu")];
           if (missingEmail) parts.push(`${missingEmail} sans email`);
           if (failed) parts.push(plural(failed, "échec"));
-          const message = `Attestations publiées · ${parts.join(" · ")}`;
+          const message = `Attestations signées et publiées · ${parts.join(" · ")}`;
           if (failed) toast.warning(message);
           else toast.success(message);
         }
@@ -108,8 +128,10 @@ export function AttestationsPublication({
                 className="text-success h-4 w-4"
                 aria-hidden="true"
               />
-              Publiées le {dayjs(publishedAt).format("DD/MM [à] HH:mm")} ·{" "}
-              {plural(available.length, "attestation")} téléchargeable
+              {signing.signature
+                ? `Signées par ${signing.signature.signerName} le ${dayjs(signing.signature.signedAt).format("DD/MM [à] HH:mm")}`
+                : `Publiées le ${dayjs(publishedAt).format("DD/MM [à] HH:mm")}`}{" "}
+              · {plural(available.length, "attestation")} téléchargeable
               {available.length > 1 ? "s" : ""}
             </span>
           ) : (
@@ -118,13 +140,19 @@ export function AttestationsPublication({
         </CardDescription>
         <CardAction>
           {publishedAt ? (
-            <Button variant="outline" onClick={unpublish} disabled={pending}>
+            <Button
+              variant="outline"
+              onClick={() => setUnpublishOpen(true)}
+              disabled={pending}
+            >
               Dépublier
             </Button>
           ) : (
             <Button
               onClick={() => setConfirmOpen(true)}
-              disabled={pending || available.length === 0}
+              disabled={
+                pending || available.length === 0 || blockedReason !== null
+              }
             >
               {pending ? (
                 <RefreshCw
@@ -132,33 +160,34 @@ export function AttestationsPublication({
                   aria-hidden="true"
                 />
               ) : (
-                <Send className="h-4 w-4" aria-hidden="true" />
+                <PenLine className="h-4 w-4" aria-hidden="true" />
               )}
-              Publier
+              Signer et publier
             </Button>
           )}
         </CardAction>
       </CardHeader>
-      {!publishedAt && available.length === 0 && (
+      {!publishedAt && (blockedReason || available.length === 0) && (
         <CardContent>
           <p className="text-muted-foreground text-sm">
-            Saisissez d&apos;abord les résultats dans Clôturer › Résultats.
+            {blockedReason ??
+              "Saisissez d'abord les résultats dans Clôturer › Résultats."}
           </p>
         </CardContent>
       )}
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialog open={confirmOpen} onOpenChange={handleConfirmOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Publier les attestations ?</AlertDialogTitle>
+            <AlertDialogTitle>Signer les attestations ?</AlertDialogTitle>
             <AlertDialogDescription>
-              {plural(available.length, "stagiaire")} pourr
-              {available.length > 1 ? "ont" : "a"} télécharger son attestation
-              depuis son espace.
-              {missingResult.length > 0 &&
-                ` ${plural(missingResult.length, "stagiaire")} sans résultat saisi ne verr${missingResult.length > 1 ? "ont" : "a"} pas d'attestation.`}
+              Vous signez {plural(available.length, "attestation")} en tant que{" "}
+              <strong className="text-foreground">{signing.signerName}</strong>.
+              Chaque attestation est figée : pour corriger un résultat, il
+              faudra dépublier puis signer à nouveau.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <SignaturePad onChange={setSignaturePng} disabled={pending} />
           {notifiable > 0 && (
             <div className="flex items-start gap-2">
               <Checkbox
@@ -178,7 +207,29 @@ export function AttestationsPublication({
           )}
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={publish}>Publier</AlertDialogAction>
+            <AlertDialogAction
+              onClick={publish}
+              disabled={!signaturePng || pending}
+            >
+              Signer et publier
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={unpublishOpen} onOpenChange={setUnpublishOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dépublier les attestations ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {signing.signature
+                ? "La signature est révoquée et les PDF signés supprimés. Les stagiaires ne pourront plus télécharger leur attestation tant que vous n'aurez pas signé à nouveau."
+                : "Les stagiaires ne pourront plus télécharger leur attestation tant que vous ne l'aurez pas signée et publiée."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={unpublish}>Dépublier</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -14,8 +14,13 @@ const mockPrisma = vi.hoisted(() => ({
       .fn()
       .mockResolvedValue({ firstName: "Hugo", lastName: "Bernard" }),
   },
+  signedAttestation: { findFirst: vi.fn() },
+  attestationSignature: { findFirst: vi.fn() },
 }));
 vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }));
+
+const mockGetFile = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/r2", () => ({ getFile: mockGetFile }));
 
 import { GET } from "@/app/espace/sessions/[inscriptionId]/attestation/route";
 
@@ -25,6 +30,7 @@ function inscription(overrides: {
 }) {
   return {
     id: "ins-1",
+    trainingSessionId: "ts-1",
     attestationResult: "result" in overrides ? overrides.result : "acquis",
     attestationValidatedAt: new Date("2026-11-16"),
     trainee: { firstName: "Léa", lastName: "Martin" },
@@ -52,6 +58,8 @@ function call(id = "ins-1") {
 beforeEach(() => {
   vi.clearAllMocks();
   mockSession.getTraineeAccess.mockResolvedValue({ id: "ins-1" });
+  mockPrisma.signedAttestation.findFirst.mockResolvedValue(null);
+  mockPrisma.attestationSignature.findFirst.mockResolvedValue(null);
 });
 
 describe("GET /espace/sessions/[id]/attestation", () => {
@@ -68,6 +76,47 @@ describe("GET /espace/sessions/[id]/attestation", () => {
     );
     const bytes = Buffer.from(await response.arrayBuffer());
     expect(bytes.subarray(0, 4).toString("latin1")).toBe("%PDF");
+  });
+
+  it("sert le PDF signé stocké, sans nouveau rendu", async () => {
+    mockSession.getTraineeInscription.mockResolvedValue(inscription({}));
+    mockPrisma.signedAttestation.findFirst.mockResolvedValue({
+      id: "sa-1",
+      fileKey: "k/ins-1.pdf",
+    });
+    mockGetFile.mockResolvedValue({ buffer: Buffer.from("%PDF-signed") });
+
+    const response = await call();
+
+    expect(response.status).toBe(200);
+    expect(mockPrisma.signedAttestation.findFirst).toHaveBeenCalledWith({
+      where: { inscriptionId: "ins-1", signature: { revokedAt: null } },
+    });
+    expect(mockGetFile).toHaveBeenCalledWith("k/ins-1.pdf", true);
+    expect(Buffer.from(await response.arrayBuffer()).toString()).toBe(
+      "%PDF-signed"
+    );
+    expect(mockPrisma.slot.findMany).not.toHaveBeenCalled();
+  });
+
+  it("404 si le PDF signé est absent de R2", async () => {
+    mockSession.getTraineeInscription.mockResolvedValue(inscription({}));
+    mockPrisma.signedAttestation.findFirst.mockResolvedValue({
+      id: "sa-1",
+      fileKey: "k/ins-1.pdf",
+    });
+    mockGetFile.mockRejectedValue(new Error("NoSuchKey"));
+    expect((await call()).status).toBe(404);
+  });
+
+  it("404 si la session est signée sans fichier pour ce stagiaire", async () => {
+    mockSession.getTraineeInscription.mockResolvedValue(inscription({}));
+    mockPrisma.attestationSignature.findFirst.mockResolvedValue({
+      id: "sig",
+      attestations: [],
+    });
+    expect((await call()).status).toBe(404);
+    expect(mockPrisma.slot.findMany).not.toHaveBeenCalled();
   });
 
   it("redirige sans session stagiaire", async () => {

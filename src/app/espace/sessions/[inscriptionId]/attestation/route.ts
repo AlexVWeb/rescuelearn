@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
+import { getActiveSignature } from "@/lib/attestation-signature";
 import { getAttestationState } from "@/lib/trainee-attestation";
 import { getTraineeAccess, getTraineeInscription } from "@/lib/trainee-session";
 import { toPdfFormateur } from "@/app/admin/training/lib/formateurs";
@@ -11,7 +13,20 @@ import type { Inscription } from "@/app/admin/training/types";
 
 const NAME_SELECT = { firstName: true, lastName: true } as const;
 
-/** Attestation PDF du stagiaire, générée à la demande (jamais stockée). */
+function pdfResponse(pdf: Buffer, fileName: string) {
+  return new NextResponse(new Uint8Array(pdf), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+/**
+ * Attestation PDF du stagiaire : fichier signé et stocké ; rendu à la volée
+ * pour les sessions publiées avant la signature.
+ */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ inscriptionId: string }> }
@@ -34,6 +49,27 @@ export async function GET(
     return new NextResponse("Attestation indisponible", { status: 404 });
   }
 
+  const pdfInscription = inscription as unknown as Inscription;
+  const fileName = attestationFileName(pdfInscription);
+  const signed = await prisma.signedAttestation.findFirst({
+    where: { inscriptionId: inscription.id, signature: { revokedAt: null } },
+  });
+  if (signed) {
+    try {
+      const { getFile } = await import("@/lib/r2");
+      const { buffer } = await getFile(signed.fileKey, true);
+      return pdfResponse(buffer, fileName);
+    } catch (error) {
+      logger.error(`Attestation signée ${signed.id} illisible sur R2`, error);
+      return new NextResponse("Attestation indisponible", { status: 404 });
+    }
+  }
+  // Signature active sans fichier pour ce stagiaire : jamais de version non signée
+  if (await getActiveSignature(inscription.trainingSessionId)) {
+    return new NextResponse("Attestation indisponible", { status: 404 });
+  }
+
+  // Sinon : session publiée avant la signature, rendu à la volée comme avant
   const session = inscription.trainingSession;
   const [slots, formateurs, owner] = await Promise.all([
     prisma.slot.findMany({
@@ -55,7 +91,6 @@ export async function GET(
     formateurs.map(({ user }) => user),
     owner ?? { firstName: null, lastName: null }
   );
-  const pdfInscription = inscription as unknown as Inscription;
   const pdf = await renderAttestationPDF(
     {
       title: session.title,
@@ -68,11 +103,5 @@ export async function GET(
     formateur
   );
 
-  return new NextResponse(new Uint8Array(pdf), {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(attestationFileName(pdfInscription))}`,
-      "Cache-Control": "no-store",
-    },
-  });
+  return pdfResponse(pdf, fileName);
 }

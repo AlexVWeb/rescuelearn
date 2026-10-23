@@ -23,6 +23,9 @@ const mockPrisma = vi.hoisted(() => ({
   sessionDocument: {
     findMany: vi.fn().mockResolvedValue([]),
   },
+  attestationSignature: {
+    findFirst: vi.fn().mockResolvedValue(null),
+  },
   $transaction: vi.fn(),
 }));
 
@@ -255,6 +258,21 @@ describe("TrainingSessionService", () => {
   });
 
   describe("deleteSession", () => {
+    it("refuses while attestations are signed", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "planifiée",
+      });
+      mockPrisma.attestationSignature.findFirst.mockResolvedValueOnce({
+        id: "sig",
+      });
+
+      await expect(
+        TrainingSessionService.deleteSession("s1", "org-1")
+      ).rejects.toThrow("Attestations signées : dépubliez-les pour modifier.");
+      expect(mockPrisma.trainingSession.delete).not.toHaveBeenCalled();
+    });
+
     it("deletes a session", async () => {
       mockPrisma.trainingSession.findFirst.mockResolvedValue({
         id: "s1",
@@ -333,6 +351,21 @@ describe("TrainingSessionService", () => {
   describe("setFormateurs", () => {
     beforeEach(() => {
       mockPrisma.$transaction.mockResolvedValue([]);
+    });
+
+    it("refuses while attestations are signed", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "planifiée",
+      });
+      mockPrisma.attestationSignature.findFirst.mockResolvedValueOnce({
+        id: "sig",
+      });
+
+      await expect(
+        TrainingSessionService.setFormateurs("s1", ["u1"], "org-1")
+      ).rejects.toThrow("Attestations signées : dépubliez-les pour modifier.");
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
 
     it("replaces the assigned formateurs", async () => {

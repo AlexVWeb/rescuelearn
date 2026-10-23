@@ -146,7 +146,7 @@ export async function deleteFile(key: string): Promise<void> {
 
 export function getStorageKey(
   organismeId: string,
-  type: "logo" | "external-trainings" | "session-documents",
+  type: "logo" | "external-trainings" | "session-documents" | "attestations",
   filename: string
 ): string {
   const mode = process.env.APP_MODE || "dev";
