@@ -203,12 +203,14 @@ export async function GET(req: NextRequest) {
         </html>
       `;
 
-      await EmailService.send({
+      const result = await EmailService.send({
         to: user.email,
         subject: `🚑 Défi Secourisme - Garde tes réflexes actifs !`,
         text: `Question de secourisme : ${question.text}\nRéponds sur ${dailyQuestionUrl}`,
         html: emailHtml,
       });
+      // Non envoyé : lastQuestionSentAt reste inchangé, nouvel essai au prochain passage
+      if (!result.success) continue;
 
       // Update lastQuestionSentAt
       await prisma.user.update({

@@ -73,13 +73,13 @@ export const RetentionService = {
       const { orgEmail, trainees: orgTrainees, smtp } = byOrg[orgId];
       const count = orgTrainees.length;
 
-      await EmailService.send({
+      const result = await EmailService.send({
         to: orgEmail,
         subject: `[RescueLearn] Alerte de purge de données - ${count} stagiaire(s)`,
         text: `Bonjour,\n\nConformément à votre politique de rétention, ${count} stagiaire(s) vont être purgés définitivement de vos archives dans moins de 6 mois.\n\nVous pouvez consulter la liste dans votre espace administration.\n\nCordialement,\nL'équipe RescueLearn`,
         smtp,
       });
-      emailsSent++;
+      if (result.success) emailsSent++;
     }
 
     return emailsSent;

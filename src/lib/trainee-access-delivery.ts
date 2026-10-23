@@ -64,7 +64,7 @@ export async function deliverAccess(
   try {
     const accessUrl = await createAccessLink(inscription.id);
     const { organisme } = session;
-    await EmailService.sendTraineeAccess({
+    const result = await EmailService.sendTraineeAccess({
       to: trainee.email,
       firstName: trainee.firstName,
       organismeName: organisme.name,
@@ -82,6 +82,9 @@ export async function deliverAccess(
         secure: organisme.smtpSecure,
       },
     });
+    // Le lien existe (statut « Lien créé ») mais le mail n'est pas parti
+    if (!result.success) return "failed";
+
     await prisma.inscription.update({
       where: { id: inscription.id },
       data: { accessSentAt: new Date() },

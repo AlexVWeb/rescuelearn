@@ -77,6 +77,10 @@ vi.mock("next/cache", () => ({
 describe("Invitation Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(EmailService.sendInvitationEmail).mockResolvedValue({
+      success: true,
+      method: "smtp",
+    });
   });
 
   describe("inviteMemberAction", () => {
@@ -313,6 +317,33 @@ describe("Invitation Actions", () => {
       expect(result.success).toBe(true);
       expect(mockPrisma.invitation.update).toHaveBeenCalled();
       expect(EmailService.sendInvitationEmail).toHaveBeenCalled();
+    });
+
+    it("signale un email non parti au lieu d'annoncer un renvoi réussi", async () => {
+      vi.mocked(getUserContext).mockResolvedValue({
+        id: "u1",
+        roles: ["SUPER_ADMIN"],
+      } as unknown as Awaited<ReturnType<typeof getUserContext>>);
+      mockPrisma.invitation.findUnique.mockResolvedValue({
+        id: "inv-1",
+        email: "test@example.com",
+        role: "FORMATEUR",
+        organizationId: "org-1",
+        organization: { id: "org-1", name: "Org 1" },
+      });
+      vi.mocked(EmailService.sendInvitationEmail).mockResolvedValueOnce({
+        success: false,
+        method: "smtp",
+        error: "Connection refused",
+      });
+
+      const result = await resendInvitationAction("inv-1");
+
+      expect(result.success).toBe(false);
+      expect(result).toHaveProperty(
+        "error",
+        expect.stringContaining("configuration SMTP")
+      );
     });
 
     it("should fail if unauthorized", async () => {

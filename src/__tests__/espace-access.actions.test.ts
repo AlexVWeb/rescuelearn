@@ -361,6 +361,27 @@ describe("sendAccessLinks", () => {
     expect(sentAtUpdates).toHaveLength(1);
   });
 
+  it("compte comme échec un refus du serveur SMTP, sans marquer l'envoi", async () => {
+    mockPrisma.trainingSession.findFirst.mockResolvedValue(
+      trainingSessionWith([
+        sessionInscription("ins-1", { email: "lea@example.test" }),
+      ])
+    );
+    mockEmail.sendTraineeAccess.mockResolvedValueOnce({
+      success: false,
+      method: "smtp",
+      error: "550 Mailbox unavailable",
+    });
+
+    const result = await sendAccessLinks("ts-1", "pending");
+
+    expect(result).toEqual({ sent: 0, missingEmail: 0, failed: 1 });
+    const sentAtUpdates = mockPrisma.inscription.update.mock.calls.filter(
+      ([args]) => args.data.accessSentAt instanceof Date
+    );
+    expect(sentAtUpdates).toHaveLength(0);
+  });
+
   it("throw si la session appartient à un autre organisme", async () => {
     mockPrisma.trainingSession.findFirst.mockResolvedValue(null);
     await expect(sendAccessLinks("ts-x", "all")).rejects.toThrow(

@@ -14,8 +14,16 @@ export interface SMTPConfig {
 }
 
 /**
- * Service d'envoi d'emails.
- * Supporte l'envoi via SMTP configuré ou console en fallback.
+ * Résultat d'un envoi. `success: false` signifie que l'email n'est pas parti :
+ * les appelants qui doivent le dire à l'utilisateur vérifient ce résultat.
+ */
+export type EmailSendResult =
+  | { success: true; method: "smtp" | "console" }
+  | { success: false; method: "smtp" | "none"; error: string };
+
+/**
+ * Service d'envoi d'emails : SMTP de l'organisme, sinon SMTP plateforme.
+ * Hors production et sans SMTP, l'email est simulé dans la console.
  */
 export const EmailService = {
   async send({
@@ -30,7 +38,7 @@ export const EmailService = {
     text: string;
     html?: string;
     smtp?: SMTPConfig;
-  }) {
+  }): Promise<EmailSendResult> {
     // Priorité 1 : SMTP de l'organisme (si configuré avec un hôte)
     // Priorité 2 : SMTP global (via env vars)
     const hasOrganismeSmtp = !!organismeSmtp?.host;
@@ -79,12 +87,29 @@ export const EmailService = {
 
         return { success: true, method: "smtp" };
       } catch (error) {
+        // Pas de repli sur la console : annoncer « envoyé » serait faux
         logger.error("❌ Erreur SMTP :", error);
-        // On continue vers le fallback console si le SMTP échoue en dev
+        return {
+          success: false,
+          method: "smtp",
+          error: error instanceof Error ? error.message : "Erreur SMTP",
+        };
       }
     }
 
-    // Fallback Console (Dev / Non configuré)
+    // En production, sans SMTP, aucun email ne part : c'est une erreur
+    if (process.env.NODE_ENV === "production") {
+      logger.error("❌ Aucun serveur SMTP configuré, email non envoyé", {
+        subject,
+      });
+      return {
+        success: false,
+        method: "none",
+        error: "Aucun serveur SMTP configuré",
+      };
+    }
+
+    // Simulation (développement et tests)
     logger.info("--- SIMULATION EMAIL (Fallback) ---");
     logger.info("Email Details", { to, subject, text });
 
