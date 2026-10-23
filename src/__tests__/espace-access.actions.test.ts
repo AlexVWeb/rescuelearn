@@ -146,14 +146,11 @@ describe("redeemAccessToken", () => {
     expect(mockCookies.set).not.toHaveBeenCalled();
   });
 
-  it("refuse un lien expiré", async () => {
+  it("accepte un lien des années après la fin de la session", async () => {
     mockPrisma.inscription.findUnique.mockResolvedValue(
       inscription({ endDate: new Date("2020-01-01") })
     );
-    expect(await redeemAccessToken(VALID_TOKEN)).toEqual({
-      ok: false,
-      reason: "expired",
-    });
+    expect(await redeemAccessToken(VALID_TOKEN)).toEqual({ ok: true });
   });
 
   it("bloque après trop d'échecs depuis la même IP", async () => {

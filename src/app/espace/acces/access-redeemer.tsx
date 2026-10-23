@@ -13,7 +13,6 @@ const DENIAL_PARAM: Record<
   invalid: "invalide",
   revoked: "revoque",
   anonymized: "invalide",
-  expired: "expire",
   rate_limited: "trop-de-tentatives",
 };
 

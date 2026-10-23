@@ -40,10 +40,9 @@ Fonctions pures, sans I/O :
 - `generateAccessToken(): { token, hash }` — 32 octets `randomBytes`, base64url ; hash SHA-256 hex.
 - `hashAccessToken(token)`, `accessFingerprint(hash)` (16 premiers caractères).
 - `buildAccessUrl(baseUrl, token)` → `${baseUrl}/espace/acces#t=${token}`.
-- `getAccessExpiry({ startDate, endDate })` → fin de journée de `endDate ?? startDate` + 90 j, `null` si aucune date.
-- `checkInscriptionAccess(inscription, fingerprint, now)` → `null | "revoked" | "anonymized" | "expired"` ; empreinte comparée en temps constant.
+- `checkInscriptionAccess(inscription, fingerprint)` → `null | "revoked" | "anonymized"` ; empreinte comparée en temps constant. Pas d'expiration (décision du 2026-10-23).
 
-**Test :** `src/lib/trainee-access.test.ts` — token base64url de 43 caractères et unique ; hash déterministe ; URL avec fragment ; expiration (endDate, repli startDate, null) ; refus révoqué / empreinte différente / anonymisé / expiré ; accès valide.
+**Test :** `src/lib/trainee-access.test.ts` — token base64url de 43 caractères et unique ; hash déterministe ; URL avec fragment ; refus révoqué / empreinte différente / anonymisé ; accès valide ; aucun refus 10 ans après la session.
 
 ### Task 1.3 : cookie et garde (`src/lib/trainee-session.ts`)
 
@@ -59,7 +58,7 @@ Fonctions pures, sans I/O :
 - `redeemAccessToken(token)` → `{ ok: true } | { ok: false, reason }`. Rate-limit des échecs par IP (`espace:token:<ip>`, 20 / 15 min). Met à jour `accessLastUsedAt`, pose le cookie.
 - `signOutTrainee()` → efface le cookie, redirige vers `/espace/lien-invalide?raison=deconnecte`.
 
-**Test :** `src/__tests__/espace-access.actions.test.ts` — token inconnu (échec compté) ; révoqué/anonymisé/expiré ; succès (cookie posé, `accessLastUsedAt` mis à jour) ; rate-limit atteint → pas de requête.
+**Test :** `src/__tests__/espace-access.actions.test.ts` — token inconnu (échec compté) ; révoqué/anonymisé ; lien d'une session ancienne accepté ; succès (cookie posé, `accessLastUsedAt` mis à jour) ; rate-limit atteint → pas de requête.
 
 ### Task 1.5 : génération et révocation côté organisme (`src/app/admin/training/actions/access.ts`)
 
@@ -73,7 +72,7 @@ Fonctions pures, sans I/O :
 
 - `src/app/espace/layout.tsx` : `robots: noindex`, fond `bg-muted/20`, `<main>`.
 - `src/app/espace/acces/page.tsx` + `access-redeemer.tsx` (client) : lit `#t=`, l'efface de l'URL (`history.replaceState`), appelle `redeemAccessToken`, redirige. Statut annoncé (`role="status"`), garde contre le double appel de StrictMode.
-- `src/app/espace/lien-invalide/page.tsx` : messages selon `raison` (`expire`, `revoque`, `deconnecte`, défaut).
+- `src/app/espace/lien-invalide/page.tsx` : messages selon `raison` (`revoque`, `trop-de-tentatives`, `deconnecte`, défaut).
 - `src/app/espace/page.tsx` : `requireTrainee()`, liste des sessions du stagiaire (base du lot 2), bouton « Se déconnecter ».
 - `next.config.ts` : pour `/espace/:path*` → `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`.
 

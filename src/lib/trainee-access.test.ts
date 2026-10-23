@@ -1,10 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   accessFingerprint,
   buildAccessUrl,
   checkInscriptionAccess,
   generateAccessToken,
-  getAccessExpiry,
   hashAccessToken,
 } from "./trainee-access";
 
@@ -60,51 +59,20 @@ describe("buildAccessUrl", () => {
   });
 });
 
-describe("getAccessExpiry", () => {
-  it("expire 90 jours après la fin de session, en fin de journée", () => {
-    const expiry = getAccessExpiry({
-      startDate: new Date("2026-11-12T00:00:00Z"),
-      endDate: new Date("2026-11-16T00:00:00Z"),
-    });
-    expect(expiry).not.toBeNull();
-    expect(expiry!.getTime()).toBeGreaterThan(
-      new Date("2027-02-14T00:00:00Z").getTime()
-    );
-    expect(expiry!.getTime()).toBeLessThan(
-      new Date("2027-02-15T12:00:00Z").getTime()
-    );
-  });
-
-  it("se rabat sur la date de début sans date de fin", () => {
-    const expiry = getAccessExpiry({
-      startDate: new Date("2026-11-12T00:00:00Z"),
-      endDate: null,
-    });
-    expect(expiry!.getTime()).toBeLessThan(
-      new Date("2027-02-11T12:00:00Z").getTime()
-    );
-  });
-
-  it("n'expire pas si la session n'a aucune date", () => {
-    expect(getAccessExpiry({ startDate: null, endDate: null })).toBeNull();
-  });
-});
-
 describe("checkInscriptionAccess", () => {
-  const now = new Date("2026-11-13T10:00:00Z");
   const fp = accessFingerprint(hashAccessToken("token-valide"));
 
   it("autorise un accès valide", () => {
-    expect(checkInscriptionAccess(inscription(), fp, now)).toBeNull();
+    expect(checkInscriptionAccess(inscription(), fp)).toBeNull();
   });
 
   it("autorise sans empreinte (échange initial du token)", () => {
-    expect(checkInscriptionAccess(inscription(), null, now)).toBeNull();
+    expect(checkInscriptionAccess(inscription(), null)).toBeNull();
   });
 
   it("refuse un lien révoqué", () => {
     expect(
-      checkInscriptionAccess(inscription({ accessTokenHash: null }), fp, now)
+      checkInscriptionAccess(inscription({ accessTokenHash: null }), fp)
     ).toBe("revoked");
   });
 
@@ -112,21 +80,30 @@ describe("checkInscriptionAccess", () => {
     expect(
       checkInscriptionAccess(
         inscription({ accessTokenHash: hashAccessToken("nouveau-token") }),
-        fp,
-        now
+        fp
       )
     ).toBe("revoked");
   });
 
   it("refuse un stagiaire anonymisé", () => {
     expect(
-      checkInscriptionAccess(inscription({ isAnonymized: true }), fp, now)
+      checkInscriptionAccess(inscription({ isAnonymized: true }), fp)
     ).toBe("anonymized");
   });
 
-  it("refuse un lien expiré", () => {
-    expect(
-      checkInscriptionAccess(inscription(), fp, new Date("2027-03-01"))
-    ).toBe("expired");
+  // Les documents et l'attestation restent accessibles sans limite de durée
+  it("n'expire jamais, même des années après la session", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2036-11-16T12:00:00Z"));
+    try {
+      expect(
+        checkInscriptionAccess(
+          inscription({ endDate: new Date("2026-11-16") }),
+          fp
+        )
+      ).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

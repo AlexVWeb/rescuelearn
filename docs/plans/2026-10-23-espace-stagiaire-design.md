@@ -71,7 +71,7 @@ model SessionDocument {
 | `/espace/acces#t=…`                | page client + Route Handler POST | Lit le token dans le fragment, le POST, reçoit le cookie, redirige |
 | `/espace`                          | Server Component                 | Sessions du stagiaire ; une seule → redirection                    |
 | `/espace/sessions/[inscriptionId]` | Server Component                 | Page de session                                                    |
-| `/espace/lien-invalide`            | statique                         | Lien expiré/révoqué + contact de l'organisme                       |
+| `/espace/lien-invalide`            | statique                         | Lien révoqué ou inconnu, renvoi vers l'organisme                   |
 
 Token dans le **fragment** : jamais envoyé au serveur, donc absent des logs,
 des `Referer` et des proxys. Token **réutilisable** : les scanners de messagerie
@@ -148,7 +148,7 @@ Une seule section ajoutée dans `src/app/admin/training/lib/session-progress.ts`
   `path=/espace`, 30 j. Le `fp` est recomparé à chaque requête : révocation immédiate.
 - `requireTrainee()` (`src/lib/trainee-session.ts`) appelé par chaque page et
   action de `/espace`. Aucun identifiant accepté depuis le client.
-- Expiration : `endDate` + 90 j (calculé).
+- Pas d'expiration : le stagiaire accède à ses supports et à son attestation à tout moment. Le lien cesse de fonctionner à la révocation ou régénération par le formateur, à la suppression de l'inscription ou de la session (cascade), ou à l'anonymisation RGPD. Le cookie dure 30 j ; au-delà, le stagiaire rouvre simplement le lien du mail.
 - En-têtes `/espace` : `Cache-Control: no-store`, `Referrer-Policy: no-referrer`,
   `X-Robots-Tag: noindex`.
 
@@ -170,7 +170,7 @@ Une seule section ajoutée dans `src/app/admin/training/lib/session-progress.ts`
 
 ### Tests
 
-`trainee-token`, `trainee-session` (cookie, `fp` périmé, anonymisé, expiration),
+`trainee-token`, `trainee-session` (cookie, `fp` périmé, anonymisé, pas d'expiration),
 `slot-window` (avant/pendant/après, passage à l'heure d'hiver),
 `signEmargementFromPortal` (PIN, verrou, fenêtre, autre inscription, idempotence,
 `signedVia`), visibilité documents/attestations.

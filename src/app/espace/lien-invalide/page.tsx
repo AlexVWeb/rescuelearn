@@ -8,11 +8,6 @@ import {
 import { LinkIcon, LogOut } from "lucide-react";
 
 const MESSAGES: Record<string, { title: string; description: string }> = {
-  expire: {
-    title: "Ce lien a expiré",
-    description:
-      "L'accès à votre espace se termine 90 jours après la fin de la formation. Demandez un nouveau lien à l'organisme qui vous a formé.",
-  },
   revoque: {
     title: "Ce lien n'est plus valide",
     description:
