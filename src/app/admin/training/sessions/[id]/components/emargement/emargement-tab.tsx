@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Download, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -40,19 +41,23 @@ export function EmargementTab({
     handleGenerateSessionPin,
   } = useEmargement({ sessionId, slots });
 
-  if (slots.length === 0) {
+  if (slots.length === 0 || inscriptions.length === 0) {
+    const missingSlots = slots.length === 0;
     return (
-      <div className="p-4 text-center">
-        Veuillez d&apos;abord configurer des créneaux dans l&apos;onglet
-        Programme.
-      </div>
-    );
-  }
-
-  if (inscriptions.length === 0) {
-    return (
-      <div className="p-4 text-center">
-        Aucun stagiaire inscrit à cette session.
+      <div className="bg-muted/20 flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-10 text-center">
+        <p className="text-muted-foreground text-sm">
+          {missingSlots
+            ? "Aucun créneau planifié : l'émargement se base sur le programme."
+            : "Aucun stagiaire inscrit à cette session."}
+        </p>
+        <Button variant="outline" asChild>
+          <Link
+            href={`?phase=prepare&section=${missingSlots ? "programme" : "stagiaires"}`}
+            scroll={false}
+          >
+            {missingSlots ? "Ajouter des créneaux" : "Inscrire des stagiaires"}
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -61,14 +66,14 @@ export function EmargementTab({
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold">Tableau d&apos;émargement</h3>
+          <h2 className="text-lg font-semibold">Tableau d&apos;émargement</h2>
           <Button
             variant="ghost"
             size="sm"
             className={cn(
               "h-8 px-2 text-xs",
               isAutoRefresh
-                ? "text-green-600 hover:bg-green-50"
+                ? "text-success hover:bg-success/10 hover:text-success"
                 : "text-muted-foreground hover:bg-muted"
             )}
             onClick={() => setIsAutoRefresh(!isAutoRefresh)}

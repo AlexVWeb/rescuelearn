@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -15,6 +17,7 @@ import {
 import { SlotHeader } from "./slot-header";
 import { EmargementCell } from "./emargement-cell";
 import { TraineeCell } from "./trainee-cell";
+import { findCurrentSlotId } from "../../../../../lib/session-progress";
 
 function getEmargementStatus(
   inscription: Inscription,
@@ -59,8 +62,23 @@ export function EmargementTable({
   onBulkStatusChange,
   onGeneratePin,
 }: EmargementTableProps) {
+  const [currentSlotId] = useState(() => findCurrentSlotId(slots, new Date()));
+  const currentHeadRef = useRef<HTMLTableCellElement>(null);
+
+  // Amène la colonne du créneau en cours dans la vue (tablette, peu de largeur)
+  useEffect(() => {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    currentHeadRef.current?.scrollIntoView({
+      block: "nearest",
+      inline: "center",
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+  }, []);
+
   return (
-    <div className="relative w-full overflow-hidden rounded-md border bg-white">
+    <div className="bg-background relative w-full overflow-hidden rounded-md border">
       <div className="max-w-full overflow-x-auto">
         <Table className="min-w-full table-auto border-collapse">
           <TableHeader>
@@ -71,8 +89,19 @@ export function EmargementTable({
               {slots.map((slot) => (
                 <TableHead
                   key={slot.id}
-                  className="min-w-[180px] border-r px-2 py-3 text-center"
+                  ref={slot.id === currentSlotId ? currentHeadRef : undefined}
+                  aria-current={slot.id === currentSlotId ? "time" : undefined}
+                  className={cn(
+                    "min-w-[180px] border-r px-2 py-3 text-center",
+                    slot.id === currentSlotId &&
+                      "bg-primary/5 shadow-[inset_0_3px_0_var(--primary)]"
+                  )}
                 >
+                  {slot.id === currentSlotId && (
+                    <span className="text-primary mb-1 block text-xs font-semibold">
+                      En cours / à venir
+                    </span>
+                  )}
                   <SlotHeader
                     slot={slot}
                     pin={getSlotPin(inscriptions, slot.id)}
@@ -94,10 +123,14 @@ export function EmargementTable({
                 {slots.map((slot) => (
                   <TableCell
                     key={slot.id}
-                    className="border-r px-2 py-3 text-center"
+                    className={cn(
+                      "border-r px-2 py-3 text-center",
+                      slot.id === currentSlotId && "bg-primary/5"
+                    )}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <EmargementCell
+                        traineeName={`${inscription.trainee?.firstName ?? ""} ${inscription.trainee?.lastName ?? ""}, ${slot.label}`}
                         status={getEmargementStatus(inscription, slot.id)}
                         loading={loading}
                         isClosed={isClosed}
@@ -113,7 +146,7 @@ export function EmargementTable({
           </TableBody>
         </Table>
       </div>
-      <div className="bg-muted/20 pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent" />
+      <div className="from-background pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l to-transparent" />
     </div>
   );
 }

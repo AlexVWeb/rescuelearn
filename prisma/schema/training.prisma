@@ -39,25 +39,31 @@ model Organisme {
 }
 
 model TrainingSession {
-  id           String                     @id @default(uuid())
-  type         String
-  title        String
-  location     String
-  status       String                     @default("planifiée")
-  maxTrainees  Int
-  formateurId  String
-  organismeId  String
-  createdAt    DateTime                   @default(now())
-  updatedAt    DateTime                   @updatedAt
-  endDate      DateTime?                  @db.Date
-  isFC         Boolean                    @default(false)
-  startDate    DateTime?                  @db.Date
-  inscriptions Inscription[]
-  slots        Slot[]
-  formateur    User                       @relation(fields: [formateurId], references: [id])
-  organisme    Organisme                  @relation(fields: [organismeId], references: [id])
-  quizSessions QuizSession[]
-  formateurs   TrainingSessionFormateur[]
+  id                       String                     @id @default(uuid())
+  type                     String
+  title                    String
+  location                 String
+  status                   String                     @default("planifiée")
+  maxTrainees              Int
+  formateurId              String
+  // Responsable pédagogique (FISE PSE) : membre de l'organisme, formateur ou non
+  responsablePedagogiqueId String?
+  organismeId              String
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  endDate                  DateTime?                  @db.Date
+  isFC                     Boolean                    @default(false)
+  startDate                DateTime?                  @db.Date
+  inscriptions             Inscription[]
+  slots                    Slot[]
+  formateur                User                       @relation("SessionOwner", fields: [formateurId], references: [id])
+  responsablePedagogique   User?                      @relation("SessionResponsablePedagogique", fields: [responsablePedagogiqueId], references: [id], onDelete: SetNull)
+  organisme                Organisme                  @relation(fields: [organismeId], references: [id])
+  quizSessions             QuizSession[]
+  formateurs               TrainingSessionFormateur[]
+  groups                   TrainingGroup[]
+
+  @@index([responsablePedagogiqueId])
 }
 
 model TrainingSessionFormateur {
@@ -70,6 +76,22 @@ model TrainingSessionFormateur {
 
   @@unique([trainingSessionId, userId])
   @@index([userId])
+}
+
+model TrainingGroup {
+  id                String          @id @default(cuid())
+  trainingSessionId String
+  name              String
+  position          Int
+  formateurId       String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  trainingSession   TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  formateur         User?           @relation(fields: [formateurId], references: [id], onDelete: SetNull)
+  inscriptions      Inscription[]
+
+  @@index([trainingSessionId])
+  @@index([formateurId])
 }
 
 model Slot {
@@ -136,8 +158,11 @@ model Inscription {
   emargements            Emargement[]
   trainee                Trainee         @relation(fields: [traineeId], references: [id], onDelete: Cascade)
   trainingSession        TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  groupId                String?
+  group                  TrainingGroup?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   @@unique([traineeId, trainingSessionId])
+  @@index([groupId])
 }
 
 model Emargement {

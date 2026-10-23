@@ -1,5 +1,5 @@
-import { Badge } from "@/components/ui/badge";
-import { Inscription } from "../../../../../types";
+import { Inscription, INSCRIPTION_STATUS } from "../../../../../types";
+import { InscriptionStatusBadge } from "../../inscription-status-badge";
 
 interface TraineeCellProps {
   inscription: Inscription;
@@ -11,9 +11,12 @@ export function TraineeCell({ inscription }: TraineeCellProps) {
       <span>
         {inscription.trainee?.firstName} {inscription.trainee?.lastName}
       </span>
-      <Badge variant="outline" className="mt-1 w-fit text-[10px] uppercase">
-        {inscription.status}
-      </Badge>
+      {/* Seul l'éliminé change la conduite à tenir pendant l'animation */}
+      {inscription.status === INSCRIPTION_STATUS.ELIMINE && (
+        <span className="mt-1">
+          <InscriptionStatusBadge status={inscription.status} />
+        </span>
+      )}
     </div>
   );
 }

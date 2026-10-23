@@ -6,3 +6,4 @@ export * from "./inscriptions";
 export * from "./emargement";
 export * from "./public";
 export * from "./dashboard";
+export * from "./groups";

@@ -1,26 +1,28 @@
 model User {
-  id                String                     @id @default(cuid())
-  email             String                     @unique
-  name              String?
-  emailVerified     Boolean                    @default(false)
-  image             String?
-  createdAt         DateTime                   @default(now())
-  updatedAt         DateTime                   @updatedAt
-  roles             Json                       @default("[]")
-  password          String?
-  firstName         String?
-  lastName          String?
-  phone             String?
-  organismeId       String?
-  accounts          Account[]
-  invitations       Invitation[]
-  members           Member[]
-  sessions          Session[]
-  passkeys          Passkey[]
-  trainingSessions  TrainingSession[]
-  sessionFormateurs TrainingSessionFormateur[]
-  organisme         Organisme?                 @relation(fields: [organismeId], references: [id])
-  quizSessions      QuizSession[]
+  id                  String                     @id @default(cuid())
+  email               String                     @unique
+  name                String?
+  emailVerified       Boolean                    @default(false)
+  image               String?
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+  roles               Json                       @default("[]")
+  password            String?
+  firstName           String?
+  lastName            String?
+  phone               String?
+  organismeId         String?
+  accounts            Account[]
+  invitations         Invitation[]
+  members             Member[]
+  sessions            Session[]
+  passkeys            Passkey[]
+  trainingSessions    TrainingSession[]          @relation("SessionOwner")
+  responsableSessions TrainingSession[]          @relation("SessionResponsablePedagogique")
+  sessionFormateurs   TrainingSessionFormateur[]
+  trainingGroups      TrainingGroup[]
+  organisme           Organisme?                 @relation(fields: [organismeId], references: [id])
+  quizSessions        QuizSession[]
 
   onboardingCompleted   Boolean @default(false)
   onboardingExperience  String?

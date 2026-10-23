@@ -1,10 +1,7 @@
-import { Suspense } from "react";
-import { SessionTabsLayout } from "../components/session-tabs-layout";
+import { getAssignableFormateurs } from "../../actions";
+import { NewSessionForm } from "../components/new-session-form";
 
-export default function NewSessionPage() {
-  return (
-    <Suspense fallback={<div>Chargement...</div>}>
-      <SessionTabsLayout isNew={true} />
-    </Suspense>
-  );
+export default async function NewSessionPage() {
+  const members = await getAssignableFormateurs();
+  return <NewSessionForm members={members} />;
 }
