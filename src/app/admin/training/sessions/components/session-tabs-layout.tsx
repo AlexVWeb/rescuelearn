@@ -18,6 +18,8 @@ import { InscriptionsTab } from "../[id]/components/inscriptions-tab";
 import { EmargementTab } from "../[id]/components/emargement";
 import { FormationTab } from "../[id]/components/formation/formation-tab";
 import { FormateursCard } from "../[id]/components/formateurs-card";
+import { GroupsTab } from "../[id]/components/groups";
+import { boardKey } from "../[id]/components/groups/board-utils";
 import { SessionForm } from "./session-form";
 import {
   Inscription,
@@ -119,7 +121,7 @@ export function SessionTabsLayout({
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-[1000px] grid-cols-2 sm:grid-cols-5">
+        <TabsList className="grid w-full max-w-[1000px] grid-cols-2 sm:grid-cols-6">
           <TabsTrigger
             value="slots"
             disabled={isNew}
@@ -137,6 +139,13 @@ export function SessionTabsLayout({
               Stagiaires ({inscriptions.length})
             </span>
             <span className="sm:hidden">Stagiaires</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="groups"
+            disabled={isNew}
+            className="text-xs sm:text-sm"
+          >
+            Groupes
           </TabsTrigger>
           <TabsTrigger
             value="emargement"
@@ -191,6 +200,23 @@ export function SessionTabsLayout({
               maxTrainees={session.maxTrainees}
               formateur={formateur ?? { lastName: null, firstName: null }}
               organismeLogoBase64={organismeLogoBase64}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="groups" className="mt-4 space-y-4">
+          {session && (
+            <GroupsTab
+              // Remonte l'onglet quand groupes, affectations ou statuts changent
+              key={`${boardKey(session.groups ?? [], inscriptions)}|${inscriptions
+                .map((i) => i.status)
+                .join(",")}`}
+              sessionId={session.id}
+              sessionType={session.type}
+              sessionStatus={session.status}
+              groups={session.groups ?? []}
+              inscriptions={inscriptions}
+              formateurs={assignedFormateurs}
             />
           )}
         </TabsContent>

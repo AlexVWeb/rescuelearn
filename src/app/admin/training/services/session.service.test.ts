@@ -17,6 +17,9 @@ const mockPrisma = vi.hoisted(() => ({
     deleteMany: vi.fn(),
     createMany: vi.fn(),
   },
+  trainingGroup: {
+    updateMany: vi.fn(),
+  },
   $transaction: vi.fn(),
 }));
 
@@ -247,6 +250,24 @@ describe("TrainingSessionService", () => {
         ],
       });
       expect(mockPrisma.$transaction).toHaveBeenCalledOnce();
+    });
+
+    it("clears the referent of groups led by removed formateurs", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "planifiée",
+      });
+      mockPrisma.member.findMany.mockResolvedValue([{ userId: "u1" }]);
+      mockPrisma.trainingGroup.updateMany.mockReturnValue("groups-op");
+
+      await TrainingSessionService.setFormateurs("s1", ["u1"], "org-1");
+
+      expect(mockPrisma.trainingGroup.updateMany).toHaveBeenCalledWith({
+        where: { trainingSessionId: "s1", formateurId: { notIn: ["u1"] } },
+        data: { formateurId: null },
+      });
+      // Dans la même transaction que le remplacement des formateurs
+      expect(mockPrisma.$transaction.mock.calls[0][0]).toContain("groups-op");
     });
 
     it("throws if the session does not belong to the organisme", async () => {

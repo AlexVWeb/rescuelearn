@@ -123,6 +123,9 @@ export class TrainingSessionService {
             },
           },
         },
+        groups: {
+          orderBy: { position: "asc" },
+        },
       },
     });
 
@@ -166,6 +169,11 @@ export class TrainingSessionService {
       }),
       prisma.trainingSessionFormateur.createMany({
         data: uniqueIds.map((userId) => ({ trainingSessionId: id, userId })),
+      }),
+      // Les groupes dont le référent est retiré de la session perdent leur référent
+      prisma.trainingGroup.updateMany({
+        where: { trainingSessionId: id, formateurId: { notIn: uniqueIds } },
+        data: { formateurId: null },
       }),
     ]);
   }

@@ -19,6 +19,7 @@ model User {
   passkeys          Passkey[]
   trainingSessions  TrainingSession[]
   sessionFormateurs TrainingSessionFormateur[]
+  trainingGroups    TrainingGroup[]
   organisme         Organisme?                 @relation(fields: [organismeId], references: [id])
   quizSessions      QuizSession[]
 
