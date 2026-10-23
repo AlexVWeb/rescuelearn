@@ -157,8 +157,8 @@ export function SlotsTab({
 
   return (
     <div className="space-y-6">
-      <Card className="border-primary/10 overflow-hidden border-2">
-        <CardHeader className="bg-primary/5 pb-4">
+      <Card className="border-primary/10 overflow-hidden border-2 pt-0">
+        <CardHeader className="bg-primary/5 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-xl">
