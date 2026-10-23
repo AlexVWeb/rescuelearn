@@ -91,7 +91,7 @@ export const columns: ColumnDef<TrainingSession>[] = [
             </Link>
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-            <Link href={`/admin/training/sessions/${session.id}?tab=settings`}>
+            <Link href={`/admin/training/sessions/${session.id}?edit=1`}>
               <Pencil className="h-4 w-4" />
             </Link>
           </Button>

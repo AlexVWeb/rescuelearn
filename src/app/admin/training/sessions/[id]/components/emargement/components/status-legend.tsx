@@ -3,7 +3,7 @@ export function StatusLegend() {
     <div className="text-muted-foreground flex items-center gap-2 text-sm">
       <div className="flex gap-4">
         <div className="flex items-center gap-1">
-          <div className="h-3 w-3 rounded-full bg-green-600" />
+          <div className="bg-success h-3 w-3 rounded-full" />
           <span>Présent</span>
         </div>
         <div className="flex items-center gap-1">

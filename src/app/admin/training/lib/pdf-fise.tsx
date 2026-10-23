@@ -134,6 +134,8 @@ interface FisePageProps {
   };
   /** Noms des formateurs affectés (FISE PSE : équipe pédagogique) */
   equipePedagogique?: string[];
+  /** Nom du responsable pédagogique (FISE PSE) */
+  responsablePedagogique?: string;
   organismeLogoBase64?: string | null;
 }
 
@@ -408,6 +410,7 @@ const FisePage: React.FC<FisePageProps> = ({
  */
 const FiseContent: React.FC<FisePageProps> = ({
   equipePedagogique,
+  responsablePedagogique,
   ...props
 }) => {
   const level = props.session.type;
@@ -421,6 +424,7 @@ const FiseContent: React.FC<FisePageProps> = ({
         session={props.session}
         inscription={props.inscription}
         equipePedagogique={equipe}
+        responsablePedagogique={responsablePedagogique}
       />
     );
   }
@@ -454,6 +458,8 @@ interface MultipleFiseDocumentProps {
   };
   /** Noms des formateurs affectés (FISE PSE : équipe pédagogique) */
   equipePedagogique?: string[];
+  /** Nom du responsable pédagogique (FISE PSE) */
+  responsablePedagogique?: string;
   organismeLogoBase64?: string | null;
 }
 
@@ -462,6 +468,7 @@ const MultipleFiseDocument: React.FC<MultipleFiseDocumentProps> = ({
   inscriptions,
   formateur,
   equipePedagogique,
+  responsablePedagogique,
   organismeLogoBase64,
 }) => (
   <Document>
@@ -472,6 +479,7 @@ const MultipleFiseDocument: React.FC<MultipleFiseDocumentProps> = ({
         inscription={inscription}
         formateur={formateur}
         equipePedagogique={equipePedagogique}
+        responsablePedagogique={responsablePedagogique}
         organismeLogoBase64={organismeLogoBase64}
       />
     ))}

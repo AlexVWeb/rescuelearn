@@ -47,6 +47,14 @@ export interface SessionFormateurUser {
   email: string;
 }
 
+export interface TrainingGroup {
+  id: string;
+  trainingSessionId: string;
+  name: string;
+  position: number;
+  formateurId: string | null;
+}
+
 export interface TrainingSession {
   id: string;
   type: SessionType;
@@ -58,11 +66,14 @@ export interface TrainingSession {
   startDate: Date | null;
   endDate: Date | null;
   formateurId: string;
+  responsablePedagogiqueId?: string | null;
   organismeId: string;
   createdAt: Date;
   updatedAt: Date;
   slots?: Slot[];
   formateurs?: { user: SessionFormateurUser }[];
+  responsablePedagogique?: SessionFormateurUser | null;
+  groups?: TrainingGroup[];
   _count?: {
     inscriptions: number;
   };
@@ -108,6 +119,7 @@ export interface Inscription {
   attestationValidatedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
+  groupId?: string | null;
   trainee?: Trainee;
   emargements?: Emargement[];
 }
@@ -126,7 +138,9 @@ export type CreateTrainingSessionInput = Omit<
   | "organismeId"
   | "slots"
   | "formateurs"
+  | "groups"
   | "_count"
+  | "responsablePedagogique"
 > & {
   status: string;
   type: string;
