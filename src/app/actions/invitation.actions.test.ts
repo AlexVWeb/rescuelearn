@@ -258,6 +258,39 @@ describe("Invitation Actions", () => {
       expect(mockPrisma.account.create).toHaveBeenCalled();
       expect(mockPrisma.invitation.delete).toHaveBeenCalled();
     });
+
+    it.each([
+      ["member", "FORMATEUR", "member"],
+      ["admin", "ADMIN_ORGANISME", "admin"],
+      ["FORMATEUR", "FORMATEUR", "member"],
+      ["ADMIN_ORGANISME", "ADMIN_ORGANISME", "admin"],
+    ])(
+      "should map invitation role %s to system role %s",
+      async (invitationRole, expectedRole, expectedMemberRole) => {
+        mockPrisma.invitation.findUnique.mockResolvedValue({
+          id: "inv-1",
+          email: "new@example.com",
+          role: invitationRole,
+          organizationId: "org-1",
+          status: "pending",
+          expiresAt: new Date(Date.now() + 10000),
+        });
+        mockPrisma.user.findUnique.mockResolvedValue(null);
+        mockPrisma.user.create.mockResolvedValue({ id: "u-new" });
+
+        const result = await acceptInvitationAction(validAccept);
+
+        expect(result.success).toBe(true);
+        expect(mockPrisma.user.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ roles: [expectedRole] }),
+          })
+        );
+        expect(mockPrisma.member.create).toHaveBeenCalledWith({
+          data: expect.objectContaining({ role: expectedMemberRole }),
+        });
+      }
+    );
   });
 
   describe("resendInvitationAction", () => {

@@ -256,6 +256,15 @@ export async function acceptInvitationAction(input: AcceptInvitationInput) {
 
     const hashedPassword = await hashPassword(password);
 
+    // Les invitations créées via Better-Auth (ADMIN_ORGANISME) stockent le rôle
+    // org ("admin" | "member") et non notre rôle système : on le remappe.
+    const isAdminInvitation =
+      invitation.role === UserRole.ADMIN_ORGANISME ||
+      invitation.role === "admin";
+    const systemRole = isAdminInvitation
+      ? UserRole.ADMIN_ORGANISME
+      : UserRole.FORMATEUR;
+
     // Création atomique (si possible, ici via transaction manuelle ou simple suite)
     const user = await prisma.user.create({
       data: {
@@ -264,17 +273,13 @@ export async function acceptInvitationAction(input: AcceptInvitationInput) {
         firstName,
         lastName,
         organismeId: invitation.organizationId,
-        roles: [invitation.role],
+        roles: [systemRole],
         emailVerified: true,
       },
     });
 
     // Création du membre de l'organisation
-    const finalMemberRole =
-      invitation.role === UserRole.ADMIN_ORGANISME ||
-      invitation.role === "admin"
-        ? "admin"
-        : "member";
+    const finalMemberRole = isAdminInvitation ? "admin" : "member";
 
     await prisma.member.create({
       data: {
