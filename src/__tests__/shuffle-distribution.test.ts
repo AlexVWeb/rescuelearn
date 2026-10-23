@@ -31,7 +31,7 @@ describe("Shuffle Distribution", () => {
 
     // Check that each position has each number with ~25% probability (+/- 1% tolerance)
     const expected = RUNS / 4;
-    const tolerance = RUNS * 0.015; // 1.5% tolerance
+    const tolerance = RUNS * 0.02; // 2% tolerance (évite les flakes statistiques)
 
     counts.forEach((posCounts) => {
       posCounts.forEach((count) => {

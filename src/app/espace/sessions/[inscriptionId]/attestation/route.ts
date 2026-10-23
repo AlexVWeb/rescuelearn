@@ -61,6 +61,7 @@ export async function GET(
       title: session.title,
       location: session.location,
       startDate: session.startDate,
+      endDate: session.endDate,
       slots,
     },
     pdfInscription,

@@ -249,6 +249,7 @@ export function SessionWorkspace({
           type: session.type,
           location: session.location,
           startDate: session.startDate,
+          endDate: session.endDate,
           slots,
           isFC: session.isFC,
           status: session.status,

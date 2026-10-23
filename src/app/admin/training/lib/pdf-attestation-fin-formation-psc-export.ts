@@ -22,14 +22,78 @@ function drawCheckbox(doc: jsPDF, cx: number, cy: number, checked: boolean) {
   doc.setLineWidth(0.2);
 }
 
+export function formatAttestationDate(session: {
+  startDate?: Date | null;
+  endDate?: Date | null;
+  slots?: Slot[];
+}): string {
+  const slots = session.slots ?? [];
+  const timestamps: number[] = [];
+
+  slots.forEach((s) => {
+    if (s.date) {
+      const t = new Date(s.date).getTime();
+      if (!Number.isNaN(t)) timestamps.push(t);
+    }
+  });
+
+  if (session.startDate) {
+    const t = new Date(session.startDate).getTime();
+    if (!Number.isNaN(t)) timestamps.push(t);
+  }
+  if (session.endDate) {
+    const t = new Date(session.endDate).getTime();
+    if (!Number.isNaN(t)) timestamps.push(t);
+  }
+
+  if (timestamps.length === 0) return "Non spécifiée";
+
+  const minDate = dayjs(Math.min(...timestamps)).format("DD/MM/YYYY");
+  const maxDate = dayjs(Math.max(...timestamps)).format("DD/MM/YYYY");
+
+  if (minDate !== maxDate) {
+    return `du ${minDate} au ${maxDate}`;
+  }
+  return minDate;
+}
+
+export function formatAttestationHoraires(slots: Slot[]): string {
+  if (!slots || slots.length === 0) return "Non spécifiés";
+
+  const startTimes = slots
+    .map((s) => s.startTime)
+    .filter(Boolean)
+    .sort();
+  const endTimes = slots
+    .map((s) => s.endTime)
+    .filter(Boolean)
+    .sort();
+
+  if (startTimes.length === 0 || endTimes.length === 0) {
+    return "Non spécifiés";
+  }
+
+  const earliestStart = startTimes[0];
+  const latestEnd = endTimes[endTimes.length - 1];
+
+  return `${earliestStart} - ${latestEnd}`;
+}
+
+export function formatAttestationDuration(slots: Slot[]): number {
+  if (!slots || slots.length === 0) return 0;
+  return (
+    Math.round(
+      slots.reduce(
+        (sum, s) => sum + slotDurationHours(s.startTime, s.endTime),
+        0
+      ) * 10
+    ) / 10
+  );
+}
+
 function buildAttestationPage(
   doc: jsPDF,
-  session: {
-    title: string;
-    location: string;
-    startDate: Date | null;
-    slots: Slot[];
-  },
+  session: AttestationSession,
   inscription: Inscription,
   formateur: { lastName: string | null; firstName: string | null }
 ): void {
@@ -89,39 +153,27 @@ function buildAttestationPage(
   doc.text(session.location, 135 + doc.getTextWidth(lieuLabel), 77);
 
   // ── Date + Horaires ────────────────────────────────────────────────────────
-  const formattedDate = session.startDate
-    ? dayjs(session.startDate).format("DD/MM/YYYY")
-    : "Non spécifiée";
-  const sortedSlots = [...session.slots].sort((a, b) =>
-    a.startTime.localeCompare(b.startTime)
-  );
-  const firstSlot = sortedSlots[0];
-  const lastSlot = sortedSlots[sortedSlots.length - 1];
-  const horaires =
-    firstSlot && lastSlot
-      ? `${firstSlot.startTime} - ${lastSlot.endTime}`
-      : "Non spécifiés";
+  const formattedDate = formatAttestationDate(session);
+  const horaires = formatAttestationHoraires(session.slots);
 
   doc.setFont("helvetica", "bold");
   doc.text("Date : ", x, 87);
   doc.setFont("helvetica", "normal");
   doc.text(formattedDate, x + doc.getTextWidth("Date : "), 87);
 
+  const dateBlockWidth = doc.getTextWidth(`Date : ${formattedDate}`);
+  const horairesX = Math.max(105, x + dateBlockWidth + 8);
+
   doc.setFont("helvetica", "bold");
-  doc.text("Horaires : ", 100, 87);
+  doc.text("Horaires : ", horairesX, 87);
   doc.setFont("helvetica", "normal");
-  doc.text(horaires, 101 + doc.getTextWidth("Horaires : "), 87);
+  doc.text(horaires, horairesX + doc.getTextWidth("Horaires : "), 87);
 
   // ── Durée ──────────────────────────────────────────────────────────────────
-  const totalHours =
-    Math.round(
-      session.slots.reduce(
-        (sum, s) => sum + slotDurationHours(s.startTime, s.endTime),
-        0
-      ) * 10
-    ) / 10;
+  const totalHours = formatAttestationDuration(session.slots);
+  const hoursLabel = totalHours > 1 ? "heures" : "heure";
   doc.setFont("helvetica", "normal");
-  doc.text(`Soit une durée de ${totalHours} heures`, x, 98);
+  doc.text(`Soit une durée de ${totalHours} ${hoursLabel}`, x, 98);
 
   // ── Nature de l'action ─────────────────────────────────────────────────────
   doc.setFont("helvetica", "bold");
@@ -212,13 +264,14 @@ function buildAttestationPage(
   doc.text("Signature du Formateur", 150, 260, { align: "center" });
 }
 
-type AttestationSession = {
+export type AttestationSession = {
   title: string;
   location: string;
   startDate: Date | null;
+  endDate?: Date | null;
   slots: Slot[];
 };
-type AttestationFormateur = {
+export type AttestationFormateur = {
   lastName: string | null;
   firstName: string | null;
 };
@@ -249,14 +302,9 @@ export function generateAttestationPDF(
 }
 
 export function generateAllAttestationsPDF(
-  session: {
-    title: string;
-    location: string;
-    startDate: Date | null;
-    slots: Slot[];
-  },
+  session: AttestationSession,
   inscriptions: Inscription[],
-  formateur: { lastName: string | null; firstName: string | null }
+  formateur: AttestationFormateur
 ): void {
   const doc = new jsPDF("portrait", "mm", "a4");
   inscriptions.forEach((inscription, index) => {

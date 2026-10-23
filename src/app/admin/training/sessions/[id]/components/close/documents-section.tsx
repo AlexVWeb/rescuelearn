@@ -42,6 +42,7 @@ interface DocumentsSectionProps {
     type: string;
     location: string;
     startDate: Date | null;
+    endDate?: Date | null;
     slots: Slot[];
     isFC?: boolean;
     status?: string;
