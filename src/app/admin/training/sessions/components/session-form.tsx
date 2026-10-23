@@ -30,8 +30,13 @@ import {
 
 import { createTrainingSession, updateTrainingSession } from "../../actions";
 import { DeleteSessionButton } from "./delete-session-button";
-import { TrainingSession, SESSION_STATUS } from "../../types";
-import { formatSessionFormData } from "./session-form.utils";
+import {
+  TrainingSession,
+  SESSION_STATUS,
+  type SessionFormateurUser,
+} from "../../types";
+import { formatFormateurName } from "../../lib/formateurs";
+import { formatSessionFormData, NO_RESPONSABLE } from "./session-form.utils";
 
 const sessionSchema = z.object({
   title: z.string().min(3, "Titre requis"),
@@ -47,18 +52,25 @@ const sessionSchema = z.object({
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
   isFC: z.boolean(),
+  responsablePedagogiqueId: z.string().optional(),
 });
 
 export type SessionFormValues = z.infer<typeof sessionSchema>;
 
 interface SessionFormProps {
   sessionItem?: TrainingSession;
+  /** Membres de l'organisme pouvant être responsable pédagogique */
+  members?: SessionFormateurUser[];
+  /** Formateurs affectés à la session, signalés dans la liste */
+  formateurIds?: string[];
   onCancel?: () => void;
   onSuccess?: (id?: string) => void;
 }
 
 export function SessionForm({
   sessionItem,
+  members = [],
+  formateurIds = [],
   onCancel,
   onSuccess,
 }: SessionFormProps) {
@@ -83,6 +95,8 @@ export function SessionForm({
         ? dayjs(sessionItem.endDate).startOf("day").format("YYYY-MM-DD")
         : "",
       isFC: sessionItem?.isFC ?? false,
+      responsablePedagogiqueId:
+        sessionItem?.responsablePedagogiqueId ?? NO_RESPONSABLE,
     },
   });
 
@@ -272,6 +286,45 @@ export function SessionForm({
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="responsablePedagogiqueId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Responsable pédagogique</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value}
+                disabled={isClosed}
+              >
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Aucun" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={NO_RESPONSABLE}>Aucun</SelectItem>
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {formatFormateurName(member) || member.email}
+                      {formateurIds.includes(member.id) && (
+                        <span className="text-muted-foreground">
+                          · formateur de la session
+                        </span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Mentionné sur les FISE PSE. Peut être l&apos;un des formateurs
+                de la session.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {sessionItem && (
           <FormField

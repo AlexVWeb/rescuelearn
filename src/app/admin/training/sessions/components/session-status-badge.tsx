@@ -16,11 +16,7 @@ export function SessionStatusBadge({ status }: SessionStatusBadgeProps) {
         </Badge>
       );
     case SESSION_STATUS.TERMINEE:
-      return (
-        <Badge className="border-transparent bg-green-600 text-white hover:bg-green-600">
-          Terminée
-        </Badge>
-      );
+      return <Badge variant="success">Terminée</Badge>;
     case SESSION_STATUS.ANNULEE:
       return <Badge variant="destructive">Annulée</Badge>;
     default:

@@ -4,12 +4,35 @@ import {
   UpdateTrainingSessionInput,
 } from "../types";
 
+const USER_SUMMARY = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+} as const;
+
+async function areMembers(userIds: string[], organismeId: string) {
+  const members = await prisma.member.findMany({
+    where: { organizationId: organismeId, userId: { in: userIds } },
+    select: { userId: true },
+  });
+  const memberIds = new Set(members.map((m) => m.userId));
+  return userIds.every((userId) => memberIds.has(userId));
+}
+
 export class TrainingSessionService {
   static async createSession(
     data: CreateTrainingSessionInput,
     organismeId: string,
     formateurId: string
   ) {
+    if (
+      data.responsablePedagogiqueId &&
+      !(await areMembers([data.responsablePedagogiqueId], organismeId))
+    ) {
+      throw new Error("Responsable pédagogique invalide pour cet organisme");
+    }
+
     return prisma.trainingSession.create({
       data: {
         ...data,
@@ -58,13 +81,24 @@ export class TrainingSessionService {
         (data.startDate !== undefined &&
           !areDatesEqual(data.startDate, session.startDate)) ||
         (data.endDate !== undefined &&
-          !areDatesEqual(data.endDate, session.endDate));
+          !areDatesEqual(data.endDate, session.endDate)) ||
+        (data.responsablePedagogiqueId !== undefined &&
+          (data.responsablePedagogiqueId ?? null) !==
+            (session.responsablePedagogiqueId ?? null));
 
       if (hasOtherChanges) {
         throw new Error(
           "Seul le statut peut être modifié sur une session clôturée"
         );
       }
+    }
+
+    if (
+      data.responsablePedagogiqueId &&
+      data.responsablePedagogiqueId !== session.responsablePedagogiqueId &&
+      !(await areMembers([data.responsablePedagogiqueId], organismeId))
+    ) {
+      throw new Error("Responsable pédagogique invalide pour cet organisme");
     }
 
     // Validation des transitions de statut
@@ -112,17 +146,9 @@ export class TrainingSessionService {
         },
         formateurs: {
           orderBy: { createdAt: "asc" },
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
+          include: { user: { select: USER_SUMMARY } },
         },
+        responsablePedagogique: { select: USER_SUMMARY },
         groups: {
           orderBy: { position: "asc" },
         },
@@ -154,12 +180,7 @@ export class TrainingSessionService {
       throw new Error("Au moins un formateur doit être affecté");
     }
 
-    const members = await prisma.member.findMany({
-      where: { organizationId: organismeId, userId: { in: uniqueIds } },
-      select: { userId: true },
-    });
-    const memberIds = new Set(members.map((m) => m.userId));
-    if (uniqueIds.some((userId) => !memberIds.has(userId))) {
+    if (!(await areMembers(uniqueIds, organismeId))) {
       throw new Error("Formateur invalide pour cet organisme");
     }
 
@@ -182,9 +203,7 @@ export class TrainingSessionService {
     const members = await prisma.member.findMany({
       where: { organizationId: organismeId },
       select: {
-        user: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
+        user: { select: USER_SUMMARY },
       },
       orderBy: { user: { lastName: "asc" } },
     });

@@ -82,7 +82,7 @@ export default async function AdminLayout({
             <AdminBreadcrumb />
           </div>
         </header>
-        <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-hidden p-4 pt-0">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-clip p-4 pt-0">
           {children}
         </div>
       </SidebarInset>

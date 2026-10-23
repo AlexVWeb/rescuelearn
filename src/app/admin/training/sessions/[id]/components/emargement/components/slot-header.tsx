@@ -43,6 +43,7 @@ export function SlotHeader({
             className="h-6 w-6"
             onClick={() => onGeneratePin(slot.id)}
             disabled={isDisabled}
+            aria-label={`Générer le PIN du créneau ${slot.label}`}
             title="Générer/Rafraîchir PIN"
           >
             <RefreshCw className="h-3 w-3" />
@@ -55,9 +56,10 @@ export function SlotHeader({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-green-600 hover:bg-green-50 hover:text-green-700"
+            className="text-success hover:bg-success/10 hover:text-success h-7 w-7"
             onClick={() => onBulkStatusChange(slot.id, "validé")}
             disabled={isDisabled}
+            aria-label={`Tous présents au créneau ${slot.label}`}
             title="Tous présents"
           >
             <Check className="h-3.5 w-3.5" />
@@ -68,6 +70,7 @@ export function SlotHeader({
             className="text-destructive hover:bg-destructive/5 h-7 w-7"
             onClick={() => onBulkStatusChange(slot.id, "absent")}
             disabled={isDisabled}
+            aria-label={`Tous absents au créneau ${slot.label}`}
             title="Tous absents"
           >
             <X className="h-3.5 w-3.5" />

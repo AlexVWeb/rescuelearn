@@ -9,7 +9,8 @@ import {
 import { toPdfFormateur } from "../../lib/formateurs";
 import { getLogoAsBase64 } from "@/lib/organisme-logo";
 import { notFound } from "next/navigation";
-import { SessionTabsLayout } from "../components/session-tabs-layout";
+import { SessionWorkspace } from "../components/session-workspace";
+import { SessionDetailSkeleton } from "../components/session-detail-skeleton";
 import { TrainingSession, Slot, Inscription } from "../../types";
 
 export default async function SessionDetailsPage({
@@ -46,8 +47,8 @@ export default async function SessionDetailsPage({
   }
 
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
-      <SessionTabsLayout
+    <Suspense fallback={<SessionDetailSkeleton />}>
+      <SessionWorkspace
         session={
           session as TrainingSession & {
             slots: Slot[];
@@ -55,7 +56,7 @@ export default async function SessionDetailsPage({
           }
         }
         allTrainees={allTrainees}
-        formateur={formateur}
+        formateur={formateur ?? { lastName: null, firstName: null }}
         assignableFormateurs={assignableFormateurs}
         organismeLogoBase64={organismeLogoBase64}
       />

@@ -66,11 +66,13 @@ export interface TrainingSession {
   startDate: Date | null;
   endDate: Date | null;
   formateurId: string;
+  responsablePedagogiqueId?: string | null;
   organismeId: string;
   createdAt: Date;
   updatedAt: Date;
   slots?: Slot[];
   formateurs?: { user: SessionFormateurUser }[];
+  responsablePedagogique?: SessionFormateurUser | null;
   groups?: TrainingGroup[];
   _count?: {
     inscriptions: number;
@@ -138,6 +140,7 @@ export type CreateTrainingSessionInput = Omit<
   | "formateurs"
   | "groups"
   | "_count"
+  | "responsablePedagogique"
 > & {
   status: string;
   type: string;

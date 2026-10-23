@@ -18,66 +18,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ClipboardList,
-  Download,
-  Trash2,
-  Upload,
-  UserPlus,
-  UserRoundPlus,
-} from "lucide-react";
+import { Trash2, Upload, UserPlus, UserRoundPlus } from "lucide-react";
 import {
   addTraineeToSession,
   removeTraineeFromSession,
-  updateInscriptionStatus,
 } from "../../../actions";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 
-import { Inscription, Slot, Trainee } from "../../../types";
+import { Inscription, Trainee } from "../../../types";
 import { TraineeDialog } from "../../../stagiaires/components/trainee-dialog";
 import { TraineeImportDialog } from "../../../stagiaires/components/trainee-import-dialog";
-import {
-  generateFicheEvaluationPDF,
-  generateAllFichesEvaluationPDF,
-} from "../../../lib/pdf-fiche-evaluation-formative-PSC";
+import { InscriptionStatusBadge } from "./inscription-status-badge";
 
 interface InscriptionsTabProps {
   sessionId: string;
-  session: {
-    title: string;
-    location: string;
-    startDate: Date | null;
-    slots: Slot[];
-    isFC?: boolean;
-    type: string;
-    status?: string;
-  };
+  sessionStatus: string;
   inscriptions: Inscription[];
   allTrainees: Trainee[];
   maxTrainees: number;
-  formateur: { lastName: string | null; firstName: string | null };
-  organismeLogoBase64?: string | null;
 }
 
 export function InscriptionsTab({
   sessionId,
-  session,
+  sessionStatus,
   inscriptions,
   allTrainees,
   maxTrainees,
-  formateur,
-  organismeLogoBase64,
 }: InscriptionsTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [selectedTrainee, setSelectedTrainee] = useState("");
   const [showTraineeDialog, setShowTraineeDialog] = useState(false);
 
-  const isClosed =
-    session.status === "terminée" || session.status === "annulée";
-
-  const isPSC = session.type === "PSC";
+  const isClosed = sessionStatus === "terminée" || sessionStatus === "annulée";
+  const isFull = inscriptions.length >= maxTrainees;
   const inscribedIds = inscriptions.map((i) => i.traineeId);
   const availableTrainees = allTrainees.filter(
     (t) => !inscribedIds.includes(t.id)
@@ -136,90 +110,28 @@ export function InscriptionsTab({
     }
   }
 
-  async function handleUpdateStatus(id: string, status: string) {
-    if (isClosed) return;
-    setLoading(true);
-    try {
-      await updateInscriptionStatus(id, status);
-      toast.success("Statut mis à jour");
-      router.refresh();
-    } catch (e) {
-      logger.error(e);
-      toast.error(
-        e instanceof Error ? e.message : "Erreur lors de la mise à jour"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleDownloadFiche(inscription: Inscription) {
-    generateFicheEvaluationPDF(
-      session,
-      inscription,
-      formateur,
-      organismeLogoBase64
-    );
-  }
-
-  function handleDownloadAllFiches() {
-    generateAllFichesEvaluationPDF(
-      session,
-      inscriptions,
-      formateur,
-      organismeLogoBase64
-    );
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "présent":
-        return (
-          <Badge variant="default" className="bg-green-600">
-            Présent
-          </Badge>
-        );
-      case "absent":
-        return <Badge variant="destructive">Absent</Badge>;
-      case "éliminé":
-        return <Badge variant="destructive">Éliminé</Badge>;
-      default:
-        return <Badge variant="secondary">Inscrit</Badge>;
-    }
-  };
-
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div>
-            <CardTitle>Liste des Inscrits</CardTitle>
-            <CardDescription>
-              Gérez les inscriptions des stagiaires à cette session. (
-              {inscriptions.length} sur {maxTrainees} places)
-            </CardDescription>
-          </div>
-          {isPSC && (
-            <Button
-              variant="outline"
-              onClick={handleDownloadAllFiches}
-              disabled={inscriptions.length === 0 || loading}
-              className="shrink-0"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Fiches évaluation
-            </Button>
-          )}
+        <CardHeader>
+          <CardTitle>Stagiaires inscrits</CardTitle>
+          <CardDescription>
+            {inscriptions.length} sur {maxTrainees} places. L&apos;issue de la
+            formation se saisit dans Clôturer › Résultats.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {!isClosed && (
-            <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row">
+            <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap">
               <Select
                 value={selectedTrainee}
                 onValueChange={setSelectedTrainee}
-                disabled={inscriptions.length >= maxTrainees || loading}
+                disabled={isFull || loading}
               >
-                <SelectTrigger className="w-full sm:w-[300px]">
+                <SelectTrigger
+                  className="w-full sm:w-[300px]"
+                  aria-label="Stagiaire à inscrire"
+                >
                   <SelectValue placeholder="Sélectionner un stagiaire" />
                 </SelectTrigger>
                 <SelectContent>
@@ -237,11 +149,7 @@ export function InscriptionsTab({
               </Select>
               <Button
                 onClick={handleAddTrainee}
-                disabled={
-                  !selectedTrainee ||
-                  inscriptions.length >= maxTrainees ||
-                  loading
-                }
+                disabled={!selectedTrainee || isFull || loading}
                 className="w-full sm:w-auto"
               >
                 <UserPlus className="mr-2 h-4 w-4" /> Inscrire
@@ -249,7 +157,7 @@ export function InscriptionsTab({
               <Button
                 variant="outline"
                 onClick={() => setShowTraineeDialog(true)}
-                disabled={inscriptions.length >= maxTrainees || loading}
+                disabled={isFull || loading}
                 className="w-full sm:w-auto"
               >
                 <UserRoundPlus className="mr-2 h-4 w-4" /> Nouveau
@@ -257,14 +165,14 @@ export function InscriptionsTab({
               <TraineeImportDialog sessionId={sessionId}>
                 <Button
                   variant="outline"
-                  disabled={inscriptions.length >= maxTrainees || loading}
+                  disabled={isFull || loading}
                   className="w-full sm:w-auto"
                 >
                   <Upload className="mr-2 h-4 w-4" /> Importer
                 </Button>
               </TraineeImportDialog>
-              {inscriptions.length >= maxTrainees && (
-                <span className="text-destructive ml-2 text-sm">
+              {isFull && (
+                <span role="status" className="text-destructive ml-2 text-sm">
                   Session complète
                 </span>
               )}
@@ -273,8 +181,9 @@ export function InscriptionsTab({
 
           <div className="space-y-2">
             {inscriptions.length === 0 ? (
-              <p className="text-muted-foreground bg-muted/20 rounded-lg border py-4 text-center text-sm">
-                Aucun stagiaire inscrit pour le moment.
+              <p className="text-muted-foreground bg-muted/20 rounded-lg border border-dashed py-6 text-center text-sm">
+                Aucun stagiaire inscrit pour le moment. Sélectionnez un
+                stagiaire existant, créez-en un ou importez une liste.
               </p>
             ) : (
               inscriptions.map((inscription) => (
@@ -293,38 +202,7 @@ export function InscriptionsTab({
                   </div>
 
                   <div className="flex items-center gap-2 self-end sm:self-auto">
-                    {getStatusBadge(inscription.status)}
-                    {!isClosed && (
-                      <Select
-                        value={inscription.status}
-                        onValueChange={(val) =>
-                          handleUpdateStatus(inscription.id, val)
-                        }
-                        disabled={loading}
-                      >
-                        <SelectTrigger className="h-8 w-[130px]">
-                          <SelectValue placeholder="Statut" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="inscrit">Inscrit</SelectItem>
-                          <SelectItem value="présent">Présent</SelectItem>
-                          <SelectItem value="absent">Absent</SelectItem>
-                          <SelectItem value="éliminé">Éliminé</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                    {isPSC && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleDownloadFiche(inscription)}
-                        disabled={loading}
-                        title="Télécharger la fiche d'évaluation"
-                      >
-                        <ClipboardList className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <InscriptionStatusBadge status={inscription.status} />
                     {!isClosed && (
                       <Button
                         variant="ghost"
@@ -332,6 +210,7 @@ export function InscriptionsTab({
                         className="text-destructive h-8 w-8"
                         onClick={() => handleRemove(inscription.id)}
                         disabled={loading}
+                        aria-label={`Désinscrire ${inscription.trainee?.firstName ?? ""} ${inscription.trainee?.lastName ?? ""}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

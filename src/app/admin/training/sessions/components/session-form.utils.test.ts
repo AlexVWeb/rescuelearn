@@ -64,4 +64,24 @@ describe("formatSessionFormData", () => {
     expect(result.maxTrainees).toBe(10);
     expect(result.status).toBe("planifiée");
   });
+
+  it("should keep the selected responsable pédagogique", () => {
+    const result = formatSessionFormData({
+      ...baseFormValues,
+      responsablePedagogiqueId: "user-1",
+    });
+    expect(result.responsablePedagogiqueId).toBe("user-1");
+  });
+
+  it("should set responsable pédagogique to null when none is selected", () => {
+    expect(
+      formatSessionFormData({
+        ...baseFormValues,
+        responsablePedagogiqueId: "none",
+      }).responsablePedagogiqueId
+    ).toBeNull();
+    expect(
+      formatSessionFormData(baseFormValues).responsablePedagogiqueId
+    ).toBeNull();
+  });
 });

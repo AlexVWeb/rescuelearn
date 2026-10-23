@@ -55,6 +55,20 @@ describe("TrainingSessionService", () => {
         },
       });
     });
+    it("rejects a responsable pédagogique outside the organisme on create", async () => {
+      const data = {
+        title: "Session 1",
+        responsablePedagogiqueId: "intrus",
+      } as unknown as Parameters<
+        typeof TrainingSessionService.createSession
+      >[0];
+      mockPrisma.member.findMany.mockResolvedValue([]);
+
+      await expect(
+        TrainingSessionService.createSession(data, "org-1", "form-1")
+      ).rejects.toThrow("Responsable pédagogique invalide pour cet organisme");
+      expect(mockPrisma.trainingSession.create).not.toHaveBeenCalled();
+    });
   });
 
   describe("updateSession", () => {
@@ -113,6 +127,70 @@ describe("TrainingSessionService", () => {
       mockPrisma.trainingSession.findFirst.mockResolvedValue({
         id: "s1",
         status: "terminée",
+      });
+
+      await expect(
+        TrainingSessionService.updateSession("s1", data, "org-1")
+      ).rejects.toThrow(
+        "Seul le statut peut être modifié sur une session clôturée"
+      );
+    });
+
+    it("sets a responsable pédagogique who is a member of the organisme", async () => {
+      const data = {
+        responsablePedagogiqueId: "user-2",
+      } as unknown as Parameters<
+        typeof TrainingSessionService.updateSession
+      >[1];
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "planifiée",
+        responsablePedagogiqueId: null,
+      });
+      mockPrisma.member.findMany.mockResolvedValue([{ userId: "user-2" }]);
+      mockPrisma.trainingSession.update.mockResolvedValue({ id: "s1" });
+
+      await TrainingSessionService.updateSession("s1", data, "org-1");
+
+      expect(mockPrisma.member.findMany).toHaveBeenCalledWith({
+        where: { organizationId: "org-1", userId: { in: ["user-2"] } },
+        select: { userId: true },
+      });
+      expect(mockPrisma.trainingSession.update).toHaveBeenCalledWith({
+        where: { id: "s1" },
+        data,
+      });
+    });
+
+    it("rejects a responsable pédagogique outside the organisme", async () => {
+      const data = {
+        responsablePedagogiqueId: "intrus",
+      } as unknown as Parameters<
+        typeof TrainingSessionService.updateSession
+      >[1];
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "planifiée",
+        responsablePedagogiqueId: null,
+      });
+      mockPrisma.member.findMany.mockResolvedValue([]);
+
+      await expect(
+        TrainingSessionService.updateSession("s1", data, "org-1")
+      ).rejects.toThrow("Responsable pédagogique invalide pour cet organisme");
+      expect(mockPrisma.trainingSession.update).not.toHaveBeenCalled();
+    });
+
+    it("refuses to change the responsable pédagogique of a closed session", async () => {
+      const data = {
+        responsablePedagogiqueId: "user-2",
+      } as unknown as Parameters<
+        typeof TrainingSessionService.updateSession
+      >[1];
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        status: "terminée",
+        responsablePedagogiqueId: null,
       });
 
       await expect(

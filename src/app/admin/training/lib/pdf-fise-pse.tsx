@@ -454,6 +454,7 @@ interface InfoPageProps {
   location: string;
   inscription: Inscription;
   equipePedagogique: string[];
+  responsablePedagogique?: string;
 }
 
 /**
@@ -465,6 +466,7 @@ const InfoPage: React.FC<InfoPageProps> = ({
   location,
   inscription,
   equipePedagogique,
+  responsablePedagogique,
 }) => {
   const trainee = inscription.trainee;
   const dob = trainee?.dateOfBirth
@@ -534,7 +536,9 @@ const InfoPage: React.FC<InfoPageProps> = ({
           <View style={[styles.infoCell, { width: "50%" }, styles.borderRight]}>
             <Text style={styles.label}>Responsable pédagogique :</Text>
           </View>
-          <View style={[styles.infoCell, { flex: 1 }]} />
+          <View style={[styles.infoCell, { flex: 1 }]}>
+            <Text style={styles.value}>{responsablePedagogique ?? ""}</Text>
+          </View>
         </View>
         <View style={[styles.row, styles.borderTop]}>
           <View style={[styles.infoCell, { width: "50%" }, styles.borderRight]}>
@@ -691,6 +695,7 @@ export interface FisePsePagesProps {
   };
   inscription: Inscription;
   equipePedagogique: string[];
+  responsablePedagogique?: string;
 }
 
 /**
@@ -701,6 +706,7 @@ export const FisePsePages: React.FC<FisePsePagesProps> = ({
   session,
   inscription,
   equipePedagogique,
+  responsablePedagogique,
 }) => {
   const { start, end } = getTrainingDates(session.startDate, session.slots);
   const evaluationProps: EvaluationPageProps = {
@@ -718,6 +724,7 @@ export const FisePsePages: React.FC<FisePsePagesProps> = ({
         location={session.location}
         inscription={inscription}
         equipePedagogique={equipePedagogique}
+        responsablePedagogique={responsablePedagogique}
       />
       {level === "PSE1" ? (
         <Pse1EvaluationPage {...evaluationProps} />
