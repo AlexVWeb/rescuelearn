@@ -62,6 +62,9 @@ model TrainingSession {
   quizSessions             QuizSession[]
   formateurs               TrainingSessionFormateur[]
   groups                   TrainingGroup[]
+  // Publication explicite des attestations dans l'espace stagiaire
+  attestationsPublishedAt  DateTime?
+  documents                SessionDocument[]
 
   @@index([responsablePedagogiqueId])
 }
@@ -160,6 +163,13 @@ model Inscription {
   trainingSession        TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
   groupId                String?
   group                  TrainingGroup?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  // Espace stagiaire : SHA-256 du token du lien, jamais le token en clair
+  accessTokenHash        String?         @unique
+  accessSentAt           DateTime?
+  accessLastUsedAt       DateTime?
+  // Verrou anti-devinette du PIN depuis l'espace stagiaire
+  pinFailedCount         Int             @default(0)
+  pinLockedUntil         DateTime?
 
   @@unique([traineeId, trainingSessionId])
   @@index([groupId])
@@ -171,10 +181,28 @@ model Emargement {
   validationCode String?
   codeSentAt     DateTime?
   validatedAt    DateTime?
+  // "portail" | "pin" | "formateur" : preuve de l'origine de la signature
+  signedVia      String?
   inscriptionId  String
   slotId         String
   inscription    Inscription @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
   slot           Slot        @relation(fields: [slotId], references: [id], onDelete: Cascade)
 
   @@unique([inscriptionId, slotId])
+}
+
+model SessionDocument {
+  id                String          @id @default(cuid())
+  trainingSessionId String
+  title             String
+  // Clé R2 privée, servie par URL présignée courte
+  fileKey           String
+  mimeType          String
+  size              Int
+  // null = visible dès l'envoi des accès
+  visibleFrom       DateTime?
+  createdAt         DateTime        @default(now())
+  trainingSession   TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+
+  @@index([trainingSessionId])
 }
