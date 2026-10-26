@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrganismeForm } from "@/components/admin/organisme-form";
 import { MembresTab } from "./components/membres-tab";
 import { DocumentsTab } from "./components/documents-tab";
+import { TemplatesTab } from "./components/templates/templates-tab";
 import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
 import { Organisme, OrganismeMember } from "@/types/organisme";
 import { updateOrganismeAction } from "@/app/actions/organisme.actions";
@@ -16,12 +17,15 @@ interface OrganismeDetailClientProps {
   organisme: Organisme;
   members: OrganismeMember[];
   invitations: InvitationInfo[];
+  /** Logo encodé pour les aperçus PDF */
+  logoBase64: string | null;
 }
 
 export function OrganismeDetailClient({
   organisme,
   members,
   invitations,
+  logoBase64,
 }: OrganismeDetailClientProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -50,6 +54,7 @@ export function OrganismeDetailClient({
         <TabsTrigger value="configuration">Configuration</TabsTrigger>
         <TabsTrigger value="membres">Membres</TabsTrigger>
         <TabsTrigger value="documents">Documents</TabsTrigger>
+        <TabsTrigger value="modeles">Modèles documents</TabsTrigger>
       </TabsList>
 
       <TabsContent value="profil" className="mt-6">
@@ -69,7 +74,9 @@ export function OrganismeDetailClient({
             legalRepJobTitle: organisme.legalRepJobTitle ?? "",
             legalStatus: organisme.legalStatus ?? "",
             tvaNumber: organisme.tvaNumber ?? "",
+            federation: organisme.federation ?? "",
             federationName: organisme.federationName ?? "",
+            documentHeader: organisme.documentHeader ?? "",
             qualiopiCertifiedBy: organisme.qualiopiCertifiedBy ?? "",
             smtpHost: organisme.smtpHost ?? "",
             smtpUser: organisme.smtpUser ?? "",
@@ -104,7 +111,9 @@ export function OrganismeDetailClient({
             legalRepJobTitle: organisme.legalRepJobTitle ?? "",
             legalStatus: organisme.legalStatus ?? "",
             tvaNumber: organisme.tvaNumber ?? "",
+            federation: organisme.federation ?? "",
             federationName: organisme.federationName ?? "",
+            documentHeader: organisme.documentHeader ?? "",
             qualiopiCertifiedBy: organisme.qualiopiCertifiedBy ?? "",
             smtpHost: organisme.smtpHost ?? "",
             smtpUser: organisme.smtpUser ?? "",
@@ -130,6 +139,19 @@ export function OrganismeDetailClient({
 
       <TabsContent value="documents" className="mt-6">
         <DocumentsTab organismeId={organisme.id} hasLogo={!!organisme.logo} />
+      </TabsContent>
+
+      <TabsContent value="modeles" className="mt-6">
+        <TemplatesTab
+          organisme={{
+            name: organisme.name,
+            city: organisme.city,
+            federation: organisme.federation,
+            federationName: organisme.federationName,
+            documentHeader: organisme.documentHeader,
+          }}
+          logoBase64={logoBase64}
+        />
       </TabsContent>
     </Tabs>
   );

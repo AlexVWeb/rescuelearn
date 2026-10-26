@@ -23,7 +23,9 @@ import { GroupsTab } from "../[id]/components/groups";
 import { boardKey } from "../[id]/components/groups/board-utils";
 import { ResultsSection } from "../[id]/components/close/results-section";
 import { DocumentsSection } from "../[id]/components/close/documents-section";
+import type { DocumentOrganisme } from "@/lib/documents/registry";
 import { SupportsTab } from "../[id]/components/supports/supports-tab";
+import { EvaluationsSection } from "../[id]/components/close/evaluations-section";
 import {
   Inscription,
   SessionDocument,
@@ -33,7 +35,10 @@ import {
   TrainingSession,
 } from "@/app/admin/training/types";
 import { formatFormateurName } from "@/app/admin/training/lib/formateurs";
-import type { AttestationSigning } from "@/app/admin/training/actions";
+import type {
+  AttestationSigning,
+  SessionEvaluationSummary,
+} from "@/app/admin/training/actions";
 import {
   checkGroups,
   isCountedInscription,
@@ -57,7 +62,9 @@ interface SessionWorkspaceProps {
   formateur: { lastName: string | null; firstName: string | null };
   assignableFormateurs: SessionFormateurUser[];
   attestationSigning: AttestationSigning;
+  evaluations: SessionEvaluationSummary[] | null;
   organismeLogoBase64?: string | null;
+  organisme: DocumentOrganisme;
 }
 
 // Fondu court à l'affichage d'un panneau, désactivé si mouvement réduit
@@ -70,7 +77,9 @@ export function SessionWorkspace({
   formateur,
   assignableFormateurs,
   attestationSigning,
+  evaluations,
   organismeLogoBase64,
+  organisme,
 }: SessionWorkspaceProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -269,8 +278,10 @@ export function SessionWorkspace({
             : undefined
         }
         organismeLogoBase64={organismeLogoBase64}
+        organisme={organisme}
       />
     ),
+    evaluations: <EvaluationsSection evaluations={evaluations} />,
   };
 
   // Les contenus formatent des dates dans le fuseau du navigateur : rendus

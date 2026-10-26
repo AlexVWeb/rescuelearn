@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getLogoAsBase64 } from "@/lib/organisme-logo";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ export default async function OrganismeDetailPage({
   }
 
   const organisme = organismeResult.data;
+  const logoBase64 = await getLogoAsBase64(organisme.logo);
   const members =
     membersResult.success && membersResult.data ? membersResult.data : [];
   const invitations =
@@ -66,6 +68,7 @@ export default async function OrganismeDetailPage({
         organisme={organisme}
         members={members}
         invitations={invitations}
+        logoBase64={logoBase64}
       />
     </div>
   );

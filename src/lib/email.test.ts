@@ -187,4 +187,70 @@ describe("EmailService", () => {
       );
     });
   });
+
+  describe("sendTraineeAccess", () => {
+    it("envoie le lien personnel, échappé dans le HTML", async () => {
+      await EmailService.sendTraineeAccess({
+        to: "stagiaire@test.com",
+        firstName: "Léa",
+        organismeName: "Secours <31>",
+        sessionTitle: "PSC",
+        sessionDates: "12 novembre 2026",
+        sessionLocation: "Toulouse",
+        accessUrl: "https://app.test/espace/acces#t=abc",
+      });
+      const callArgs = vi.mocked(nodemailer.createTransport().sendMail).mock
+        .calls[0][0] as SendMailOptions;
+
+      expect(callArgs.subject).toBe(
+        "Votre espace de formation PSC – Secours <31>"
+      );
+      expect(callArgs.html).toContain("Secours &lt;31&gt;");
+      expect(callArgs.html).toContain("Accéder à mon espace");
+      expect(callArgs.text).toContain("https://app.test/espace/acces#t=abc");
+    });
+  });
+
+  describe("sendEvaluationInvitation", () => {
+    const base = {
+      to: "stagiaire@test.com",
+      firstName: null,
+      organismeName: "Secours 31",
+      sessionTitle: "PSC",
+      sessionDates: "12 novembre 2026",
+      sessionLocation: "Toulouse",
+      accessUrl: "https://app.test/espace/acces#t=abc",
+      closesAtLabel: "12 décembre",
+      estimatedMinutes: 3,
+    };
+    const lastMail = () =>
+      vi.mocked(nodemailer.createTransport().sendMail).mock
+        .calls[0][0] as SendMailOptions;
+
+    it("invitation à chaud avec la date de fermeture", async () => {
+      await EmailService.sendEvaluationInvitation({
+        ...base,
+        evaluation: "chaud",
+        isReminder: false,
+      });
+      const mail = lastMail();
+      expect(mail.subject).toBe("Votre avis sur la formation PSC – Secours 31");
+      expect(mail.text).toContain("jusqu'au 12 décembre");
+      expect(mail.text).toContain("Ne plus recevoir de rappels");
+      expect(mail.html).toContain(base.accessUrl);
+    });
+
+    it("rappel à froid", async () => {
+      await EmailService.sendEvaluationInvitation({
+        ...base,
+        evaluation: "froid",
+        isReminder: true,
+      });
+      const mail = lastMail();
+      expect(mail.subject).toBe(
+        "Rappel : Que retenez-vous de votre formation PSC ? – Secours 31"
+      );
+      expect(mail.text).toContain("Vous n'avez pas encore répondu.");
+    });
+  });
 });

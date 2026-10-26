@@ -10,3 +10,4 @@ export * from "./groups";
 export * from "./access";
 export * from "./documents";
 export * from "./attestations";
+export * from "./evaluations";

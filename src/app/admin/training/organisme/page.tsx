@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getLogoAsBase64 } from "@/lib/organisme-logo";
 import { getMyOrganismeAction } from "@/app/actions/organisme.actions";
 import { getOrganismeMembersAction } from "@/app/actions/members.actions";
 import { getPendingInvitationsAction } from "@/app/actions/invitation.actions";
@@ -12,6 +13,7 @@ export default async function MonOrganismePage() {
   }
 
   const organisme = organismeResult.data;
+  const logoBase64 = await getLogoAsBase64(organisme.logo);
   const membersResult = await getOrganismeMembersAction();
   const members =
     membersResult.success && membersResult.data ? membersResult.data : [];
@@ -36,6 +38,7 @@ export default async function MonOrganismePage() {
         organisme={organisme}
         members={members}
         invitations={invitations}
+        logoBase64={logoBase64}
       />
     </div>
   );

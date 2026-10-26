@@ -21,7 +21,9 @@ model Organisme {
   smtpPort              Int?
   smtpSecure            Boolean           @default(true)
   smtpUser              String?
+  federation            Federation?
   federationName        String?
+  documentHeader        String?
   isQualiopi            Boolean           @default(false)
   legalRepFirstName     String?
   legalRepJobTitle      String?
@@ -36,6 +38,20 @@ model Organisme {
   trainees              Trainee[]
   trainingSessions      TrainingSession[]
   users                 User[]
+}
+
+/// Fédération de rattachement : détermine les modèles de documents disponibles
+enum Federation {
+  CROIX_ROUGE
+  FNPC
+  CROIX_BLANCHE
+  ORDRE_DE_MALTE
+  FFSS
+  FNSPF
+  ANPS
+  UNASS
+  SNSM
+  AUTRE
 }
 
 model TrainingSession {
@@ -153,25 +169,29 @@ model ExternalTraining {
 }
 
 model Inscription {
-  id                     String              @id @default(cuid())
-  status                 String              @default("inscrit")
-  traineeId              String
-  trainingSessionId      String
-  attestationResult      String?
-  attestationValidatedAt DateTime?
-  emargements            Emargement[]
-  trainee                Trainee             @relation(fields: [traineeId], references: [id], onDelete: Cascade)
-  trainingSession        TrainingSession     @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
-  groupId                String?
-  group                  TrainingGroup?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  id                        String               @id @default(cuid())
+  status                    String               @default("inscrit")
+  traineeId                 String
+  trainingSessionId         String
+  attestationResult         String?
+  attestationValidatedAt    DateTime?
+  emargements               Emargement[]
+  trainee                   Trainee              @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+  trainingSession           TrainingSession      @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  groupId                   String?
+  group                     TrainingGroup?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
   // Espace stagiaire : SHA-256 du token du lien, jamais le token en clair
-  accessTokenHash        String?             @unique
-  accessSentAt           DateTime?
-  accessLastUsedAt       DateTime?
+  accessTokenHash           String?              @unique
+  accessSentAt              DateTime?
+  accessLastUsedAt          DateTime?
   // Verrou anti-devinette du PIN depuis l'espace stagiaire
-  pinFailedCount         Int                 @default(0)
-  pinLockedUntil         DateTime?
-  signedAttestations     SignedAttestation[]
+  pinFailedCount            Int                  @default(0)
+  pinLockedUntil            DateTime?
+  signedAttestations        SignedAttestation[]
+  // Le stagiaire peut couper les rappels, pas l'accès aux évaluations
+  evaluationRemindersOptOut Boolean              @default(false)
+  evaluationResponses       EvaluationResponse[]
+  evaluationReminders       EvaluationReminder[]
 
   @@unique([traineeId, trainingSessionId])
   @@index([groupId])
@@ -245,4 +265,35 @@ model SignedAttestation {
 
   @@unique([signatureId, inscriptionId])
   @@index([inscriptionId])
+}
+
+// Évaluations à chaud (J+0 → J+30) et à froid (J+90 → J+120) : fenêtres
+// calculées depuis la fin du dernier créneau, questionnaires définis en code
+model EvaluationResponse {
+  id            String      @id @default(cuid())
+  inscriptionId String
+  // "chaud" | "froid"
+  type          String
+  // Version du questionnaire, figée à la première sauvegarde
+  version       String
+  answers       Json
+  // "brouillon" | "soumise"
+  status        String      @default("brouillon")
+  submittedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  inscription   Inscription @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([inscriptionId, type])
+}
+
+// Un envoi par palier ("chaud-j0", "chaud-j7"…) : le cron reste idempotent
+model EvaluationReminder {
+  id            String      @id @default(cuid())
+  inscriptionId String
+  kind          String
+  sentAt        DateTime    @default(now())
+  inscription   Inscription @relation(fields: [inscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([inscriptionId, kind])
 }

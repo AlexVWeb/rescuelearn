@@ -444,16 +444,126 @@ export const EmailService = {
     const cta = isAttestation
       ? "Télécharger mon attestation"
       : "Accéder à mon espace";
-    const text = `${greeting}\n\n${intro}\n\n${sessionTitle}\n${sessionDates} · ${sessionLocation}\n\n${cta} :\n${accessUrl}\n\nCe lien est personnel : ne le transférez pas. Seul le lien le plus récent fonctionne.\n\n${organismeName}`;
+    const { text, html } = renderTraineeEmail({
+      organismeName,
+      greeting,
+      heading,
+      intro,
+      sessionTitle,
+      sessionDates,
+      sessionLocation,
+      cta,
+      accessUrl,
+    });
 
-    const e = escapeHtml;
-    const html = `
+    return this.send({ to, subject, text, html, smtp });
+  },
+
+  /**
+   * Invitation (premier palier) ou rappel d'une évaluation à chaud ou à froid.
+   * Le stagiaire coupe les rappels depuis son espace, pas l'évaluation.
+   */
+  async sendEvaluationInvitation({
+    to,
+    firstName,
+    organismeName,
+    sessionTitle,
+    sessionDates,
+    sessionLocation,
+    accessUrl,
+    evaluation,
+    isReminder,
+    closesAtLabel,
+    estimatedMinutes,
+    smtp,
+  }: {
+    to: string;
+    firstName: string | null;
+    organismeName: string;
+    sessionTitle: string;
+    sessionDates: string;
+    sessionLocation: string;
+    accessUrl: string;
+    evaluation: "chaud" | "froid";
+    isReminder: boolean;
+    /** « 20 novembre » */
+    closesAtLabel: string;
+    estimatedMinutes: number;
+    smtp?: SMTPConfig;
+  }) {
+    const greeting = firstName ? `Bonjour ${firstName},` : "Bonjour,";
+    const isCold = evaluation === "froid";
+    const duration = `Cela prend environ ${estimatedMinutes} minutes, jusqu'au ${closesAtLabel}.`;
+
+    const baseSubject = isCold
+      ? `Que retenez-vous de votre formation ${sessionTitle} ?`
+      : `Votre avis sur la formation ${sessionTitle}`;
+    const subject = `${isReminder ? "Rappel : " : ""}${baseSubject} – ${organismeName}`;
+    const heading = isCold
+      ? "Que retenez-vous de votre formation ?"
+      : "Donnez votre avis sur votre formation";
+    const lead = isCold
+      ? `Quelques mois après votre formation, ${organismeName} aimerait savoir ce que vous en avez retenu et utilisé.`
+      : `${organismeName} vous invite à évaluer la formation que vous avez suivie. Votre avis l'aide à améliorer ses formations.`;
+    const intro = isReminder
+      ? `Vous n'avez pas encore répondu. ${lead} ${duration}`
+      : `${lead} ${duration}`;
+
+    const { text, html } = renderTraineeEmail({
+      organismeName,
+      greeting,
+      heading,
+      intro,
+      sessionTitle,
+      sessionDates,
+      sessionLocation,
+      cta: "Répondre à l'évaluation",
+      accessUrl,
+      footnote:
+        "Vous ne souhaitez plus recevoir ces rappels ? Choisissez « Ne plus recevoir de rappels » dans votre espace de formation.",
+    });
+
+    return this.send({ to, subject, text, html, smtp });
+  },
+};
+
+interface TraineeEmailContent {
+  organismeName: string;
+  greeting: string;
+  heading: string;
+  intro: string;
+  sessionTitle: string;
+  sessionDates: string;
+  sessionLocation: string;
+  cta: string;
+  accessUrl: string;
+  /** Mention ajoutée sous le lien (ex. désinscription des rappels) */
+  footnote?: string;
+}
+
+// Gabarit des emails envoyés aux stagiaires avec leur lien personnel
+function renderTraineeEmail({
+  organismeName,
+  greeting,
+  heading,
+  intro,
+  sessionTitle,
+  sessionDates,
+  sessionLocation,
+  cta,
+  accessUrl,
+  footnote,
+}: TraineeEmailContent) {
+  const text = `${greeting}\n\n${intro}\n\n${sessionTitle}\n${sessionDates} · ${sessionLocation}\n\n${cta} :\n${accessUrl}\n\nCe lien est personnel : ne le transférez pas. Seul le lien le plus récent fonctionne.${footnote ? `\n\n${footnote}` : ""}\n\n${organismeName}`;
+
+  const e = escapeHtml;
+  const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; max-width: 580px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden;">
         <div style="padding: 28px 32px 0 32px; background-color: #ffffff;">
           <p style="margin: 0; font-size: 15px; font-weight: 700; color: #111827;">${e(organismeName)}</p>
         </div>
         <div style="padding: 24px 32px 32px 32px; background-color: #ffffff;">
-          <h1 style="margin: 0 0 16px 0; color: #111827; font-size: 20px; font-weight: 700; line-height: 1.3;">${heading}</h1>
+          <h1 style="margin: 0 0 16px 0; color: #111827; font-size: 20px; font-weight: 700; line-height: 1.3;">${e(heading)}</h1>
           <p style="font-size: 15px; color: #4b5563; margin: 0 0 20px 0;">${e(greeting)}</p>
           <div style="background-color: #f3f4f6; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;">
             <p style="margin: 0; font-size: 16px; font-weight: 700; color: #111827;">${e(sessionTitle)}</p>
@@ -461,9 +571,14 @@ export const EmailService = {
           </div>
           <p style="font-size: 15px; color: #4b5563; margin: 0 0 28px 0;">${e(intro)}</p>
           <div style="text-align: center; margin: 28px 0;">
-            <a href="${e(accessUrl)}" style="background-color: #111827; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 15px;">${cta}</a>
+            <a href="${e(accessUrl)}" style="background-color: #111827; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 15px;">${e(cta)}</a>
           </div>
-          <p style="font-size: 13px; color: #6b7280; margin: 0;">Ce lien est personnel : ne le transférez pas. Si vous recevez un nouveau message, seul le lien le plus récent fonctionne.</p>
+          <p style="font-size: 13px; color: #6b7280; margin: 0;">Ce lien est personnel : ne le transférez pas. Si vous recevez un nouveau message, seul le lien le plus récent fonctionne.</p>${
+            footnote
+              ? `
+          <p style="font-size: 13px; color: #6b7280; margin: 12px 0 0 0;">${e(footnote)}</p>`
+              : ""
+          }
         </div>
         <div style="background-color: #f9fafb; padding: 16px 32px; text-align: center; border-top: 1px solid #f3f4f6;">
           <p style="color: #9ca3af; font-size: 12px; margin: 0;">Envoyé par ${e(organismeName)} avec RescueLearn</p>
@@ -471,9 +586,8 @@ export const EmailService = {
       </div>
     `;
 
-    return this.send({ to, subject, text, html, smtp });
-  },
-};
+  return { text, html };
+}
 
 function escapeHtml(value: string): string {
   return value

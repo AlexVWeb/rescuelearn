@@ -15,109 +15,117 @@ interface TechniqueSection {
   techniques: string[];
 }
 
-const PSE1_LEFT: TechniqueSection[] = [
-  {
-    title: "Attitude et comportement",
-    techniques: [
-      "Évaluation de l'impact psychologique",
-      "Stabiliser l'état psycho-physiologique d'une victime",
-      "L'écoute active",
-      "La respiration contrôlée",
-      "La focalisation / défocalisation attentionnelle",
-    ],
-  },
-  {
-    title: "Bilans",
-    techniques: [
-      "Retournement à deux secouristes et à un secouriste",
-      "Evaluation de la fonction respiratoire",
-      "Evaluation de la fonction circulatoire",
-      "Mesure de la glycémie capillaire",
-      "Mesure de la pression artérielle",
-      "Mesure de la saturation pulsée en oxygène",
-      "Mesure de la température",
-      "Evaluation de la fonction neurologique",
-      "Mesure de la douleur",
-      "Recherche des lésions",
-    ],
-  },
-  {
-    title: "Protection et sécurité",
-    techniques: ["Dégagements d'urgence"],
-  },
-  {
-    title: "Hygiène et aseptie",
-    techniques: [
-      "Equipement contre les agents infectieux",
-      "Friction des mains",
-      "Lavage des mains",
-      "Mise en place de gants stériles",
-      "Retrait des gants à usage unique",
-      "Utilisation des emballages à élimination de déchets",
-      "Utilisation des détergents et désinfectants",
-      "Nettoyage et désinfection du matériel",
-      "Nettoyage et désinfection d'un véhicule ou d'un local",
-    ],
-  },
-  {
-    title: "Malaises et affections spécifiques",
-    techniques: [
-      "Positions d'attente et de confort",
-      "Aide à la prise de médicaments",
-      "Manœuvres physiques",
-    ],
-  },
-  {
-    title: "Urgences vitales",
-    techniques: [
-      "Compression manuelle",
-      "Pansement compressif",
-      "Garrots",
-      "Gaze imbibée de substance hémostatique",
-      "Technique de réchauffement d'une victime",
-      "Désobstruction par la méthode des claques dans le dos",
-      "Désobstruction par la méthode des compressions abdominales",
-      "Désobstruction par la méthode des compressions thoraciques",
-      "Utilisation d'une bouteille d'oxygène",
-      "Administration de l'oxygène par inhalation",
-      "LVA chez une victime non traumatisée",
-      "LVA chez une victime traumatisée",
-    ],
-  },
+/**
+ * Colonne de gauche : un tableau par groupe (le premier porte l'en-tête),
+ * comme dans le référentiel
+ */
+const PSE1_LEFT: TechniqueSection[][] = [
+  [
+    {
+      title: "Attitude et comportement :",
+      techniques: [
+        "Évaluation de l'impact psychologique",
+        "Stabiliser l'état psycho-physiologique d'une victime",
+        "L'écoute active",
+        "La respiration contrôlée",
+        "La focalisation / défocalisation attentionnelle",
+      ],
+    },
+    {
+      title: "Bilans :",
+      techniques: [
+        "Retournement à deux secouristes",
+        "Retournement d'urgence à un secouriste",
+        "Gestes complémentaires d'examen",
+        "Interrogatoire de la victime",
+        "Mesure de la glycémie capillaire",
+        "Mesure de la pression artérielle",
+        "Mesure de la saturation pulsée en oxygène",
+        "Mesure de la température",
+        "Recherche d'une détresse vitale",
+        "Repérage en cas de nombreuses victimes",
+      ],
+    },
+  ],
+  [
+    {
+      title: "Protection et sécurité :",
+      techniques: ["Dégagement d'urgence"],
+    },
+  ],
+  [
+    {
+      title: "Hygiène et asepsie :",
+      techniques: [
+        "Équipement en moyens de protection contre les agents infectieux",
+        "Friction des mains",
+        "Lavage des mains",
+        "Mise en place de gants stériles",
+        "Nettoyage et désinfection d'un véhicule ou d'un local",
+        "Nettoyage et désinfection du matériel",
+        "Retrait de gants à usage unique",
+        "Utilisation des détergents et désinfectants",
+        "Utilisation des emballages à élimination de déchets",
+      ],
+    },
+  ],
+  [
+    {
+      title: "Malaises et affection spécifiques :",
+      techniques: [
+        "Positions d'attente et de transport",
+        "Aide à la prise de médicaments",
+        "Manœuvres physiques",
+      ],
+    },
+  ],
 ];
 
 const PSE1_RIGHT: TechniqueSection[] = [
   {
+    title: "Urgences vitales :",
     techniques: [
-      "LVA chez une victime assise",
-      "Position latérale de sécurité à 1 secouriste",
-      "Position latérale de sécurité à 2 secouristes",
-      "Aspiration de mucosité",
+      "Administration d'oxygène par insufflation",
+      "Aspiration de mucosités",
+      "Compression manuelle",
       "Compressions thoraciques",
-      "Ventilation artificielle par voie orale",
-      "Administration d'oxygène par insufflations",
-      "Ventilation artificielle avec insufflateur manuel",
-      "Utilisation d'un défibrillateur automatisé externe",
+      "Désobstruction par la méthode des claques dans le dos",
+      "Désobstruction par la méthode des compressions abdominales",
+      "Désobstruction par la méthode des compressions thoraciques",
+      "Garrot",
+      "Libération des voies aériennes chez une victime assise",
+      "Libération des voies aériennes chez une victime non traumatisée",
+      "Libération des voies aériennes chez une victime traumatisée",
       "Mise en place d'une canule oropharyngée",
+      "Pansement compressif",
+      "Pansement imbibé de substance hémostatique",
+      "Utilisation d'un défibrillateur automatisé externe",
+      "Ventilation artificielle par une méthode orale",
+      "Ventilation artificielle par un insufflateur manuel",
+      "Position latérale de sécurité à deux secouristes",
+      "Position latérale de sécurité à un secouriste",
+      "Administration d'oxygène par inhalation",
+      "Utilisation d'une bouteille d'oxygène",
     ],
   },
   {
-    title: "Traumatismes",
+    title: "Traumatismes :",
     techniques: [
       "Immobilisation d'un membre au moyen d'une attelle à dépression",
       "Immobilisation d'un membre au moyen d'une attelle modulable",
       "Immobilisation d'un membre supérieur au moyen d'écharpes",
       "Maintien de la tête en position neutre",
-      "Pose d'un collier cervical",
+      "Pose d'un collier cervical (allongé et assis)",
       "Retrait d'un casque de protection",
       "Application de froid",
-      "Emballages au moyen d'un pansement stérile",
-      "Pansement et maintien d'un pansement",
+      "Emballage au moyen d'un pansement stérile",
+      "Maintien d'un pansement",
+      "Pansement",
       "Utilisation d'un lot membre arraché ou sectionné",
     ],
   },
   {
-    title: "Relevage et brancardage",
+    title: "Relevage et brancardage :",
     techniques: ["Préparation d'un dispositif de portage"],
   },
 ];
@@ -215,11 +223,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     fontFamily: "Helvetica",
   },
-  titleBar: {
-    border: "1 solid #000",
-    paddingVertical: 2,
-    marginBottom: 8,
-  },
   identityBar: {
     flexDirection: "row",
     border: "1 solid #000",
@@ -275,20 +278,13 @@ const styles = StyleSheet.create({
   techniqueCheck: {
     borderLeft: "1 solid #000",
   },
-  sideBox: {
-    border: "1 solid #000",
-    padding: 6,
-    marginTop: 10,
-  },
   footnote: {
     fontSize: 7.5,
     fontFamily: ITALIC,
   },
-  checkbox: {
-    width: 8,
-    height: 8,
+  pse1Frame: {
     border: "1 solid #000",
-    marginRight: 4,
+    padding: 6,
   },
   pse2Frame: {
     border: "1 solid #000",
@@ -364,15 +360,15 @@ interface TechniqueTableTheme {
 }
 
 const PSE1_THEME: TechniqueTableTheme = {
-  headerLabel: "Evaluation de la technicité",
-  checkLabel: "V*",
-  checkWidth: 34,
+  headerLabel: "Évaluation de la technicité :",
+  checkLabel: "Validé*",
+  checkWidth: 40,
   headerColor: "#ffff00",
-  categoryColor: "#2e75b6",
-  categoryTextColor: "#ffffff",
-  fontSize: 7.5,
-  bold: false,
-  rowMinHeight: 14,
+  categoryColor: "#00b0f0",
+  categoryTextColor: "#000000",
+  fontSize: 6.6,
+  bold: true,
+  rowMinHeight: 15.5,
 };
 
 const PSE2_THEME: TechniqueTableTheme = {
@@ -391,14 +387,18 @@ const TechniqueTable: React.FC<{
   sections: TechniqueSection[];
   theme: TechniqueTableTheme;
   style?: React.ComponentProps<typeof View>["style"];
-}> = ({ sections, theme, style }) => (
+  /** Faux : tableau de suite, sans la ligne jaune d'en-tête */
+  showHeader?: boolean;
+}> = ({ sections, theme, style, showHeader = true }) => (
   <View style={[{ border: "1 solid #000", borderBottom: 0 }, style ?? {}]}>
-    <View style={[styles.headerRow, { backgroundColor: theme.headerColor }]}>
-      <Text style={styles.headerLabel}>{theme.headerLabel}</Text>
-      <Text style={[styles.headerCheck, { width: theme.checkWidth }]}>
-        {theme.checkLabel}
-      </Text>
-    </View>
+    {showHeader && (
+      <View style={[styles.headerRow, { backgroundColor: theme.headerColor }]}>
+        <Text style={styles.headerLabel}>{theme.headerLabel}</Text>
+        <Text style={[styles.headerCheck, { width: theme.checkWidth }]}>
+          {theme.checkLabel}
+        </Text>
+      </View>
+    )}
     {sections.map((section, si) => (
       <View key={section.title ?? si}>
         {section.title && (
@@ -441,10 +441,23 @@ const TechniqueTable: React.FC<{
   </View>
 );
 
-const Checkbox: React.FC<{ label: string }> = ({ label }) => (
-  <View style={[styles.row, { alignItems: "center", marginHorizontal: 12 }]}>
-    <View style={styles.checkbox} />
-    <Text style={{ fontSize: 9, fontFamily: BOLD }}>{label}</Text>
+interface EvaluationPageProps {
+  lastName: string;
+  firstName: string;
+  start: string;
+  end: string;
+}
+
+/** Bandeau d'identité du participant, rappelé au-dessus de la grille */
+const IdentityBar: React.FC<
+  EvaluationPageProps & { style?: React.ComponentProps<typeof View>["style"] }
+> = ({ lastName, firstName, start, end, style }) => (
+  <View style={[styles.identityBar, style ?? {}]}>
+    <Text style={[styles.identityText, { flex: 1 }]}>Nom : {lastName}</Text>
+    <Text style={[styles.identityText, { flex: 1 }]}>Prénom : {firstName}</Text>
+    <Text style={[styles.identityText, { flex: 1.4 }]}>
+      Formation du {start} au {end}
+    </Text>
   </View>
 );
 
@@ -455,6 +468,8 @@ interface InfoPageProps {
   inscription: Inscription;
   equipePedagogique: string[];
   responsablePedagogique?: string;
+  /** PSE 2 : le bandeau d'identité clôt la page 1 (cf. référentiel) */
+  identity?: EvaluationPageProps;
 }
 
 /**
@@ -467,6 +482,7 @@ const InfoPage: React.FC<InfoPageProps> = ({
   inscription,
   equipePedagogique,
   responsablePedagogique,
+  identity,
 }) => {
   const trainee = inscription.trainee;
   const dob = trainee?.dateOfBirth
@@ -522,7 +538,9 @@ const InfoPage: React.FC<InfoPageProps> = ({
           <Text style={styles.value}>{trainee?.address ?? ""}</Text>
         </View>
         <View style={[styles.infoCell, styles.borderTop, { minHeight: 34 }]}>
-          <Text style={styles.label}>Tél :</Text>
+          <Text style={styles.label}>
+            {level === "PSE2" ? "Tél. :" : "Tél :"}
+          </Text>
           <Text style={styles.value}>{trainee?.phone ?? ""}</Text>
         </View>
         <View style={[styles.infoCell, styles.borderTop, { minHeight: 40 }]}>
@@ -560,19 +578,15 @@ const InfoPage: React.FC<InfoPageProps> = ({
           </View>
         </View>
       </View>
+
+      {identity && <IdentityBar {...identity} style={{ marginTop: 30 }} />}
     </Page>
   );
 };
 
-interface EvaluationPageProps {
-  lastName: string;
-  firstName: string;
-  start: string;
-  end: string;
-}
-
 /**
- * Page 2 PSE 1 : grille sur 2 colonnes, synthèse dans la colonne de droite
+ * Page 2 PSE 1 : grille sur 2 colonnes dans un cadre, synthèse en pied de page
+ * (même pied que le PSE 2, conforme au référentiel)
  */
 const Pse1EvaluationPage: React.FC<EvaluationPageProps> = ({
   lastName,
@@ -581,81 +595,59 @@ const Pse1EvaluationPage: React.FC<EvaluationPageProps> = ({
   end,
 }) => (
   <Page size="A4" style={styles.evalPage}>
-    <View style={styles.titleBar}>
-      <Text style={styles.barTitle}>
-        Evaluation des techniques et procédures PSE1
-      </Text>
-    </View>
-    <View style={styles.identityBar}>
-      <Text style={[styles.identityText, { flex: 1 }]}>Nom : {lastName}</Text>
-      <Text style={[styles.identityText, { flex: 1 }]}>
-        Prénom : {firstName}
-      </Text>
-      <Text style={[styles.identityText, { flex: 1.2 }]}>
-        date : {formatDateRange(start, end)}
-      </Text>
-    </View>
+    <IdentityBar
+      lastName={lastName}
+      firstName={firstName}
+      start={start}
+      end={end}
+    />
 
-    <View style={[styles.row, { gap: 24 }]}>
-      <TechniqueTable
-        sections={PSE1_LEFT}
-        theme={PSE1_THEME}
-        style={{ flex: 1 }}
-      />
-      <View style={{ flex: 1 }}>
+    <View style={styles.pse1Frame}>
+      <Text style={[styles.barTitle, { marginBottom: 6 }]}>
+        Evaluation des techniques et procédures PSE 1
+      </Text>
+      {/* Chaque colonne garde sa hauteur : pas de cadre étiré sous la plus courte */}
+      <View style={[styles.row, { gap: 24, alignItems: "flex-start" }]}>
+        <View style={{ flex: 1 }}>
+          {PSE1_LEFT.map((group, i) => (
+            <TechniqueTable
+              key={group[0].title}
+              sections={group}
+              theme={PSE1_THEME}
+              showHeader={i === 0}
+              style={i > 0 ? { marginTop: 10 } : undefined}
+            />
+          ))}
+        </View>
         <TechniqueTable
           sections={PSE1_RIGHT}
-          theme={{ ...PSE1_THEME, categoryColor: "#5b9bd5" }}
+          theme={PSE1_THEME}
+          style={{ flex: 1 }}
         />
-        <View style={[styles.sideBox, { marginTop: 0, borderTop: 0, flex: 1 }]}>
-          <Text style={[styles.footnote, { marginTop: 24 }]}>
-            *Mettre une croix lorsque l'apprenant a réalisé correctement la
-            technique lors de la phase d'apprentissage ou la mise en situation
-            (cas concret)
-          </Text>
-        </View>
-        <View
-          style={[styles.sideBox, { marginTop: 0, borderTop: 0, flex: 1.6 }]}
-        >
-          <Text style={{ fontSize: 9, fontFamily: BOLD, marginTop: 30 }}>
-            Synthèse de l'évaluation des techniques et procédures :
-          </Text>
-          <Text style={{ fontSize: 9, marginTop: 12 }}>
-            Chaque technique a été réalisée correctement au moins 1 fois :
-          </Text>
-          <View
-            style={[styles.row, { justifyContent: "center", marginTop: 14 }]}
-          >
-            <Checkbox label="OUI" />
-            <Checkbox label="NON" />
-          </View>
-          <Text style={{ fontSize: 9, marginTop: 50 }}>Observations :</Text>
-        </View>
       </View>
     </View>
+
+    <Text style={[styles.footnote, { marginTop: 3 }]}>
+      *Mettre une croix lorsque le participant a réalisé correctement la
+      technique lors de l'apprentissage ou la mise en situation (cas concret).
+    </Text>
+
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryLabel}>
+        Chaque technique a été réalisée correctement au moins 1 fois
+      </Text>
+      <Text style={styles.summaryChoice}>OUI</Text>
+      <Text style={styles.summaryChoice}>NON</Text>
+    </View>
+    <Text style={styles.observations}>Observations :</Text>
   </Page>
 );
 
 /**
- * Page 2 PSE 2 : deux tableaux sur une colonne
+ * Page 2 PSE 2 : deux tableaux sur une colonne (identité en bas de page 1)
  */
-const Pse2EvaluationPage: React.FC<EvaluationPageProps> = ({
-  lastName,
-  firstName,
-  start,
-  end,
-}) => (
+const Pse2EvaluationPage: React.FC = () => (
   <Page size="A4" style={styles.evalPage}>
-    <View style={styles.identityBar}>
-      <Text style={[styles.identityText, { flex: 1 }]}>Nom : {lastName}</Text>
-      <Text style={[styles.identityText, { flex: 1 }]}>
-        Prénom : {firstName}
-      </Text>
-      <Text style={[styles.identityText, { flex: 1.4 }]}>
-        Formation du {start} au {end}
-      </Text>
-    </View>
-
     <View style={styles.pse2Frame}>
       <Text style={[styles.barTitle, { fontSize: 10, marginBottom: 8 }]}>
         EVALUATION DES TECHNIQUES ET PROCEDURES PSE2
@@ -725,11 +717,12 @@ export const FisePsePages: React.FC<FisePsePagesProps> = ({
         inscription={inscription}
         equipePedagogique={equipePedagogique}
         responsablePedagogique={responsablePedagogique}
+        identity={level === "PSE2" ? evaluationProps : undefined}
       />
       {level === "PSE1" ? (
         <Pse1EvaluationPage {...evaluationProps} />
       ) : (
-        <Pse2EvaluationPage {...evaluationProps} />
+        <Pse2EvaluationPage />
       )}
     </>
   );

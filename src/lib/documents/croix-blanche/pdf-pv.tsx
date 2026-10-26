@@ -1,8 +1,8 @@
 import React from "react";
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import dayjs from "dayjs";
-import { Slot, Inscription } from "../types";
-import { downloadPdfDocument } from "./pdf-download";
+import type { Slot, Inscription } from "@/app/admin/training/types";
+import { downloadPdfDocument } from "@/app/admin/training/lib/pdf-download";
 
 // ──────────────────────────────────────────────────────────────────────────
 // STYLES
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
 // COMPONENT
 // ──────────────────────────────────────────────────────────────────────────
 
-interface PvPageProps {
+export interface PvPageProps {
   session: {
     title: string;
     location: string;
@@ -135,9 +135,15 @@ interface PvPageProps {
     lastName: string | null;
     firstName: string | null;
   };
+  /** Cf. documentHeaderLines() */
+  headerLines: string[];
 }
 
-const PvPage: React.FC<PvPageProps> = ({ session, inscriptions }) => {
+const PvPage: React.FC<PvPageProps> = ({
+  session,
+  inscriptions,
+  headerLines,
+}) => {
   const startDateStr = session.startDate
     ? dayjs(session.startDate).format("DD/MM/YYYY")
     : "_______________";
@@ -159,20 +165,12 @@ const PvPage: React.FC<PvPageProps> = ({ session, inscriptions }) => {
     <Page size="A4" style={styles.page}>
       <Text style={styles.mainTitle}>PROCES VERBAL DE LA FORMATION</Text>
 
-      <Text style={styles.subTitle}>
-        COMITE DEPARTEMENTAL RHONE LYON METROPOLE
-      </Text>
-      <Text style={styles.subTitle}>
-        DES SECOURISTES FRANCAIS CROIX BLANCHE
-      </Text>
-      <Text
-        style={[
-          styles.subTitle,
-          { marginTop: 10, textAlign: "center", marginLeft: 0 },
-        ]}
-      >
-        Association de LYON
-      </Text>
+      {/* En-tête saisi par l'organisme (comité, fédération, association…) */}
+      {headerLines.map((line, idx) => (
+        <Text key={idx} style={styles.subTitle}>
+          {line}
+        </Text>
+      ))}
 
       {/* Trainees Table */}
       <View style={styles.table}>
@@ -353,7 +351,7 @@ const PvPage: React.FC<PvPageProps> = ({ session, inscriptions }) => {
   );
 };
 
-const PvDocument: React.FC<PvPageProps> = (props) => (
+export const PvDocument: React.FC<PvPageProps> = (props) => (
   <Document>
     <PvPage {...props} />
   </Document>
