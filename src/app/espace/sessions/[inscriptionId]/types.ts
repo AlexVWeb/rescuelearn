@@ -18,3 +18,34 @@ export interface DocumentView {
   title: string;
   sizeLabel: string;
 }
+
+export interface PreReadView {
+  id: string;
+  source: "kit" | "session";
+  title: string;
+  sizeLabel: string;
+  /** « 5 novembre » si pas encore disponible */
+  availableLabel: string | null;
+  opened: boolean;
+}
+
+export interface ReadinessView {
+  done: number;
+  total: number;
+  items: {
+    id: string;
+    label: string;
+    kind: "terms" | "preread" | "manual";
+    done: boolean;
+  }[];
+}
+
+export interface PracticalInfoView {
+  location: string;
+  accessInfo: string | null;
+  mapsUrl: string;
+  days: { dayLabel: string; ranges: string[] }[];
+  toBring: string[];
+  formateurs: string[];
+  organisme: { name: string; email: string | null; phone: string | null };
+}

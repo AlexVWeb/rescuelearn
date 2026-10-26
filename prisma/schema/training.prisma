@@ -33,12 +33,48 @@ model Organisme {
   tvaNumber             String?
   metadata              String?
   slug                  String            @unique
+  // CGV courantes (PDF R2 privé) ; version = SHA-256 du PDF
+  termsFileKey          String?
+  termsVersion          String?
+  termsUpdatedAt        DateTime?
   invitations           Invitation[]
   members               Member[]
   modules               OrganismeModule[]
   trainees              Trainee[]
   trainingSessions      TrainingSession[]
   users                 User[]
+  welcomeKits           WelcomeKit[]
+}
+
+// Modèle d'accueil par type de formation, résolu à la volée par les sessions
+model WelcomeKit {
+  id          String               @id @default(cuid())
+  organismeId String
+  type        String
+  // Une ligne = une puce
+  toBring     String?
+  // [{ id, label }] : ids stables, les coches des stagiaires y sont rattachées
+  checklist   Json                 @default("[]")
+  updatedAt   DateTime             @updatedAt
+  documents   WelcomeKitDocument[]
+  organisme   Organisme            @relation(fields: [organismeId], references: [id], onDelete: Cascade)
+
+  @@unique([organismeId, type])
+}
+
+model WelcomeKitDocument {
+  id                String     @id @default(cuid())
+  welcomeKitId      String
+  title             String
+  fileKey           String
+  mimeType          String
+  size              Int
+  // null = visible dès l'envoi des accès ; N = minuit (Paris) de startDate - N jours
+  visibleDaysBefore Int?
+  createdAt         DateTime   @default(now())
+  welcomeKit        WelcomeKit @relation(fields: [welcomeKitId], references: [id], onDelete: Cascade)
+
+  @@index([welcomeKitId])
 }
 
 /// Module fonctionnel d'un organisme. Absence de ligne = défauts du registre
@@ -98,6 +134,9 @@ model TrainingSession {
   attestationsPublishedAt  DateTime?
   documents                SessionDocument[]
   attestationSignatures    AttestationSignature[]
+  // Kit d'accueil : propre au lieu / à la session
+  accessInfo               String?
+  toBringExtra             String?
 
   @@index([responsablePedagogiqueId])
 }
@@ -208,6 +247,16 @@ model Inscription {
   evaluationRemindersOptOut Boolean              @default(false)
   evaluationResponses       EvaluationResponse[]
   evaluationReminders       EvaluationReminder[]
+  // { [itemId]: ISO date } ; coches orphelines ignorées
+  checklistDone             Json?
+  // Preuve d'acceptation des CGV : version et PDF exacts, figés
+  termsAcceptedAt           DateTime?
+  termsVersion              String?
+  termsFileKey              String?
+  termsAcceptedIp           String?
+  termsAcceptedUa           String?
+  // { [documentId]: ISO date } au premier téléchargement d'une pré-lecture
+  prereadOpenedAt           Json?
 
   @@unique([traineeId, trainingSessionId])
   @@index([groupId])
@@ -239,6 +288,8 @@ model SessionDocument {
   size              Int
   // null = visible dès l'envoi des accès
   visibleFrom       DateTime?
+  // "preparation" (à lire avant) | "support"
+  kind              String          @default("support")
   createdAt         DateTime        @default(now())
   trainingSession   TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
 

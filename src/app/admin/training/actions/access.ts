@@ -7,6 +7,7 @@ import {
   deliverAccess,
   deliverAccessToAll,
 } from "@/lib/trainee-access-delivery";
+import { hasPreparation } from "@/lib/welcome-kit-service";
 
 async function findOwnInscription(inscriptionId: string) {
   const user = await requireOrganisme();
@@ -55,7 +56,11 @@ export async function revokeAccessLink(inscriptionId: string) {
 
 export async function sendAccessLink(inscriptionId: string) {
   const inscription = await findOwnInscription(inscriptionId);
-  const outcome = await deliverAccess(inscription, inscription.trainingSession);
+  const session = inscription.trainingSession;
+  const outcome = await deliverAccess(inscription, {
+    ...session,
+    hasPreparation: await hasPreparation(session),
+  });
 
   if (outcome === "missing_email") {
     throw new Error("Ce stagiaire n'a pas d'adresse email");
@@ -88,5 +93,8 @@ export async function sendAccessLinks(
       !inscription.accessTokenHash
   );
 
-  return deliverAccessToAll(targets, session);
+  return deliverAccessToAll(targets, {
+    ...session,
+    hasPreparation: await hasPreparation(session),
+  });
 }

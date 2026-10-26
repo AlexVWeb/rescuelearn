@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +21,7 @@ const TABS = [
   "membres",
   "documents",
   "modeles",
+  "accueil",
 ] as const;
 type OrganismeTab = (typeof TABS)[number];
 
@@ -37,6 +38,8 @@ interface OrganismeDetailClientProps {
   modules: OrganismeModuleState[];
   /** Super admin : gère la disponibilité des modules */
   canManageAvailability: boolean;
+  /** « Mon organisme » uniquement : les actions portent sur l'organisme courant */
+  welcomeTab?: ReactNode;
 }
 
 export function OrganismeDetailClient({
@@ -46,6 +49,7 @@ export function OrganismeDetailClient({
   logoBase64,
   modules,
   canManageAvailability,
+  welcomeTab,
 }: OrganismeDetailClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -53,9 +57,10 @@ export function OrganismeDetailClient({
   const [loading, setLoading] = useState(false);
 
   const tabParam = searchParams.get("tab");
-  const activeTab: OrganismeTab = isOrganismeTab(tabParam)
-    ? tabParam
-    : "profil";
+  const activeTab: OrganismeTab =
+    isOrganismeTab(tabParam) && (tabParam !== "accueil" || welcomeTab)
+      ? tabParam
+      : "profil";
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -90,6 +95,9 @@ export function OrganismeDetailClient({
         <TabsTrigger value="membres">Membres</TabsTrigger>
         <TabsTrigger value="documents">Documents</TabsTrigger>
         <TabsTrigger value="modeles">Modèles documents</TabsTrigger>
+        {welcomeTab && (
+          <TabsTrigger value="accueil">Accueil stagiaires</TabsTrigger>
+        )}
       </TabsList>
 
       <TabsContent value="profil" className="mt-6">
@@ -193,6 +201,12 @@ export function OrganismeDetailClient({
           logoBase64={logoBase64}
         />
       </TabsContent>
+
+      {welcomeTab && (
+        <TabsContent value="accueil" className="mt-6 space-y-6">
+          {welcomeTab}
+        </TabsContent>
+      )}
     </Tabs>
   );
 }

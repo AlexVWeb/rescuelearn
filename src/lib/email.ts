@@ -417,6 +417,7 @@ export const EmailService = {
     sessionLocation,
     accessUrl,
     reason = "access",
+    hasPreparation = false,
     smtp,
   }: {
     to: string;
@@ -428,6 +429,8 @@ export const EmailService = {
     accessUrl: string;
     /** "attestation" : prévient que l'attestation est disponible */
     reason?: "access" | "attestation";
+    /** Kit d'accueil ou CGV : invite à préparer la venue depuis l'espace */
+    hasPreparation?: boolean;
     smtp?: SMTPConfig;
   }) {
     const isAttestation = reason === "attestation";
@@ -440,7 +443,11 @@ export const EmailService = {
       : "Votre espace de formation est prêt";
     const intro = isAttestation
       ? `${organismeName} a publié votre attestation de fin de formation. Vous pouvez la télécharger depuis votre espace.`
-      : `${organismeName} vous ouvre l'accès à votre espace de formation. Vous pourrez y émarger pendant la formation (avec le code affiché en salle), télécharger les supports et, à la fin, votre attestation.`;
+      : `${organismeName} vous ouvre l'accès à votre espace de formation. Vous pourrez y émarger pendant la formation (avec le code affiché en salle), télécharger les supports et, à la fin, votre attestation.${
+          hasPreparation
+            ? " Préparez votre venue : infos pratiques, documents à lire et conditions à accepter vous y attendent."
+            : ""
+        }`;
     const cta = isAttestation
       ? "Télécharger mon attestation"
       : "Accéder à mon espace";

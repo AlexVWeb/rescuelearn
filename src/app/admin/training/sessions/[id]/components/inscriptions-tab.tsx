@@ -33,6 +33,8 @@ import { InscriptionStatusBadge } from "./inscription-status-badge";
 import { AccessMenu } from "./access/access-menu";
 import { AccessStatusBadge } from "./access/access-status-badge";
 import { SendAccessButton } from "./access/send-access-button";
+import { ReadinessBadge } from "./welcome/readiness-badge";
+import type { SessionReadiness } from "../../../actions";
 
 interface InscriptionsTabProps {
   sessionId: string;
@@ -40,6 +42,8 @@ interface InscriptionsTabProps {
   inscriptions: Inscription[];
   allTrainees: Trainee[];
   maxTrainees: number;
+  /** null : la session n'a ni kit ni CGV, pas de suivi de préparation */
+  readiness?: Record<string, SessionReadiness> | null;
 }
 
 export function InscriptionsTab({
@@ -48,6 +52,7 @@ export function InscriptionsTab({
   inscriptions,
   allTrainees,
   maxTrainees,
+  readiness,
 }: InscriptionsTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -213,6 +218,12 @@ export function InscriptionsTab({
                   </div>
 
                   <div className="flex flex-wrap items-center justify-end gap-2 self-end sm:self-auto">
+                    {readiness?.[inscription.id] && (
+                      <ReadinessBadge
+                        readiness={readiness[inscription.id]}
+                        traineeName={`${inscription.trainee?.firstName ?? ""} ${inscription.trainee?.lastName ?? ""}`.trim()}
+                      />
+                    )}
                     <AccessStatusBadge inscription={inscription} />
                     <InscriptionStatusBadge status={inscription.status} />
                     <AccessMenu inscription={inscription} />

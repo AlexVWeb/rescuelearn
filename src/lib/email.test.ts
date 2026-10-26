@@ -209,6 +209,41 @@ describe("EmailService", () => {
       expect(callArgs.html).toContain("Accéder à mon espace");
       expect(callArgs.text).toContain("https://app.test/espace/acces#t=abc");
     });
+
+    const base = {
+      to: "stagiaire@test.com",
+      firstName: null,
+      organismeName: "Secours 31",
+      sessionTitle: "PSC",
+      sessionDates: "12 novembre 2026",
+      sessionLocation: "Toulouse",
+      accessUrl: "https://app.test/espace/acces#t=abc",
+    };
+    const PREPARE = "Préparez votre venue";
+
+    function sentText() {
+      const calls = vi.mocked(nodemailer.createTransport().sendMail).mock.calls;
+      return (calls[calls.length - 1][0] as SendMailOptions).text as string;
+    }
+
+    it("ajoute la ligne de préparation si hasPreparation", async () => {
+      await EmailService.sendTraineeAccess({ ...base, hasPreparation: true });
+      expect(sentText()).toContain(PREPARE);
+    });
+
+    it("n'ajoute pas la ligne sans préparation", async () => {
+      await EmailService.sendTraineeAccess(base);
+      expect(sentText()).not.toContain(PREPARE);
+    });
+
+    it("n'ajoute pas la ligne pour l'attestation", async () => {
+      await EmailService.sendTraineeAccess({
+        ...base,
+        reason: "attestation",
+        hasPreparation: true,
+      });
+      expect(sentText()).not.toContain(PREPARE);
+    });
   });
 
   describe("sendEvaluationInvitation", () => {

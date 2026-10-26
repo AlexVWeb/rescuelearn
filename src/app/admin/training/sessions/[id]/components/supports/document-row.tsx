@@ -25,6 +25,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { deleteDocument, updateDocument } from "@/app/admin/training/actions";
 import type { SessionDocument } from "@/app/admin/training/types";
 import {
@@ -53,11 +60,14 @@ export function DocumentRow({
   function save(formData: FormData) {
     const title = String(formData.get("title") ?? "");
     const visibleAt = String(formData.get("visibleFrom") ?? "");
+    const kind =
+      formData.get("kind") === "preparation" ? "preparation" : "support";
     startTransition(async () => {
       try {
         await updateDocument(document.id, {
           title,
           visibleFrom: fromDateTimeLocalValue(visibleAt),
+          kind,
         });
         setEditOpen(false);
         router.refresh();
@@ -92,6 +102,9 @@ export function DocumentRow({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {document.kind === "preparation" && (
+          <Badge variant="secondary">À lire avant</Badge>
+        )}
         {hidden && (
           <Badge variant="outline">
             Visible le {formatVisibleFrom(visibleFrom!)}
@@ -134,6 +147,18 @@ export function DocumentRow({
                 maxLength={120}
                 required
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`kind-${document.id}`}>Type</Label>
+              <Select name="kind" defaultValue={document.kind}>
+                <SelectTrigger id={`kind-${document.id}`} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="support">Support de cours</SelectItem>
+                  <SelectItem value="preparation">À lire avant</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor={`visible-${document.id}`}>

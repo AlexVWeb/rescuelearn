@@ -15,6 +15,7 @@ export const SESSION_PHASES = {
       programme: "Programme",
       stagiaires: "Stagiaires",
       groupes: "Groupes",
+      accueil: "Accueil",
       supports: "Supports",
     },
   },

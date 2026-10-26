@@ -226,6 +226,8 @@ export async function getDocumentDownloadUrl(
     where: {
       id: documentId,
       trainingSessionId: inscription.trainingSessionId,
+      // Les pré-lectures passent par getPreReadDownloadUrl (date de lecture)
+      kind: "support",
       OR: [{ visibleFrom: null }, { visibleFrom: { lte: new Date() } }],
     },
   });

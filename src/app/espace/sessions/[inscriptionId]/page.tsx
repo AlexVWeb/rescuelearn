@@ -12,10 +12,17 @@ import {
 import { getEvaluationContexts } from "@/lib/evaluation/service";
 import { getAttestationState } from "@/lib/trainee-attestation";
 import { checkInscriptionAccess } from "@/lib/trainee-access";
+import {
+  isBeforeSession,
+  parseDateMap,
+  resolveToBring,
+} from "@/lib/welcome-kit";
+import { inscriptionReadiness, loadWelcome } from "@/lib/welcome-kit-service";
 import { getTraineeInscription, requireTrainee } from "@/lib/trainee-session";
 import { EspaceHeader } from "../../components/espace-header";
 import {
   formatFileSize,
+  formatParisDay,
   formatSessionDates,
   formatSlotDay,
   formatTimeLabel,
@@ -23,10 +30,18 @@ import {
 import { AttestationCard } from "./components/attestation-card";
 import { DocumentsList } from "./components/documents-list";
 import { EvaluationsCard } from "./components/evaluations-card";
+import { PracticalInfo } from "./components/practical-info";
+import { PrepareCard } from "./components/prepare-card";
+import { PrereadList } from "./components/preread-list";
 import { SignSlotCard } from "./components/sign-slot-card";
 import { SlotList } from "./components/slot-list";
 import { SlotRefresh } from "./components/slot-refresh";
-import type { DocumentView, SlotView } from "./types";
+import type {
+  DocumentView,
+  PracticalInfoView,
+  PreReadView,
+  SlotView,
+} from "./types";
 import { visibleEvaluations } from "./evaluations/view";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +69,8 @@ export default async function EspaceSessionPage({
     nextDocument,
     otherInscriptions,
     evaluationContexts,
+    welcome,
+    formateurs,
   ] = await Promise.all([
     prisma.slot.findMany({
       where: { trainingSessionId: session.id },
@@ -63,13 +80,18 @@ export default async function EspaceSessionPage({
     prisma.sessionDocument.findMany({
       where: {
         trainingSessionId: session.id,
+        kind: "support",
         OR: [{ visibleFrom: null }, { visibleFrom: { lte: now } }],
       },
       orderBy: { createdAt: "asc" },
     }),
     // Prochain document programmé : la page se rafraîchit à son heure
     prisma.sessionDocument.findFirst({
-      where: { trainingSessionId: session.id, visibleFrom: { gt: now } },
+      where: {
+        trainingSessionId: session.id,
+        kind: "support",
+        visibleFrom: { gt: now },
+      },
       orderBy: { visibleFrom: "asc" },
       select: { visibleFrom: true },
     }),
@@ -82,6 +104,13 @@ export default async function EspaceSessionPage({
       include: { trainee: true, trainingSession: true },
     }),
     getEvaluationContexts(inscription, now),
+    loadWelcome(session),
+    // Nom seul : pas d'exposition des coordonnées personnelles du formateur
+    prisma.trainingSessionFormateur.findMany({
+      where: { trainingSessionId: session.id },
+      orderBy: { createdAt: "asc" },
+      include: { user: { select: { firstName: true, lastName: true } } },
+    }),
   ]);
 
   // Mêmes règles que /espace : sinon « Mes formations » redirigerait ici en boucle
@@ -121,6 +150,7 @@ export default async function EspaceSessionPage({
   const nextChange = windows
     .flatMap(({ opensAt, closesAt }) => [opensAt, closesAt])
     .concat(nextDocument?.visibleFrom ? [nextDocument.visibleFrom] : [])
+    .concat(welcome.preReads.flatMap((doc) => doc.visibleFrom ?? []))
     .filter((date) => date > now)
     .sort((a, b) => a.getTime() - b.getTime())[0];
 
@@ -131,6 +161,62 @@ export default async function EspaceSessionPage({
   }));
 
   const evaluations = visibleEvaluations(evaluationContexts);
+
+  // --- Kit d'accueil ---
+  const before = isBeforeSession(slots, session.startDate, now);
+  const readiness = inscriptionReadiness(welcome, inscription);
+  const showPrepare = readiness.total > 0;
+  const prereadOpened = parseDateMap(inscription.prereadOpenedAt);
+  const preReadViews: PreReadView[] = welcome.preReads.map((doc) => ({
+    id: doc.id,
+    source: doc.source,
+    title: doc.title,
+    sizeLabel: formatFileSize(doc.size),
+    availableLabel:
+      doc.visibleFrom && doc.visibleFrom > now
+        ? formatParisDay(doc.visibleFrom)
+        : null,
+    opened: doc.id in prereadOpened,
+  }));
+
+  const days = new Map<string, string[]>();
+  for (const slot of slots) {
+    const dayLabel = formatSlotDay(slot.date);
+    const range = `${formatTimeLabel(slot.startTime)}–${formatTimeLabel(slot.endTime)}`;
+    days.set(dayLabel, [...(days.get(dayLabel) ?? []), range]);
+  }
+  const practical: PracticalInfoView = {
+    location: session.location,
+    accessInfo: session.accessInfo,
+    mapsUrl: `https://maps.google.com/?q=${encodeURIComponent(session.location)}`,
+    days: [...days].map(([dayLabel, ranges]) => ({ dayLabel, ranges })),
+    toBring: resolveToBring(welcome.toBring, session.toBringExtra),
+    formateurs: formateurs
+      .map(({ user }) =>
+        [user.firstName, user.lastName].filter(Boolean).join(" ")
+      )
+      .filter(Boolean),
+    organisme: {
+      name: session.organisme.name,
+      email: session.organisme.email,
+      phone: session.organisme.phone,
+    },
+  };
+
+  const prepareCard = showPrepare && (
+    <PrepareCard
+      inscriptionId={inscription.id}
+      readiness={readiness}
+      termsAcceptedLabel={
+        inscription.termsAcceptedAt
+          ? formatParisDay(inscription.termsAcceptedAt)
+          : null
+      }
+    />
+  );
+  const prereadList = preReadViews.length > 0 && (
+    <PrereadList inscriptionId={inscription.id} documents={preReadViews} />
+  );
 
   const attestationState = getAttestationState(
     session.attestationsPublishedAt,
@@ -167,16 +253,26 @@ export default async function EspaceSessionPage({
         </div>
 
         <div className="grid gap-6 md:grid-cols-[3fr_2fr] md:items-start">
-          <div className="space-y-6">
-            {currentSlot && (
-              <SignSlotCard
-                key={currentSlot.id}
-                inscriptionId={inscription.id}
-                slot={currentSlot}
-              />
-            )}
-            <SlotList slots={slotViews} />
-          </div>
+          {before ? (
+            <div className="space-y-6">
+              {prepareCard}
+              <PracticalInfo info={practical} />
+              {prereadList}
+              <SlotList slots={slotViews} />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {currentSlot && (
+                <SignSlotCard
+                  key={currentSlot.id}
+                  inscriptionId={inscription.id}
+                  slot={currentSlot}
+                />
+              )}
+              <SlotList slots={slotViews} />
+              <PracticalInfo info={practical} collapsed />
+            </div>
+          )}
 
           <div className="space-y-6">
             {evaluations.length > 0 && (
@@ -186,6 +282,7 @@ export default async function EspaceSessionPage({
                 remindersEnabled={!inscription.evaluationRemindersOptOut}
               />
             )}
+            {!before && prereadList}
             {documentViews.length > 0 && (
               <DocumentsList
                 inscriptionId={inscription.id}
