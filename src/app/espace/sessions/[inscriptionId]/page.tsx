@@ -9,6 +9,7 @@ import {
   getSlotWindow,
   SLOT_TIMEZONE,
 } from "@/lib/slot-window";
+import { getEvaluationContexts } from "@/lib/evaluation/service";
 import { getAttestationState } from "@/lib/trainee-attestation";
 import { checkInscriptionAccess } from "@/lib/trainee-access";
 import { getTraineeInscription, requireTrainee } from "@/lib/trainee-session";
@@ -21,10 +22,12 @@ import {
 } from "../../lib/format";
 import { AttestationCard } from "./components/attestation-card";
 import { DocumentsList } from "./components/documents-list";
+import { EvaluationsCard } from "./components/evaluations-card";
 import { SignSlotCard } from "./components/sign-slot-card";
 import { SlotList } from "./components/slot-list";
 import { SlotRefresh } from "./components/slot-refresh";
 import type { DocumentView, SlotView } from "./types";
+import { visibleEvaluations } from "./evaluations/view";
 
 export const dynamic = "force-dynamic";
 
@@ -45,36 +48,41 @@ export default async function EspaceSessionPage({
   const session = inscription.trainingSession;
   const now = new Date();
 
-  const [slots, documents, nextDocument, otherInscriptions] = await Promise.all(
-    [
-      prisma.slot.findMany({
-        where: { trainingSessionId: session.id },
-        orderBy: [{ date: "asc" }, { startTime: "asc" }],
-        include: { emargements: { where: { inscriptionId: inscription.id } } },
-      }),
-      prisma.sessionDocument.findMany({
-        where: {
-          trainingSessionId: session.id,
-          OR: [{ visibleFrom: null }, { visibleFrom: { lte: now } }],
-        },
-        orderBy: { createdAt: "asc" },
-      }),
-      // Prochain document programmé : la page se rafraîchit à son heure
-      prisma.sessionDocument.findFirst({
-        where: { trainingSessionId: session.id, visibleFrom: { gt: now } },
-        orderBy: { visibleFrom: "asc" },
-        select: { visibleFrom: true },
-      }),
-      prisma.inscription.findMany({
-        where: {
-          traineeId: inscription.traineeId,
-          accessTokenHash: { not: null },
-          id: { not: inscription.id },
-        },
-        include: { trainee: true, trainingSession: true },
-      }),
-    ]
-  );
+  const [
+    slots,
+    documents,
+    nextDocument,
+    otherInscriptions,
+    evaluationContexts,
+  ] = await Promise.all([
+    prisma.slot.findMany({
+      where: { trainingSessionId: session.id },
+      orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      include: { emargements: { where: { inscriptionId: inscription.id } } },
+    }),
+    prisma.sessionDocument.findMany({
+      where: {
+        trainingSessionId: session.id,
+        OR: [{ visibleFrom: null }, { visibleFrom: { lte: now } }],
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    // Prochain document programmé : la page se rafraîchit à son heure
+    prisma.sessionDocument.findFirst({
+      where: { trainingSessionId: session.id, visibleFrom: { gt: now } },
+      orderBy: { visibleFrom: "asc" },
+      select: { visibleFrom: true },
+    }),
+    prisma.inscription.findMany({
+      where: {
+        traineeId: inscription.traineeId,
+        accessTokenHash: { not: null },
+        id: { not: inscription.id },
+      },
+      include: { trainee: true, trainingSession: true },
+    }),
+    getEvaluationContexts(inscription, now),
+  ]);
 
   // Mêmes règles que /espace : sinon « Mes formations » redirigerait ici en boucle
   const hasOtherSessions = otherInscriptions.some(
@@ -121,6 +129,8 @@ export default async function EspaceSessionPage({
     title: document.title,
     sizeLabel: formatFileSize(document.size),
   }));
+
+  const evaluations = visibleEvaluations(evaluationContexts);
 
   const attestationState = getAttestationState(
     session.attestationsPublishedAt,
@@ -169,6 +179,13 @@ export default async function EspaceSessionPage({
           </div>
 
           <div className="space-y-6">
+            {evaluations.length > 0 && (
+              <EvaluationsCard
+                inscriptionId={inscription.id}
+                evaluations={evaluations}
+                remindersEnabled={!inscription.evaluationRemindersOptOut}
+              />
+            )}
             {documentViews.length > 0 && (
               <DocumentsList
                 inscriptionId={inscription.id}

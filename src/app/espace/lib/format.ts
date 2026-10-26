@@ -37,3 +37,14 @@ export function formatFileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} Ko`;
   return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} Mo`;
 }
+
+const parisDayFormat = new Intl.DateTimeFormat("fr-FR", {
+  day: "numeric",
+  month: "long",
+  timeZone: "Europe/Paris",
+});
+
+/** « 20 novembre », jour calendaire à Paris (instant, pas une @db.Date) */
+export function formatParisDay(date: Date) {
+  return parisDayFormat.format(date);
+}

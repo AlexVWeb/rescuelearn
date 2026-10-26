@@ -24,7 +24,11 @@ export const SESSION_PHASES = {
   },
   close: {
     label: "Clôturer",
-    sections: { resultats: "Résultats", documents: "Documents" },
+    sections: {
+      resultats: "Résultats",
+      documents: "Documents",
+      evaluations: "Évaluations",
+    },
   },
 } as const;
 

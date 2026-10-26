@@ -1,13 +1,22 @@
-import { getAllSessions } from "../actions";
+import { getAllSessions, getEvaluationQuality } from "../actions";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
-import { columns } from "./components/columns";
+import { columns, type SessionRow } from "./components/columns";
 import { TrainingSession } from "../types";
 import Link from "next/link";
 
 export default async function SessionsPage() {
-  const sessions = (await getAllSessions()) as unknown as TrainingSession[];
+  const [allSessions, quality] = await Promise.all([
+    getAllSessions(),
+    getEvaluationQuality(),
+  ]);
+  const sessions: SessionRow[] = (
+    allSessions as unknown as TrainingSession[]
+  ).map((session) => ({
+    ...session,
+    satisfaction: quality.bySession[session.id] ?? null,
+  }));
 
   return (
     <div className="space-y-6">
