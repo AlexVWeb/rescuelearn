@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrganismeForm } from "@/components/admin/organisme-form";
@@ -12,6 +12,19 @@ import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
 import { Organisme, OrganismeMember } from "@/types/organisme";
 import { updateOrganismeAction } from "@/app/actions/organisme.actions";
 import { InvitationInfo } from "./components/membres-tab";
+
+const TABS = [
+  "profil",
+  "configuration",
+  "membres",
+  "documents",
+  "modeles",
+] as const;
+type OrganismeTab = (typeof TABS)[number];
+
+function isOrganismeTab(value: string | null): value is OrganismeTab {
+  return TABS.includes(value as OrganismeTab);
+}
 
 interface OrganismeDetailClientProps {
   organisme: Organisme;
@@ -28,7 +41,22 @@ export function OrganismeDetailClient({
   logoBase64,
 }: OrganismeDetailClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+
+  const tabParam = searchParams.get("tab");
+  const activeTab: OrganismeTab = isOrganismeTab(tabParam)
+    ? tabParam
+    : "profil";
+
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    // API History native : Next synchronise useSearchParams sans refaire le
+    // rendu serveur, et le bouton précédent revient à l'onglet d'avant
+    window.history.pushState(null, "", `${pathname}?${params.toString()}`);
+  };
 
   const handleSubmit = async (data: OrganismeFormValues) => {
     setLoading(true);
@@ -48,7 +76,7 @@ export function OrganismeDetailClient({
   };
 
   return (
-    <Tabs defaultValue="profil">
+    <Tabs value={activeTab} onValueChange={handleTabChange}>
       <TabsList>
         <TabsTrigger value="profil">Profil</TabsTrigger>
         <TabsTrigger value="configuration">Configuration</TabsTrigger>
