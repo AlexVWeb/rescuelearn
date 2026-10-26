@@ -23,6 +23,7 @@ import { GroupsTab } from "../[id]/components/groups";
 import { boardKey } from "../[id]/components/groups/board-utils";
 import { ResultsSection } from "../[id]/components/close/results-section";
 import { DocumentsSection } from "../[id]/components/close/documents-section";
+import type { DocumentOrganisme } from "@/lib/documents/registry";
 import { SupportsTab } from "../[id]/components/supports/supports-tab";
 import {
   Inscription,
@@ -58,6 +59,7 @@ interface SessionWorkspaceProps {
   assignableFormateurs: SessionFormateurUser[];
   attestationSigning: AttestationSigning;
   organismeLogoBase64?: string | null;
+  organisme: DocumentOrganisme;
 }
 
 // Fondu court à l'affichage d'un panneau, désactivé si mouvement réduit
@@ -71,6 +73,7 @@ export function SessionWorkspace({
   assignableFormateurs,
   attestationSigning,
   organismeLogoBase64,
+  organisme,
 }: SessionWorkspaceProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -269,6 +272,7 @@ export function SessionWorkspace({
             : undefined
         }
         organismeLogoBase64={organismeLogoBase64}
+        organisme={organisme}
       />
     ),
   };

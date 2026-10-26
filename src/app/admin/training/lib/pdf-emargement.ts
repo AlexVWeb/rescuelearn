@@ -6,11 +6,28 @@ import { Slot, Inscription, EMARGEMENT_STATUS } from "../types";
 const L = 14;
 const R = 283;
 
+type EmargementSession = {
+  title: string;
+  location?: string | null;
+  type?: string;
+};
+
 export function generateEmargementPDF(
-  session: { title: string; location?: string | null; type?: string },
+  session: EmargementSession,
   slots: Slot[],
   inscriptions: Inscription[]
 ) {
+  buildEmargementPDF(session, slots, inscriptions).save(
+    `Emargement_${session.title.replace(/\s+/g, "_")}.pdf`
+  );
+}
+
+/** Construit la feuille sans la télécharger (aperçu, export). */
+export function buildEmargementPDF(
+  session: EmargementSession,
+  slots: Slot[],
+  inscriptions: Inscription[]
+): jsPDF {
   const doc = new jsPDF("landscape");
 
   // ── Header box ─────────────────────────────────────────────────────────────
@@ -117,5 +134,5 @@ export function generateEmargementPDF(
     },
   });
 
-  doc.save(`Emargement_${session.title.replace(/\s+/g, "_")}.pdf`);
+  return doc;
 }

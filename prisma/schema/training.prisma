@@ -21,7 +21,9 @@ model Organisme {
   smtpPort              Int?
   smtpSecure            Boolean           @default(true)
   smtpUser              String?
+  federation            Federation?
   federationName        String?
+  documentHeader        String?
   isQualiopi            Boolean           @default(false)
   legalRepFirstName     String?
   legalRepJobTitle      String?
@@ -36,6 +38,20 @@ model Organisme {
   trainees              Trainee[]
   trainingSessions      TrainingSession[]
   users                 User[]
+}
+
+/// Fédération de rattachement : détermine les modèles de documents disponibles
+enum Federation {
+  CROIX_ROUGE
+  FNPC
+  CROIX_BLANCHE
+  ORDRE_DE_MALTE
+  FFSS
+  FNSPF
+  ANPS
+  UNASS
+  SNSM
+  AUTRE
 }
 
 model TrainingSession {

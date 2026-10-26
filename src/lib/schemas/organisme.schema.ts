@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { FEDERATION_VALUES } from "@/lib/documents/federations";
+
+export const DOCUMENT_HEADER_MAX_LENGTH = 500;
+export const DOCUMENT_HEADER_MAX_LINES = 6;
 
 export const organismeSchema = z
   .object({
@@ -28,7 +32,22 @@ export const organismeSchema = z
     // Informations Administratives
     legalStatus: z.string().optional().or(z.literal("")),
     tvaNumber: z.string().optional().or(z.literal("")),
+    federation: z.enum(FEDERATION_VALUES).optional().or(z.literal("")),
     federationName: z.string().optional().or(z.literal("")),
+    documentHeader: z
+      .string()
+      .max(
+        DOCUMENT_HEADER_MAX_LENGTH,
+        `${DOCUMENT_HEADER_MAX_LENGTH} caractères maximum`
+      )
+      .refine(
+        (value) =>
+          value.split(/\r?\n/).filter((line) => line.trim()).length <=
+          DOCUMENT_HEADER_MAX_LINES,
+        `${DOCUMENT_HEADER_MAX_LINES} lignes maximum`
+      )
+      .optional()
+      .or(z.literal("")),
 
     // Certification Qualiopi
     isQualiopi: z.boolean().default(false),

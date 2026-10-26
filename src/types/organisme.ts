@@ -1,4 +1,5 @@
 import { UserRole } from "@/lib/roles";
+import type { Federation } from "@/lib/documents/federations";
 
 export type Organisme = {
   // ... existing fields (truncated in replacement content for brevity but kept in target)
@@ -19,7 +20,9 @@ export type Organisme = {
   legalRepJobTitle: string | null;
   legalStatus: string | null;
   tvaNumber: string | null;
+  federation: Federation | null;
   federationName: string | null;
+  documentHeader: string | null;
   isQualiopi: boolean;
   qualiopiCertifiedBy: string | null;
   retentionYearsActive: number;
