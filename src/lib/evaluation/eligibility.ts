@@ -4,7 +4,11 @@ import type { EvaluationWindowState } from "./window";
 // Seuls les stagiaires présents à au moins un créneau évaluent la formation.
 
 export type EvaluationDenial =
-  "session_cancelled" | "not_attended" | "anonymized" | "no_slots";
+  | "session_cancelled"
+  | "not_attended"
+  | "anonymized"
+  | "no_slots"
+  | "module_disabled";
 
 interface EligibilityInput {
   sessionStatus: string;

@@ -35,9 +35,25 @@ model Organisme {
   slug                  String            @unique
   invitations           Invitation[]
   members               Member[]
+  modules               OrganismeModule[]
   trainees              Trainee[]
   trainingSessions      TrainingSession[]
   users                 User[]
+}
+
+/// Module fonctionnel d'un organisme. Absence de ligne = défauts du registre
+/// (src/lib/organisme-modules/registry.ts). Actif = available && enabled.
+model OrganismeModule {
+  organismeId String
+  module      String
+  /// Décidé par le super admin
+  available   Boolean   @default(true)
+  /// Décidé par l'admin de l'organisme
+  enabled     Boolean   @default(false)
+  updatedAt   DateTime  @updatedAt
+  organisme   Organisme @relation(fields: [organismeId], references: [id], onDelete: Cascade)
+
+  @@id([organismeId, module])
 }
 
 /// Fédération de rattachement : détermine les modèles de documents disponibles

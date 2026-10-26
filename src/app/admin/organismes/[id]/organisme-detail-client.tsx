@@ -12,6 +12,8 @@ import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
 import { Organisme, OrganismeMember } from "@/types/organisme";
 import { updateOrganismeAction } from "@/app/actions/organisme.actions";
 import { InvitationInfo } from "./components/membres-tab";
+import { ModulesCard } from "./components/modules-card";
+import type { OrganismeModuleState } from "@/lib/organisme-modules/resolve";
 
 const TABS = [
   "profil",
@@ -32,6 +34,9 @@ interface OrganismeDetailClientProps {
   invitations: InvitationInfo[];
   /** Logo encodé pour les aperçus PDF */
   logoBase64: string | null;
+  modules: OrganismeModuleState[];
+  /** Super admin : gère la disponibilité des modules */
+  canManageAvailability: boolean;
 }
 
 export function OrganismeDetailClient({
@@ -39,6 +44,8 @@ export function OrganismeDetailClient({
   members,
   invitations,
   logoBase64,
+  modules,
+  canManageAvailability,
 }: OrganismeDetailClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -120,7 +127,12 @@ export function OrganismeDetailClient({
         />
       </TabsContent>
 
-      <TabsContent value="configuration" className="mt-6">
+      <TabsContent value="configuration" className="mt-6 space-y-6">
+        <ModulesCard
+          organismeId={organisme.id}
+          modules={modules}
+          canManageAvailability={canManageAvailability}
+        />
         <OrganismeForm
           defaultValues={{
             ...organisme,

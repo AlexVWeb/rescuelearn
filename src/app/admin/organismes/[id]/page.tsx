@@ -9,6 +9,7 @@ import { getPendingInvitationsAction } from "@/app/actions/invitation.actions";
 import { OrganismeDetailClient } from "./organisme-detail-client";
 import { CopyButton } from "@/components/copy-button";
 import { requireSuperAdmin } from "@/lib/context";
+import { getOrganismeModules } from "@/lib/organisme-modules/service";
 
 export default async function OrganismeDetailPage({
   params,
@@ -18,13 +19,13 @@ export default async function OrganismeDetailPage({
   await requireSuperAdmin();
   const { id } = await params;
 
-  const [organismeResult, membersResult, invitationsResult] = await Promise.all(
-    [
+  const [organismeResult, membersResult, invitationsResult, modules] =
+    await Promise.all([
       getOrganismeByIdAction(id),
       getOrganismeMembersAction(id),
       getPendingInvitationsAction(id),
-    ]
-  );
+      getOrganismeModules(id),
+    ]);
 
   if (!organismeResult.success || !organismeResult.data) {
     notFound();
@@ -69,6 +70,8 @@ export default async function OrganismeDetailPage({
         members={members}
         invitations={invitations}
         logoBase64={logoBase64}
+        modules={modules}
+        canManageAvailability
       />
     </div>
   );

@@ -17,6 +17,7 @@ import {
   buildEvaluationQuality,
   type EvaluationQuality,
 } from "@/lib/evaluation/quality";
+import { isModuleActive } from "@/lib/organisme-modules/service";
 import { parseStoredAnswers } from "@/lib/evaluation/schemas";
 import { RESPONSE_STATUS } from "@/lib/evaluation/service";
 import {
@@ -37,12 +38,14 @@ export interface SessionEvaluationSummary {
 
 /**
  * Synthèse des évaluations d'une session : uniquement des agrégats, jamais
- * de réponse rattachée à un stagiaire. Null pour une session sans créneau.
+ * de réponse rattachée à un stagiaire. Null pour une session sans créneau
+ * ou si le module évaluation de l'organisme est inactif.
  */
 export async function getSessionEvaluations(
   sessionId: string
 ): Promise<SessionEvaluationSummary[] | null> {
   const user = await requireOrganisme();
+  if (!(await isModuleActive(user.organismeId, "evaluation"))) return null;
   const session = await prisma.trainingSession.findFirst({
     where: { id: sessionId, organismeId: user.organismeId },
     select: {
@@ -100,6 +103,9 @@ export async function getSessionEvaluations(
 /** Satisfaction par session et synthèse 12 mois de l'organisme. */
 export async function getEvaluationQuality(): Promise<EvaluationQuality> {
   const user = await requireOrganisme();
+  if (!(await isModuleActive(user.organismeId, "evaluation"))) {
+    return buildEvaluationQuality([]);
+  }
   const sessions = await prisma.trainingSession.findMany({
     where: { organismeId: user.organismeId },
     select: {

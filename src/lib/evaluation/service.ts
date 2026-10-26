@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isModuleActive } from "@/lib/organisme-modules/service";
 import {
   checkEvaluationEligibility,
   type EvaluationDenial,
@@ -29,7 +30,7 @@ export const RESPONSE_STATUS = {
 export interface EvaluationInscription {
   id: string;
   trainee: { isAnonymized: boolean };
-  trainingSession: { id: string; status: string };
+  trainingSession: { id: string; status: string; organismeId: string };
 }
 
 export interface EvaluationContext {
@@ -49,6 +50,19 @@ export async function getEvaluationContexts(
   inscription: EvaluationInscription,
   now: Date = new Date()
 ): Promise<EvaluationContext[]> {
+  // Module désactivé : rien de visible ni de modifiable, données conservées
+  const { organismeId } = inscription.trainingSession;
+  if (!(await isModuleActive(organismeId, "evaluation"))) {
+    return EVALUATION_TYPES.map((type) => ({
+      type,
+      questionnaire: getCurrentQuestionnaire(type),
+      window: null,
+      state: null,
+      denial: "module_disabled",
+      response: null,
+    }));
+  }
+
   const [slots, emargements, responses] = await Promise.all([
     prisma.slot.findMany({
       where: { trainingSessionId: inscription.trainingSession.id },

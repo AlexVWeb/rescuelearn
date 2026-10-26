@@ -154,3 +154,8 @@ export const columns: ColumnDef<SessionRow>[] = [
     },
   },
 ];
+
+/** Colonnes sans satisfaction : module évaluation inactif pour l'organisme. */
+export const columnsWithoutSatisfaction = columns.filter(
+  (column) => column.id !== "satisfaction"
+);

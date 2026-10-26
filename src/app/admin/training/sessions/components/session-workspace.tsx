@@ -63,6 +63,8 @@ interface SessionWorkspaceProps {
   assignableFormateurs: SessionFormateurUser[];
   attestationSigning: AttestationSigning;
   evaluations: SessionEvaluationSummary[] | null;
+  /** Sections masquées (module d'organisme inactif) */
+  hiddenSections: SessionSection[];
   organismeLogoBase64?: string | null;
   organisme: DocumentOrganisme;
 }
@@ -78,6 +80,7 @@ export function SessionWorkspace({
   assignableFormateurs,
   attestationSigning,
   evaluations,
+  hiddenSections,
   organismeLogoBase64,
   organisme,
 }: SessionWorkspaceProps) {
@@ -95,7 +98,8 @@ export function SessionWorkspace({
       section: searchParams.get("section"),
       tab: searchParams.get("tab"),
     },
-    session.status
+    session.status,
+    hiddenSections
   );
   // `?edit=1` (liste des sessions) et l'ancien `?tab=settings` ouvrent l'édition
   const editRequested =
@@ -115,7 +119,7 @@ export function SessionWorkspace({
   function navigate(phase: SessionPhase, section?: SessionSection) {
     updateUrl((params) => {
       params.set("phase", phase);
-      params.set("section", section ?? sectionsOf(phase)[0]);
+      params.set("section", section ?? sectionsOf(phase, hiddenSections)[0]);
     });
   }
 
@@ -355,7 +359,7 @@ export function SessionWorkspace({
         </nav>
 
         {(Object.keys(SESSION_PHASES) as SessionPhase[]).map((phase) => {
-          const sections = sectionsOf(phase);
+          const sections = sectionsOf(phase, hiddenSections);
           return (
             <TabsContent key={phase} value={phase} className={panelMotion}>
               {sections.length === 1 ? (

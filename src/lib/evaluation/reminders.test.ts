@@ -194,6 +194,18 @@ describe("runEvaluationReminders", () => {
     });
   });
 
+  it("ne cible que les organismes dont le module évaluation est actif", async () => {
+    await runEvaluationReminders();
+    const where = mockPrisma.trainingSession.findMany.mock.calls[0][0].where;
+    expect(where).toMatchObject({
+      organisme: {
+        modules: {
+          some: { module: "evaluation", available: true, enabled: true },
+        },
+      },
+    });
+  });
+
   it("pose le palier, envoie un rappel avec un lien régénéré", async () => {
     const result = await runEvaluationReminders();
 

@@ -4,6 +4,7 @@ import {
   defaultPhase,
   findCurrentSlotId,
   resolveView,
+  sectionsOf,
   suggestOutcome,
 } from "./session-progress";
 import type { Emargement, EmargementStatus } from "../types";
@@ -58,6 +59,31 @@ describe("resolveView", () => {
       phase: "close",
       section: "resultats",
     });
+  });
+
+  it("retombe sur la première section si la section demandée est masquée", () => {
+    expect(
+      resolveView({ phase: "close", section: "evaluations" }, "terminée", [
+        "evaluations",
+      ])
+    ).toEqual({ phase: "close", section: "resultats" });
+  });
+});
+
+describe("sectionsOf", () => {
+  it("liste les sections de la phase", () => {
+    expect(sectionsOf("close")).toEqual([
+      "resultats",
+      "documents",
+      "evaluations",
+    ]);
+  });
+
+  it("masque les sections demandées", () => {
+    expect(sectionsOf("close", ["evaluations"])).toEqual([
+      "resultats",
+      "documents",
+    ]);
   });
 });
 

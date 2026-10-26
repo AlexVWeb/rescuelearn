@@ -10,6 +10,7 @@ import {
 } from "../../actions";
 import { toPdfFormateur } from "../../lib/formateurs";
 import { getLogoAsBase64 } from "@/lib/organisme-logo";
+import { isModuleActive } from "@/lib/organisme-modules/service";
 import type { DocumentOrganisme } from "@/lib/documents/registry";
 import { notFound } from "next/navigation";
 import { SessionWorkspace } from "../components/session-workspace";
@@ -34,6 +35,7 @@ export default async function SessionDetailsPage({
   let assignableFormateurs;
   let attestationSigning;
   let evaluations;
+  let evaluationActive = false;
   let organismeLogoBase64: string | null = null;
   let documentOrganisme: DocumentOrganisme | null = null;
   try {
@@ -56,6 +58,7 @@ export default async function SessionDetailsPage({
       session.formateurs.map((f) => f.user),
       formateur
     );
+    evaluationActive = await isModuleActive(session.organismeId, "evaluation");
     const organisme = await getMonOrganisme();
     if (organisme) {
       documentOrganisme = {
@@ -89,6 +92,7 @@ export default async function SessionDetailsPage({
         assignableFormateurs={assignableFormateurs}
         attestationSigning={attestationSigning}
         evaluations={evaluations}
+        hiddenSections={evaluationActive ? [] : ["evaluations"]}
         organismeLogoBase64={organismeLogoBase64}
         organisme={documentOrganisme}
       />

@@ -7,6 +7,8 @@ vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }));
 vi.mock("@/lib/context", () => ({
   requireOrganisme: vi.fn().mockResolvedValue({ organismeId: "org-1" }),
 }));
+const mockModules = vi.hoisted(() => ({ isModuleActive: vi.fn() }));
+vi.mock("@/lib/organisme-modules/service", () => mockModules);
 
 import {
   getEvaluationQuality,
@@ -42,6 +44,8 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-30T10:00:00Z"));
   mockPrisma.trainingSession.findFirst.mockReset();
+  mockPrisma.trainingSession.findMany.mockClear();
+  mockModules.isModuleActive.mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -116,6 +120,25 @@ describe("getSessionEvaluations", () => {
       kind: "nps",
       score: 0,
     });
+  });
+});
+
+describe("module évaluation inactif", () => {
+  it("getSessionEvaluations renvoie null sans requête", async () => {
+    mockModules.isModuleActive.mockResolvedValueOnce(false);
+    expect(await getSessionEvaluations("s-1")).toBeNull();
+    expect(mockModules.isModuleActive).toHaveBeenCalledWith(
+      "org-1",
+      "evaluation"
+    );
+    expect(mockPrisma.trainingSession.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("getEvaluationQuality vide", async () => {
+    mockModules.isModuleActive.mockResolvedValueOnce(false);
+    const quality = await getEvaluationQuality();
+    expect(quality.bySession).toEqual({});
+    expect(mockPrisma.trainingSession.findMany).not.toHaveBeenCalled();
   });
 });
 
