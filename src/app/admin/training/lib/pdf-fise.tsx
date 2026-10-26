@@ -137,6 +137,8 @@ interface FisePageProps {
   /** Nom du responsable pédagogique (FISE PSE) */
   responsablePedagogique?: string;
   organismeLogoBase64?: string | null;
+  /** En-tête saisi par l'organisme, cf. documentHeaderLines() */
+  headerLines?: string[];
 }
 
 const FisePage: React.FC<FisePageProps> = ({
@@ -144,6 +146,7 @@ const FisePage: React.FC<FisePageProps> = ({
   inscription,
   formateur,
   organismeLogoBase64,
+  headerLines = [],
 }) => {
   const dateStr = session.startDate
     ? dayjs(session.startDate).format("DD/MM/YYYY")
@@ -170,14 +173,15 @@ const FisePage: React.FC<FisePageProps> = ({
         FICHE DE RENSEIGNEMENTS, DE SUIVI ET D'EVALUATION
       </Text>
 
-      <View style={styles.metaRow}>
-        <Text style={styles.metaText}>
-          <Text style={styles.textBold}>COMITE :</Text> RHONE LYON METROPOLE
-        </Text>
-        <Text style={styles.metaText}>
-          <Text style={styles.textBold}>ASSOCIATION :</Text> LYON
-        </Text>
-      </View>
+      {headerLines.length > 0 && (
+        <View style={styles.metaRow}>
+          {headerLines.map((line, idx) => (
+            <Text key={idx} style={styles.metaText}>
+              {line}
+            </Text>
+          ))}
+        </View>
+      )}
 
       <Text style={styles.subTitle}>FORMATION EN PREMIERS SECOURS CITOYEN</Text>
 
@@ -461,15 +465,18 @@ interface MultipleFiseDocumentProps {
   /** Nom du responsable pédagogique (FISE PSE) */
   responsablePedagogique?: string;
   organismeLogoBase64?: string | null;
+  /** En-tête saisi par l'organisme, cf. documentHeaderLines() */
+  headerLines?: string[];
 }
 
-const MultipleFiseDocument: React.FC<MultipleFiseDocumentProps> = ({
+export const MultipleFiseDocument: React.FC<MultipleFiseDocumentProps> = ({
   session,
   inscriptions,
   formateur,
   equipePedagogique,
   responsablePedagogique,
   organismeLogoBase64,
+  headerLines,
 }) => (
   <Document>
     {inscriptions.map((inscription, index) => (
@@ -481,6 +488,7 @@ const MultipleFiseDocument: React.FC<MultipleFiseDocumentProps> = ({
         equipePedagogique={equipePedagogique}
         responsablePedagogique={responsablePedagogique}
         organismeLogoBase64={organismeLogoBase64}
+        headerLines={headerLines}
       />
     ))}
   </Document>

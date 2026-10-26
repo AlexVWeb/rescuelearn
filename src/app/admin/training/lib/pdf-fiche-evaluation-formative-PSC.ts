@@ -338,6 +338,27 @@ export function generateAllFichesEvaluationPDF(
   formateur: { lastName: string | null; firstName: string | null },
   organismeLogoBase64?: string | null
 ): void {
+  buildAllFichesEvaluationPDF(
+    session,
+    inscriptions,
+    formateur,
+    organismeLogoBase64
+  ).save(`FichesEvaluation_${session.title.replace(/\s+/g, "_")}.pdf`);
+}
+
+/** Construit les fiches sans les télécharger (aperçu, export). */
+export function buildAllFichesEvaluationPDF(
+  session: {
+    title: string;
+    location: string;
+    startDate: Date | null;
+    slots: Slot[];
+    isFC?: boolean;
+  },
+  inscriptions: Inscription[],
+  formateur: { lastName: string | null; firstName: string | null },
+  organismeLogoBase64?: string | null
+): jsPDF {
   const doc = new jsPDF("portrait", "mm", "a4");
   inscriptions.forEach((inscription, index) => {
     buildFicheEvaluationPage(
@@ -351,5 +372,5 @@ export function generateAllFichesEvaluationPDF(
       doc.addPage();
     }
   });
-  doc.save(`FichesEvaluation_${session.title.replace(/\s+/g, "_")}.pdf`);
+  return doc;
 }

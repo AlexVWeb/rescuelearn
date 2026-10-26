@@ -108,7 +108,10 @@ export async function createOrganismeAction(data: OrganismeFormValues) {
         legalRepJobTitle: data.legalRepJobTitle || null,
         legalStatus: data.legalStatus || null,
         tvaNumber: data.tvaNumber || null,
-        federationName: data.federationName || null,
+        federation: data.federation || null,
+        federationName:
+          data.federation === "AUTRE" ? data.federationName || null : null,
+        documentHeader: data.documentHeader?.trim() || null,
         isQualiopi: data.isQualiopi,
         qualiopiCertifiedBy: data.qualiopiCertifiedBy || null,
         retentionYearsActive: data.retentionYearsActive,
@@ -217,7 +220,10 @@ export async function updateOrganismeAction(
         legalRepJobTitle: data.legalRepJobTitle || null,
         legalStatus: data.legalStatus || null,
         tvaNumber: data.tvaNumber || null,
-        federationName: data.federationName || null,
+        federation: data.federation || null,
+        federationName:
+          data.federation === "AUTRE" ? data.federationName || null : null,
+        documentHeader: data.documentHeader?.trim() || null,
         isQualiopi: data.isQualiopi,
         qualiopiCertifiedBy: data.qualiopiCertifiedBy || null,
         retentionYearsActive: data.retentionYearsActive,

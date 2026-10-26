@@ -29,11 +29,19 @@ import {
   generateAllFichesEvaluationPDF,
 } from "../../../../lib/pdf-fiche-evaluation-formative-PSC";
 import { downloadFisePDF, downloadAllFisePDF } from "../../../../lib/pdf-fise";
-import { downloadPvPDF } from "../../../../lib/pdf-pv";
+import { downloadPvPDF } from "@/lib/documents/croix-blanche/pdf-pv";
 import { generateEmargementPDF } from "../../../../lib/pdf-emargement";
 import type { Inscription, Slot } from "../../../../types";
 import type { AttestationSigning } from "@/app/admin/training/actions";
 import { AttestationsPublication } from "./attestations-publication";
+import { MissingTemplatesAlert } from "./missing-templates-alert";
+import {
+  availableDocuments,
+  documentHeaderLines,
+  missingFederationDocuments,
+  type DocumentKey,
+  type DocumentOrganisme,
+} from "@/lib/documents/registry";
 
 interface DocumentsSectionProps {
   session: {
@@ -54,6 +62,7 @@ interface DocumentsSectionProps {
   equipePedagogique?: string[];
   responsablePedagogique?: string;
   organismeLogoBase64?: string | null;
+  organisme: DocumentOrganisme;
 }
 
 export function DocumentsSection({
@@ -64,6 +73,7 @@ export function DocumentsSection({
   equipePedagogique,
   responsablePedagogique,
   organismeLogoBase64,
+  organisme,
 }: DocumentsSectionProps) {
   // PDF en cours de génération : clé du document ou id d'une inscription
   const [generating, setGenerating] = useState<string | null>(null);
@@ -88,6 +98,8 @@ export function DocumentsSection({
     }
   }
 
+  const headerLines = documentHeaderLines(organisme);
+
   function downloadPv() {
     const times = session.slots.map((s) => new Date(s.date).getTime());
     return downloadPvPDF({
@@ -97,12 +109,18 @@ export function DocumentsSection({
       },
       inscriptions,
       formateur,
+      headerLines,
     });
   }
 
-  const sessionDocuments = [
+  const available = new Set<DocumentKey>(
+    availableDocuments(organisme.federation)
+  );
+
+  const allDocuments = [
     {
       key: "pv",
+      type: "pv" as const,
       icon: FileText,
       title: "PV de formation",
       description: "Procès-verbal avec l'issue de chaque stagiaire.",
@@ -111,6 +129,7 @@ export function DocumentsSection({
     },
     {
       key: "emargement",
+      type: "emargement" as const,
       icon: ClipboardCheck,
       title: "Feuille d'émargement",
       description:
@@ -122,6 +141,7 @@ export function DocumentsSection({
     },
     {
       key: "all-fise",
+      type: "fise" as const,
       icon: Files,
       title: "Toutes les FISE",
       description: "Fiches individuelles de suivi, en un seul PDF.",
@@ -134,11 +154,13 @@ export function DocumentsSection({
           equipePedagogique,
           responsablePedagogique,
           organismeLogoBase64,
+          headerLines,
         }),
     },
     signing.signature
       ? {
           key: "all-attestations",
+          type: "attestation" as const,
           icon: ScrollText,
           title: "Attestations de fin de formation",
           description: "Versions signées, en un seul PDF.",
@@ -149,6 +171,7 @@ export function DocumentsSection({
         }
       : {
           key: "all-attestations",
+          type: "attestation" as const,
           icon: ScrollText,
           title: "Attestations (aperçu non signé)",
           description:
@@ -162,6 +185,7 @@ export function DocumentsSection({
       ? [
           {
             key: "all-fiches",
+            type: "fiche-formative" as const,
             icon: ClipboardList,
             title: "Fiches d'évaluation formative",
             description: "Une fiche par stagiaire (PSC).",
@@ -177,9 +201,15 @@ export function DocumentsSection({
         ]
       : []),
   ];
+  const sessionDocuments = allDocuments.filter((doc) =>
+    available.has(doc.type)
+  );
 
   return (
     <div className="space-y-6">
+      {missingFederationDocuments(organisme.federation) && (
+        <MissingTemplatesAlert organisme={organisme} />
+      )}
       <AttestationsPublication
         sessionId={session.id}
         publishedAt={session.attestationsPublishedAt}
@@ -300,6 +330,7 @@ export function DocumentsSection({
                               equipePedagogique,
                               responsablePedagogique,
                               organismeLogoBase64,
+                              headerLines,
                             })
                           )
                         }
