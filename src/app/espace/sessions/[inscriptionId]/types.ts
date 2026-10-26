@@ -43,7 +43,6 @@ export interface ReadinessView {
 export interface PracticalInfoView {
   location: string;
   accessInfo: string | null;
-  mapsUrl: string;
   days: { dayLabel: string; ranges: string[] }[];
   toBring: string[];
   formateurs: string[];

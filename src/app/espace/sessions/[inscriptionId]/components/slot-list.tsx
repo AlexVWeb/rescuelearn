@@ -8,7 +8,7 @@ function SlotBadge({ slot }: { slot: SlotView }) {
       return (
         <Badge variant="success">
           <CheckCircle2 aria-hidden="true" />
-          Signé à {slot.signedAtLabel}
+          {slot.signedAtLabel ? `Signé à ${slot.signedAtLabel}` : "Signé"}
         </Badge>
       );
     case "open":

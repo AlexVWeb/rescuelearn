@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 import {
   Select,
   SelectContent,
@@ -236,7 +237,7 @@ export function SessionForm({
             <FormItem>
               <FormLabel>Lieu</FormLabel>
               <FormControl>
-                <Input
+                <AddressAutocomplete
                   placeholder="Adresse ou salle"
                   {...field}
                   disabled={isClosed}

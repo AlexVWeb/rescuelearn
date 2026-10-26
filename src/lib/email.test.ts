@@ -236,6 +236,18 @@ describe("EmailService", () => {
       expect(sentText()).not.toContain(PREPARE);
     });
 
+    it("ajoute le lien d'itinéraire vers le lieu", async () => {
+      await EmailService.sendTraineeAccess(base);
+      expect(sentText()).toContain(
+        "Itinéraire : https://www.google.com/maps/dir/?api=1&destination=Toulouse"
+      );
+    });
+
+    it("n'ajoute pas l'itinéraire pour l'attestation", async () => {
+      await EmailService.sendTraineeAccess({ ...base, reason: "attestation" });
+      expect(sentText()).not.toContain("Itinéraire");
+    });
+
     it("n'ajoute pas la ligne pour l'attestation", async () => {
       await EmailService.sendTraineeAccess({
         ...base,

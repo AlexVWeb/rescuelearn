@@ -4,6 +4,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { DirectionsLinks } from "@/components/directions-links";
 import type { PracticalInfoView } from "../types";
 
 function Details({ info }: { info: PracticalInfoView }) {
@@ -23,15 +24,7 @@ function Details({ info }: { info: PracticalInfoView }) {
             {info.accessInfo}
           </p>
         )}
-        <a
-          href={info.mapsUrl}
-          target="_blank"
-          rel="noopener"
-          className="text-primary inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
-        >
-          Itinéraire
-          <span className="sr-only"> (nouvel onglet)</span>
-        </a>
+        <DirectionsLinks location={info.location} className="pt-2" />
       </div>
 
       {info.days.length > 0 && (

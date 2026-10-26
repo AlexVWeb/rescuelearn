@@ -188,7 +188,6 @@ export default async function EspaceSessionPage({
   const practical: PracticalInfoView = {
     location: session.location,
     accessInfo: session.accessInfo,
-    mapsUrl: `https://maps.google.com/?q=${encodeURIComponent(session.location)}`,
     days: [...days].map(([dayLabel, ranges]) => ({ dayLabel, ranges })),
     toBring: resolveToBring(welcome.toBring, session.toBringExtra),
     formateurs: formateurs
