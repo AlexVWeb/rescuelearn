@@ -3,23 +3,25 @@
 import { useOptimistic, useTransition } from "react";
 import { CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toggleChecklistItem } from "../../../welcome-actions";
 import type { ReadinessView } from "../types";
-import { TermsBlock } from "./terms-block";
+import { ACTION_BUTTON_CLASS, ActionShell } from "./action-shell";
 
 const ANCHORS = { terms: "#conditions", preread: "#pre-lecture" } as const;
 
 export function PrepareCard({
   inscriptionId,
   readiness,
-  termsAcceptedLabel,
+  eyebrow,
 }: {
   inscriptionId: string;
   readiness: ReadinessView;
-  termsAcceptedLabel: string | null;
+  /** « À faire avant le lun. 19 oct. » */
+  eyebrow: string;
 }) {
   const [, startTransition] = useTransition();
   // L'état réel revient par revalidatePath ; en cas d'échec l'optimiste se rétablit
@@ -31,7 +33,9 @@ export function PrepareCard({
       )
   );
   const done = items.filter((item) => item.done).length;
-  const hasTerms = items.some((item) => item.kind === "terms");
+  const termsPending = items.some(
+    (item) => item.kind === "terms" && !item.done
+  );
 
   function toggle(id: string, value: boolean) {
     startTransition(async () => {
@@ -42,27 +46,19 @@ export function PrepareCard({
   }
 
   return (
-    <section
-      aria-labelledby="prepare-title"
-      className="bg-card space-y-4 rounded-xl border p-4"
-    >
-      <div className="space-y-2">
-        <h2 id="prepare-title" className="text-lg font-semibold">
-          Préparer ma venue
-        </h2>
-        <div className="flex items-center gap-3">
-          <Progress
-            value={readiness.total ? (done / readiness.total) * 100 : 0}
-            aria-label="Progression de la préparation"
-            className="flex-1"
-          />
-          <span className="text-muted-foreground shrink-0 text-sm tabular-nums">
-            {done} sur {readiness.total}
-          </span>
-        </div>
+    <ActionShell eyebrow={eyebrow} title="Préparer ma venue">
+      <div className="flex items-center gap-3">
+        <Progress
+          value={readiness.total ? (done / readiness.total) * 100 : 0}
+          aria-label="Progression de la préparation"
+          className="bg-brand-foreground/25 [&>[data-slot=progress-indicator]]:bg-brand-foreground flex-1"
+        />
+        <span className="shrink-0 text-sm font-semibold tabular-nums">
+          {done} sur {readiness.total}
+        </span>
       </div>
 
-      <ul className="space-y-1">
+      <ul className="grid gap-x-6 sm:grid-cols-2">
         {items.map((item) =>
           item.kind === "manual" ? (
             <li key={item.id} className="flex min-h-11 items-center gap-3">
@@ -70,11 +66,11 @@ export function PrepareCard({
                 id={`prepare-${item.id}`}
                 checked={item.done}
                 onCheckedChange={(value) => toggle(item.id, value === true)}
-                className="size-5"
+                className="border-brand-foreground/70 data-[state=checked]:border-brand-foreground data-[state=checked]:bg-brand-foreground data-[state=checked]:text-brand size-5"
               />
               <Label
                 htmlFor={`prepare-${item.id}`}
-                className={`flex-1 py-2 text-sm font-normal ${item.done ? "text-muted-foreground line-through" : ""}`}
+                className={`flex-1 py-2 text-sm font-normal ${item.done ? "text-brand-foreground/75 line-through" : ""}`}
               >
                 {item.label}
               </Label>
@@ -82,19 +78,16 @@ export function PrepareCard({
           ) : (
             <li key={item.id} className="flex min-h-11 items-center gap-3">
               {item.done ? (
-                <CheckCircle2
-                  className="text-success h-5 w-5 shrink-0"
-                  aria-hidden="true"
-                />
+                <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden="true" />
               ) : (
                 <Circle
-                  className="text-muted-foreground h-5 w-5 shrink-0"
+                  className="text-brand-foreground/70 h-5 w-5 shrink-0"
                   aria-hidden="true"
                 />
               )}
               <a
                 href={ANCHORS[item.kind]}
-                className={`flex-1 py-2 text-sm underline-offset-4 hover:underline ${item.done ? "text-muted-foreground" : ""}`}
+                className={`flex-1 py-2 text-sm underline-offset-4 hover:underline ${item.done ? "text-brand-foreground/75 line-through" : "font-medium"}`}
               >
                 <span className="sr-only">
                   {item.done ? "Fait : " : "À faire : "}
@@ -106,12 +99,11 @@ export function PrepareCard({
         )}
       </ul>
 
-      {hasTerms && (
-        <TermsBlock
-          inscriptionId={inscriptionId}
-          acceptedAtLabel={termsAcceptedLabel}
-        />
+      {termsPending && (
+        <Button asChild className={ACTION_BUTTON_CLASS}>
+          <a href={ANCHORS.terms}>Lire et accepter les conditions</a>
+        </Button>
       )}
-    </section>
+    </ActionShell>
   );
 }

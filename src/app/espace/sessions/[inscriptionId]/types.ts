@@ -45,6 +45,9 @@ export interface PracticalInfoView {
   accessInfo: string | null;
   days: { dayLabel: string; ranges: string[] }[];
   toBring: string[];
+}
+
+export interface ContactView {
   formateurs: string[];
   organisme: { name: string; email: string | null; phone: string | null };
 }

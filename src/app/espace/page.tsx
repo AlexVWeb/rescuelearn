@@ -32,7 +32,7 @@ export default async function EspacePage() {
     <>
       <EspaceHeader organisme={organisme} />
 
-      <main className="mx-auto max-w-4xl space-y-6 px-4 py-6">
+      <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold">
             {firstName ? `Bonjour ${firstName}` : "Mon espace de formation"}

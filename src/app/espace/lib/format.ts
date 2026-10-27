@@ -48,3 +48,14 @@ const parisDayFormat = new Intl.DateTimeFormat("fr-FR", {
 export function formatParisDay(date: Date) {
   return parisDayFormat.format(date);
 }
+
+/** « 0644046022 » → « 06 44 04 60 22 » ; format inconnu : tel quel */
+export function formatPhone(phone: string) {
+  const digits = phone.replace(/[^\d+]/g, "");
+  const pairs = (rest: string) => rest.match(/\d{2}/g)?.join(" ") ?? rest;
+  if (/^0\d{9}$/.test(digits)) return pairs(digits);
+  if (/^\+33\d{9}$/.test(digits)) {
+    return `+33 ${digits[3]} ${pairs(digits.slice(4))}`;
+  }
+  return phone;
+}

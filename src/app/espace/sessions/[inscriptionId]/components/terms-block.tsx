@@ -56,49 +56,54 @@ export function TermsBlock({
   );
 
   return (
-    <div
+    <section
       id="conditions"
-      className="bg-muted/30 scroll-mt-20 space-y-2 rounded-lg border p-3"
+      aria-labelledby={`${id}-title`}
+      className="scroll-mt-6 space-y-3"
     >
-      <p className="text-sm font-medium">Conditions générales</p>
-      <div aria-live="polite">
-        {acceptedAtLabel && (
-          <p className="text-success flex items-center gap-2 text-sm">
-            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-            Conditions acceptées le {acceptedAtLabel}
-          </p>
-        )}
-      </div>
-      {pdfLink}
-      {!acceptedAtLabel && (
-        <div className="space-y-2">
-          <div className="flex min-h-11 items-center gap-3">
-            <Checkbox
-              id={`${id}-accept`}
-              checked={checked}
-              onCheckedChange={(value) => setChecked(value === true)}
-              aria-describedby={error ? `${id}-error` : undefined}
-              className="size-5"
-            />
-            <Label htmlFor={`${id}-accept`} className="text-sm font-normal">
-              J&apos;ai lu et j&apos;accepte les conditions générales
-            </Label>
-          </div>
-          <Button
-            type="button"
-            onClick={accept}
-            disabled={!checked || accepting}
-            className="min-h-11"
-          >
-            Accepter
-          </Button>
-          {error && (
-            <p id={`${id}-error`} className="text-destructive text-sm">
-              {error}
+      <h2 id={`${id}-title`} className="text-lg font-semibold">
+        Conditions générales
+      </h2>
+      <div className="bg-card space-y-2 rounded-xl border p-4">
+        <div aria-live="polite">
+          {acceptedAtLabel && (
+            <p className="text-success flex items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              Conditions acceptées le {acceptedAtLabel}
             </p>
           )}
         </div>
-      )}
-    </div>
+        {pdfLink}
+        {!acceptedAtLabel && (
+          <div className="space-y-2">
+            <div className="flex min-h-11 items-center gap-3">
+              <Checkbox
+                id={`${id}-accept`}
+                checked={checked}
+                onCheckedChange={(value) => setChecked(value === true)}
+                aria-describedby={error ? `${id}-error` : undefined}
+                className="size-5"
+              />
+              <Label htmlFor={`${id}-accept`} className="text-sm font-normal">
+                J&apos;ai lu et j&apos;accepte les conditions générales
+              </Label>
+            </div>
+            <Button
+              type="button"
+              onClick={accept}
+              disabled={!checked || accepting}
+              className="min-h-11"
+            >
+              Accepter
+            </Button>
+            {error && (
+              <p id={`${id}-error`} className="text-destructive text-sm">
+                {error}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

@@ -10,5 +10,5 @@ export default function EspaceLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="bg-muted/20 min-h-screen">{children}</div>;
+  return <div className="bg-canvas min-h-screen">{children}</div>;
 }
