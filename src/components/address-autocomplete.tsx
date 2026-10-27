@@ -31,22 +31,22 @@ export function AddressAutocomplete({
   onBlur,
   disabled,
   className,
+  ref,
   ...props
 }: AddressAutocompleteProps) {
   const listId = React.useId();
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [suggestions, setSuggestions] = React.useState<AddressSuggestion[]>([]);
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [activeIndex, setActiveIndex] = React.useState(-1);
-  // Évite de relancer une recherche juste après la sélection d'une suggestion
-  const skipNextSearch = React.useRef(true);
+  // Texte tapé au clavier, seul déclencheur de recherche : une valeur posée
+  // par le formulaire (édition, reset) ou par un choix de suggestion n'ouvre rien
+  const [query, setQuery] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (skipNextSearch.current) {
-      skipNextSearch.current = false;
-      return;
-    }
-    if (value.trim().length < MIN_QUERY_LENGTH) {
+    if (query === null) return;
+    if (query.trim().length < MIN_QUERY_LENGTH) {
       setSuggestions([]);
       setLoading(false);
       return;
@@ -56,10 +56,11 @@ export function AddressAutocomplete({
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const results = await searchAddresses(value, controller.signal);
+        const results = await searchAddresses(query, controller.signal);
         setSuggestions(results);
         setActiveIndex(-1);
-        setOpen(true);
+        // Résultats arrivés après la sortie du champ : on ne rouvre pas
+        setOpen(document.activeElement === inputRef.current);
       } catch {
         // Requête annulée : une saisie plus récente a pris le relais
       } finally {
@@ -71,14 +72,21 @@ export function AddressAutocomplete({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [value]);
+  }, [query]);
 
   function select(suggestion: AddressSuggestion) {
-    skipNextSearch.current = true;
+    setQuery(null);
     onChange(suggestion.label);
     setOpen(false);
     setSuggestions([]);
   }
+
+  // Ref du formulaire (react-hook-form) et ref locale pour tester le focus
+  const setRefs = (node: HTMLInputElement | null) => {
+    inputRef.current = node;
+    if (typeof ref === "function") ref(node);
+    else if (ref) ref.current = node;
+  };
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!open || suggestions.length === 0) return;
@@ -102,6 +110,7 @@ export function AddressAutocomplete({
     <div className="relative">
       <Input
         {...props}
+        ref={setRefs}
         value={value}
         disabled={disabled}
         autoComplete="off"
@@ -113,7 +122,10 @@ export function AddressAutocomplete({
           showList && activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined
         }
         className={cn("pr-8", className)}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          onChange(e.target.value);
+        }}
         onFocus={() => suggestions.length > 0 && setOpen(true)}
         onBlur={(e) => {
           setOpen(false);
