@@ -25,6 +25,10 @@ import { ResultsSection } from "../[id]/components/close/results-section";
 import { DocumentsSection } from "../[id]/components/close/documents-section";
 import type { DocumentOrganisme } from "@/lib/documents/registry";
 import { SupportsTab } from "../[id]/components/supports/supports-tab";
+import {
+  WelcomeSection,
+  type SessionWelcomeView,
+} from "../[id]/components/welcome/welcome-section";
 import { EvaluationsSection } from "../[id]/components/close/evaluations-section";
 import {
   Inscription,
@@ -38,6 +42,7 @@ import { formatFormateurName } from "@/app/admin/training/lib/formateurs";
 import type {
   AttestationSigning,
   SessionEvaluationSummary,
+  SessionReadiness,
 } from "@/app/admin/training/actions";
 import {
   checkGroups,
@@ -63,6 +68,11 @@ interface SessionWorkspaceProps {
   assignableFormateurs: SessionFormateurUser[];
   attestationSigning: AttestationSigning;
   evaluations: SessionEvaluationSummary[] | null;
+  welcome: SessionWelcomeView;
+  /** Progression « Préparer ma venue » par inscription ; null = rien à préparer */
+  readiness: Record<string, SessionReadiness> | null;
+  /** Sections masquées (module d'organisme inactif) */
+  hiddenSections: SessionSection[];
   organismeLogoBase64?: string | null;
   organisme: DocumentOrganisme;
 }
@@ -78,6 +88,9 @@ export function SessionWorkspace({
   assignableFormateurs,
   attestationSigning,
   evaluations,
+  welcome,
+  readiness,
+  hiddenSections,
   organismeLogoBase64,
   organisme,
 }: SessionWorkspaceProps) {
@@ -95,7 +108,8 @@ export function SessionWorkspace({
       section: searchParams.get("section"),
       tab: searchParams.get("tab"),
     },
-    session.status
+    session.status,
+    hiddenSections
   );
   // `?edit=1` (liste des sessions) et l'ancien `?tab=settings` ouvrent l'édition
   const editRequested =
@@ -115,7 +129,7 @@ export function SessionWorkspace({
   function navigate(phase: SessionPhase, section?: SessionSection) {
     updateUrl((params) => {
       params.set("phase", phase);
-      params.set("section", section ?? sectionsOf(phase)[0]);
+      params.set("section", section ?? sectionsOf(phase, hiddenSections)[0]);
     });
   }
 
@@ -194,6 +208,7 @@ export function SessionWorkspace({
       groupWarnings.length > 0
         ? `${groupWarnings.length} ⚠`
         : String(groups.length),
+    accueil: welcome.kit || welcome.accessInfo ? "✓" : undefined,
     supports: String(session.documents?.length ?? 0),
   };
 
@@ -214,6 +229,7 @@ export function SessionWorkspace({
         inscriptions={inscriptions}
         allTrainees={allTrainees}
         maxTrainees={session.maxTrainees}
+        readiness={readiness}
       />
     ),
     groupes: (
@@ -230,6 +246,7 @@ export function SessionWorkspace({
         formateurs={assignedFormateurs}
       />
     ),
+    accueil: <WelcomeSection sessionId={session.id} welcome={welcome} />,
     supports: (
       <SupportsTab sessionId={session.id} documents={session.documents ?? []} />
     ),
@@ -355,7 +372,7 @@ export function SessionWorkspace({
         </nav>
 
         {(Object.keys(SESSION_PHASES) as SessionPhase[]).map((phase) => {
-          const sections = sectionsOf(phase);
+          const sections = sectionsOf(phase, hiddenSections);
           return (
             <TabsContent key={phase} value={phase} className={panelMotion}>
               {sections.length === 1 ? (

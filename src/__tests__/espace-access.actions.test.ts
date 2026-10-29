@@ -29,6 +29,9 @@ const mockPrisma = vi.hoisted(() => ({
   trainingSession: { findFirst: vi.fn() },
   inscription: { findUnique: vi.fn(), update: vi.fn() },
   rateLimit: { findUnique: vi.fn(), upsert: vi.fn(), update: vi.fn() },
+  // Kit d'accueil : aucune préparation, pas de ligne en plus dans le mail
+  welcomeKit: { findUnique: vi.fn().mockResolvedValue(null) },
+  sessionDocument: { count: vi.fn().mockResolvedValue(0) },
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -81,6 +84,7 @@ function inscription(
       organismeId: overrides.organismeId ?? "org-1",
       startDate: new Date("2026-11-12"),
       endDate: overrides.endDate ?? new Date("2099-01-01"),
+      organisme: { termsFileKey: null },
     },
   };
 }

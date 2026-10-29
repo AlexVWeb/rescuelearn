@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signEmargementFromPortal, type SignResult } from "../../../actions";
 import type { SlotView } from "../types";
+import { ACTION_BUTTON_CLASS, ActionShell } from "./action-shell";
 
 interface SignSlotCardProps {
   inscriptionId: string;
@@ -43,33 +44,20 @@ export function SignSlotCard({ inscriptionId, slot }: SignSlotCardProps) {
   }, [signed, result]);
 
   return (
-    <section
-      aria-labelledby="action-title"
-      className="bg-card rounded-xl border p-5 shadow-sm"
+    <ActionShell
+      eyebrow={signed ? "Créneau en cours" : "À faire maintenant"}
+      title={`Émarger · ${slot.label}`}
+      description={`${slot.dayLabel} · ${slot.timeRange}`}
     >
-      <h2
-        id="action-title"
-        className="text-muted-foreground text-sm font-medium"
-      >
-        {signed ? "Créneau en cours" : "À faire maintenant"}
-      </h2>
-      <p className="mt-1 text-lg font-semibold">Émarger · {slot.label}</p>
-      <p className="text-muted-foreground text-sm">
-        {slot.dayLabel} · {slot.timeRange}
-      </p>
-
       {/* Région live toujours présente : l'annonce survit au changement de contenu */}
-      <div aria-live="polite" className="mt-4">
+      <div aria-live="polite">
         {signed ? (
           <p
             ref={successRef}
             tabIndex={-1}
-            className="flex items-center gap-2 font-medium outline-none"
+            className="bg-brand-foreground/10 flex items-center gap-3 rounded-xl p-4 font-medium outline-none"
           >
-            <CheckCircle2
-              className="text-success h-6 w-6 shrink-0"
-              aria-hidden="true"
-            />
+            <CheckCircle2 className="h-6 w-6 shrink-0" aria-hidden="true" />
             Présence enregistrée
             {slot.signedAtLabel ? ` à ${slot.signedAtLabel}` : ""}
           </p>
@@ -77,46 +65,56 @@ export function SignSlotCard({ inscriptionId, slot }: SignSlotCardProps) {
           <form action={formAction} className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor={inputId}>Code affiché en salle</Label>
-              <Input
-                ref={inputRef}
-                id={inputId}
-                name="pin"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="\d{6}"
-                maxLength={6}
-                required
-                disabled={pending}
-                aria-invalid={error ? true : undefined}
-                aria-describedby={error ? errorId : hintId}
-                className="h-14 text-center font-mono text-2xl tracking-[0.4em]"
-              />
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Input
+                  ref={inputRef}
+                  id={inputId}
+                  name="pin"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  required
+                  disabled={pending}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? errorId : hintId}
+                  className="bg-background text-foreground h-14 flex-1 rounded-xl border-0 text-center font-mono text-2xl tracking-[0.4em]"
+                />
+                <Button
+                  type="submit"
+                  className={`${ACTION_BUTTON_CLASS} sm:h-14`}
+                  disabled={pending}
+                >
+                  {pending ? (
+                    <>
+                      <RefreshCw
+                        className="h-4 w-4 motion-safe:animate-spin"
+                        aria-hidden="true"
+                      />
+                      Enregistrement…
+                    </>
+                  ) : (
+                    "Je confirme ma présence"
+                  )}
+                </Button>
+              </div>
               {error ? (
-                <p id={errorId} className="text-destructive text-sm">
+                // Fond clair : le rouge reste lisible sur la carte inversée
+                <p
+                  id={errorId}
+                  className="bg-background text-destructive rounded-lg px-3 py-2 text-sm font-medium"
+                >
                   {error}
                 </p>
               ) : (
-                <p id={hintId} className="text-muted-foreground text-sm">
+                <p id={hintId} className="text-brand-foreground/85 text-sm">
                   6 chiffres, affichés par votre formateur.
                 </p>
               )}
             </div>
-            <Button type="submit" className="h-12 w-full" disabled={pending}>
-              {pending ? (
-                <>
-                  <RefreshCw
-                    className="h-4 w-4 motion-safe:animate-spin"
-                    aria-hidden="true"
-                  />
-                  Enregistrement…
-                </>
-              ) : (
-                "Je confirme ma présence"
-              )}
-            </Button>
           </form>
         )}
       </div>
-    </section>
+    </ActionShell>
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, ClipboardList, Clock, PencilLine } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { setEvaluationReminders } from "../evaluations/actions";
 import type { EvaluationView } from "../evaluations/view";
 
@@ -37,7 +38,7 @@ function StatusBadge({ view }: { view: EvaluationView }) {
   }
 }
 
-const DETAIL: Record<
+export const EVALUATION_DETAIL: Record<
   EvaluationView["status"],
   (view: EvaluationView) => string
 > = {
@@ -48,23 +49,65 @@ const DETAIL: Record<
   upcoming: (v) => `Ouvrira le ${v.dateLabel}`,
 };
 
-const CTA: Partial<Record<EvaluationView["status"], string>> = {
-  todo: "Répondre",
-  draft: "Reprendre",
-  submitted: "Modifier mes réponses",
-  submitted_closed: "Voir mes réponses",
-};
+export const EVALUATION_CTA: Partial<Record<EvaluationView["status"], string>> =
+  {
+    todo: "Répondre",
+    draft: "Reprendre",
+    submitted: "Modifier mes réponses",
+    submitted_closed: "Voir mes réponses",
+  };
+
+/** Rappels par email : utiles tant qu'une évaluation reste à envoyer */
+export function RemindersForm({
+  inscriptionId,
+  enabled,
+  inverted = false,
+}: {
+  inscriptionId: string;
+  enabled: boolean;
+  /** Sur la carte d'action, fond inversé */
+  inverted?: boolean;
+}) {
+  return (
+    <form
+      action={setEvaluationReminders.bind(null, inscriptionId, !enabled)}
+      className="flex flex-wrap items-center gap-x-2 text-sm"
+    >
+      <span
+        className={
+          inverted ? "text-brand-foreground/85" : "text-muted-foreground"
+        }
+      >
+        {enabled
+          ? "Vous recevez un rappel par email tant que l'évaluation n'est pas envoyée."
+          : "Rappels par email désactivés."}
+      </span>
+      <Button
+        type="submit"
+        variant="link"
+        className={cn(
+          "h-11 px-0",
+          inverted && "text-brand-foreground underline"
+        )}
+      >
+        {enabled ? "Ne plus recevoir de rappels" : "Réactiver les rappels"}
+      </Button>
+    </form>
+  );
+}
 
 export function EvaluationsCard({
   inscriptionId,
   evaluations,
   remindersEnabled,
+  showReminders,
 }: {
   inscriptionId: string;
   evaluations: EvaluationView[];
   remindersEnabled: boolean;
+  /** Faux quand la carte d'action porte déjà le réglage */
+  showReminders: boolean;
 }) {
-  // Rappels utiles tant qu'une évaluation reste à envoyer
   const pending = evaluations.some((v) =>
     ["todo", "draft", "upcoming"].includes(v.status)
   );
@@ -76,7 +119,7 @@ export function EvaluationsCard({
       </h2>
       <ul className="bg-card divide-y rounded-xl border">
         {evaluations.map((view) => {
-          const cta = CTA[view.status];
+          const cta = EVALUATION_CTA[view.status];
           return (
             <li key={view.type} className="space-y-3 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -84,7 +127,7 @@ export function EvaluationsCard({
                 <StatusBadge view={view} />
               </div>
               <p className="text-muted-foreground text-sm">
-                {DETAIL[view.status](view)}
+                {EVALUATION_DETAIL[view.status](view)}
               </p>
               {cta && (
                 <Button
@@ -109,26 +152,11 @@ export function EvaluationsCard({
           );
         })}
       </ul>
-      {pending && (
-        <form
-          action={setEvaluationReminders.bind(
-            null,
-            inscriptionId,
-            !remindersEnabled
-          )}
-          className="flex flex-wrap items-center gap-x-2 text-sm"
-        >
-          <span className="text-muted-foreground">
-            {remindersEnabled
-              ? "Vous recevez un rappel par email tant que l'évaluation n'est pas envoyée."
-              : "Rappels par email désactivés."}
-          </span>
-          <Button type="submit" variant="link" className="h-11 px-0">
-            {remindersEnabled
-              ? "Ne plus recevoir de rappels"
-              : "Réactiver les rappels"}
-          </Button>
-        </form>
+      {showReminders && pending && (
+        <RemindersForm
+          inscriptionId={inscriptionId}
+          enabled={remindersEnabled}
+        />
       )}
     </section>
   );

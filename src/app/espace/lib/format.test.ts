@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   formatFileSize,
+  formatPhone,
   formatSessionDates,
   formatSlotDay,
   formatTimeLabel,
@@ -40,5 +41,17 @@ describe("formatSlotDay / formatTimeLabel / formatFileSize", () => {
   it("taille lisible", () => {
     expect(formatFileSize(300)).toBe("1 Ko");
     expect(formatFileSize(2.5 * 1024 * 1024)).toBe("2,5 Mo");
+  });
+});
+
+describe("formatPhone", () => {
+  it("numéro français par paires", () => {
+    expect(formatPhone("0644046022")).toBe("06 44 04 60 22");
+    expect(formatPhone("06.44.04.60.22")).toBe("06 44 04 60 22");
+    expect(formatPhone("+33644046022")).toBe("+33 6 44 04 60 22");
+  });
+
+  it("format inconnu : inchangé", () => {
+    expect(formatPhone("+1 555 0100")).toBe("+1 555 0100");
   });
 });

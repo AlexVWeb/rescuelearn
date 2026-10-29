@@ -13,16 +13,21 @@ import { TrainerTeam } from "./_components/trainer-team";
 import { QualityCard } from "./_components/quality-card";
 import { Calendar } from "lucide-react";
 import Link from "next/link";
+import { requireOrganisme } from "@/lib/context";
+import { isModuleActive } from "@/lib/organisme-modules/service";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [upcomingSessions, organisme, stats, quality] = await Promise.all([
-    getUpcomingSessions(),
-    getMonOrganisme(),
-    getDashboardStats(),
-    getEvaluationQuality(),
-  ]);
+  const user = await requireOrganisme();
+  const [upcomingSessions, organisme, stats, quality, evaluationActive] =
+    await Promise.all([
+      getUpcomingSessions(),
+      getMonOrganisme(),
+      getDashboardStats(),
+      getEvaluationQuality(),
+      isModuleActive(user.organismeId, "evaluation"),
+    ]);
 
   return (
     <main
@@ -65,7 +70,7 @@ export default async function DashboardPage() {
         {/* Right Column: Invite, Planning, Trainers (30%) */}
         <aside className="space-y-6" aria-label="Outils et équipe">
           {/* Évaluations à chaud et à froid (Qualiopi) */}
-          <QualityCard overview={quality.overview} />
+          {evaluationActive && <QualityCard overview={quality.overview} />}
 
           {/* Trainer Invitation Widget */}
           <InviteCard organisme={organisme} />

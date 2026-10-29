@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrganismeForm } from "@/components/admin/organisme-form";
@@ -12,6 +12,22 @@ import { OrganismeFormValues } from "@/lib/schemas/organisme.schema";
 import { Organisme, OrganismeMember } from "@/types/organisme";
 import { updateOrganismeAction } from "@/app/actions/organisme.actions";
 import { InvitationInfo } from "./components/membres-tab";
+import { ModulesCard } from "./components/modules-card";
+import type { OrganismeModuleState } from "@/lib/organisme-modules/resolve";
+
+const TABS = [
+  "profil",
+  "configuration",
+  "membres",
+  "documents",
+  "modeles",
+  "accueil",
+] as const;
+type OrganismeTab = (typeof TABS)[number];
+
+function isOrganismeTab(value: string | null): value is OrganismeTab {
+  return TABS.includes(value as OrganismeTab);
+}
 
 interface OrganismeDetailClientProps {
   organisme: Organisme;
@@ -19,6 +35,11 @@ interface OrganismeDetailClientProps {
   invitations: InvitationInfo[];
   /** Logo encodé pour les aperçus PDF */
   logoBase64: string | null;
+  modules: OrganismeModuleState[];
+  /** Super admin : gère la disponibilité des modules */
+  canManageAvailability: boolean;
+  /** « Mon organisme » uniquement : les actions portent sur l'organisme courant */
+  welcomeTab?: ReactNode;
 }
 
 export function OrganismeDetailClient({
@@ -26,9 +47,28 @@ export function OrganismeDetailClient({
   members,
   invitations,
   logoBase64,
+  modules,
+  canManageAvailability,
+  welcomeTab,
 }: OrganismeDetailClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+
+  const tabParam = searchParams.get("tab");
+  const activeTab: OrganismeTab =
+    isOrganismeTab(tabParam) && (tabParam !== "accueil" || welcomeTab)
+      ? tabParam
+      : "profil";
+
+  const handleTabChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    // API History native : Next synchronise useSearchParams sans refaire le
+    // rendu serveur, et le bouton précédent revient à l'onglet d'avant
+    window.history.pushState(null, "", `${pathname}?${params.toString()}`);
+  };
 
   const handleSubmit = async (data: OrganismeFormValues) => {
     setLoading(true);
@@ -48,13 +88,16 @@ export function OrganismeDetailClient({
   };
 
   return (
-    <Tabs defaultValue="profil">
+    <Tabs value={activeTab} onValueChange={handleTabChange}>
       <TabsList>
         <TabsTrigger value="profil">Profil</TabsTrigger>
         <TabsTrigger value="configuration">Configuration</TabsTrigger>
         <TabsTrigger value="membres">Membres</TabsTrigger>
         <TabsTrigger value="documents">Documents</TabsTrigger>
         <TabsTrigger value="modeles">Modèles documents</TabsTrigger>
+        {welcomeTab && (
+          <TabsTrigger value="accueil">Accueil stagiaires</TabsTrigger>
+        )}
       </TabsList>
 
       <TabsContent value="profil" className="mt-6">
@@ -92,7 +135,12 @@ export function OrganismeDetailClient({
         />
       </TabsContent>
 
-      <TabsContent value="configuration" className="mt-6">
+      <TabsContent value="configuration" className="mt-6 space-y-6">
+        <ModulesCard
+          organismeId={organisme.id}
+          modules={modules}
+          canManageAvailability={canManageAvailability}
+        />
         <OrganismeForm
           defaultValues={{
             ...organisme,
@@ -153,6 +201,12 @@ export function OrganismeDetailClient({
           logoBase64={logoBase64}
         />
       </TabsContent>
+
+      {welcomeTab && (
+        <TabsContent value="accueil" className="mt-6 space-y-6">
+          {welcomeTab}
+        </TabsContent>
+      )}
     </Tabs>
   );
 }

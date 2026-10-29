@@ -13,18 +13,10 @@ import {
   TraineeWithHistory,
   SessionType,
   SessionStatus,
+  VALID_SESSION_TYPES,
 } from "../types";
 import { hash } from "@/lib/encryption";
 
-const VALID_SESSION_TYPES = [
-  "PSC",
-  "PSE1",
-  "PSE2",
-  "SST",
-  "IPS",
-  "FF",
-  "FPS",
-] as const;
 const VALID_SESSION_STATUSES = [
   "planifiée",
   "en_cours",

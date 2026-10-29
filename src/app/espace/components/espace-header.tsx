@@ -16,26 +16,30 @@ export async function EspaceHeader({ organisme }: EspaceHeaderProps) {
 
   return (
     <header className="bg-background border-b">
-      <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           {logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={logoUrl}
               alt=""
-              height={40}
-              className="h-10 w-auto max-w-24 shrink-0 object-contain"
+              height={48}
+              className="h-12 w-auto max-w-28 shrink-0 object-contain"
             />
           )}
           <div className="min-w-0">
-            <p className="line-clamp-2 text-sm leading-tight font-semibold sm:text-base">
+            <p className="line-clamp-3 text-[13px] leading-snug font-semibold sm:line-clamp-2 sm:text-base">
               {organisme.name}
             </p>
             <p className="text-muted-foreground text-xs">avec RescueLearn</p>
           </div>
         </div>
         <form action={signOutTrainee}>
-          <Button type="submit" variant="ghost" size="sm">
+          <Button
+            type="submit"
+            variant="ghost"
+            className="h-11 min-w-11 shrink-0"
+          >
             <LogOut className="h-4 w-4" aria-hidden="true" />
             <span className="sr-only sm:not-sr-only sm:ml-2">
               Se déconnecter

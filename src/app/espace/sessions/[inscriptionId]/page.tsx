@@ -1,7 +1,5 @@
 import dayjs from "dayjs";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, MapPin } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   formatParisTime,
@@ -12,22 +10,46 @@ import {
 import { getEvaluationContexts } from "@/lib/evaluation/service";
 import { getAttestationState } from "@/lib/trainee-attestation";
 import { checkInscriptionAccess } from "@/lib/trainee-access";
+import {
+  isBeforeSession,
+  parseDateMap,
+  resolveToBring,
+} from "@/lib/welcome-kit";
+import { inscriptionReadiness, loadWelcome } from "@/lib/welcome-kit-service";
 import { getTraineeInscription, requireTrainee } from "@/lib/trainee-session";
 import { EspaceHeader } from "../../components/espace-header";
 import {
   formatFileSize,
+  formatParisDay,
   formatSessionDates,
   formatSlotDay,
   formatTimeLabel,
 } from "../../lib/format";
 import { AttestationCard } from "./components/attestation-card";
-import { DocumentsList } from "./components/documents-list";
+import { Attendance } from "./components/attendance";
+import { ContactCard } from "./components/contact-card";
 import { EvaluationsCard } from "./components/evaluations-card";
-import { SignSlotCard } from "./components/sign-slot-card";
-import { SlotList } from "./components/slot-list";
+import { NextActionCard } from "./components/next-action-card";
+import { PracticalInfo } from "./components/practical-info";
+import { PrereadList } from "./components/preread-list";
+import { Resources } from "./components/resources";
+import { SessionHeading } from "./components/session-heading";
 import { SlotRefresh } from "./components/slot-refresh";
-import type { DocumentView, SlotView } from "./types";
+import { TermsBlock } from "./components/terms-block";
+import type {
+  ContactView,
+  DocumentView,
+  PracticalInfoView,
+  PreReadView,
+  SlotView,
+} from "./types";
 import { visibleEvaluations } from "./evaluations/view";
+import {
+  getNextAction,
+  getSessionPhase,
+  getSessionStatus,
+  shortLocation,
+} from "./view-model";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +76,8 @@ export default async function EspaceSessionPage({
     nextDocument,
     otherInscriptions,
     evaluationContexts,
+    welcome,
+    formateurs,
   ] = await Promise.all([
     prisma.slot.findMany({
       where: { trainingSessionId: session.id },
@@ -63,13 +87,18 @@ export default async function EspaceSessionPage({
     prisma.sessionDocument.findMany({
       where: {
         trainingSessionId: session.id,
+        kind: "support",
         OR: [{ visibleFrom: null }, { visibleFrom: { lte: now } }],
       },
       orderBy: { createdAt: "asc" },
     }),
     // Prochain document programmé : la page se rafraîchit à son heure
     prisma.sessionDocument.findFirst({
-      where: { trainingSessionId: session.id, visibleFrom: { gt: now } },
+      where: {
+        trainingSessionId: session.id,
+        kind: "support",
+        visibleFrom: { gt: now },
+      },
       orderBy: { visibleFrom: "asc" },
       select: { visibleFrom: true },
     }),
@@ -82,6 +111,13 @@ export default async function EspaceSessionPage({
       include: { trainee: true, trainingSession: true },
     }),
     getEvaluationContexts(inscription, now),
+    loadWelcome(session),
+    // Nom seul : pas d'exposition des coordonnées personnelles du formateur
+    prisma.trainingSessionFormateur.findMany({
+      where: { trainingSessionId: session.id },
+      orderBy: { createdAt: "asc" },
+      include: { user: { select: { firstName: true, lastName: true } } },
+    }),
   ]);
 
   // Mêmes règles que /espace : sinon « Mes formations » redirigerait ici en boucle
@@ -115,12 +151,14 @@ export default async function EspaceSessionPage({
       now <= windows[index].closesAt
   );
   const currentSlot = currentIndex >= 0 ? slotViews[currentIndex] : null;
+  const nextSlot = slotViews.find((slot) => slot.state === "upcoming") ?? null;
 
   // Prochaine ouverture ou fermeture de créneau, ou prochain document programmé :
   // la page se rafraîchit à ce moment
   const nextChange = windows
     .flatMap(({ opensAt, closesAt }) => [opensAt, closesAt])
     .concat(nextDocument?.visibleFrom ? [nextDocument.visibleFrom] : [])
+    .concat(welcome.preReads.flatMap((doc) => doc.visibleFrom ?? []))
     .filter((date) => date > now)
     .sort((a, b) => a.getTime() - b.getTime())[0];
 
@@ -131,72 +169,198 @@ export default async function EspaceSessionPage({
   }));
 
   const evaluations = visibleEvaluations(evaluationContexts);
-
   const attestationState = getAttestationState(
     session.attestationsPublishedAt,
     inscription
   );
+
+  // --- Phase et action du moment ---
+  const before = isBeforeSession(slots, session.startDate, now);
+  const lastClosesAt =
+    windows
+      .map(({ closesAt }) => closesAt)
+      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+  const phase = getSessionPhase({
+    before,
+    lastClosesAt,
+    endDate: session.endDate ?? session.startDate,
+    now,
+  });
+  const readiness = inscriptionReadiness(welcome, inscription);
+  const action = getNextAction({
+    phase,
+    currentSlot,
+    nextSlot,
+    readiness,
+    evaluations,
+    attestation: attestationState,
+  });
+  const status = getSessionStatus({
+    phase,
+    days: [...new Set(windows.map(({ startsAt }) => parisDay(startsAt)))],
+    today,
+  });
+
+  // --- Kit d'accueil ---
+  const prereadOpened = parseDateMap(inscription.prereadOpenedAt);
+  const preReadViews: PreReadView[] = welcome.preReads.map((doc) => ({
+    id: doc.id,
+    source: doc.source,
+    title: doc.title,
+    sizeLabel: formatFileSize(doc.size),
+    availableLabel:
+      doc.visibleFrom && doc.visibleFrom > now
+        ? formatParisDay(doc.visibleFrom)
+        : null,
+    opened: doc.id in prereadOpened,
+  }));
+
+  const days = new Map<string, string[]>();
+  for (const view of slotViews) {
+    days.set(view.dayLabel, [
+      ...(days.get(view.dayLabel) ?? []),
+      view.timeRange,
+    ]);
+  }
+  const practical: PracticalInfoView = {
+    location: session.location,
+    accessInfo: session.accessInfo,
+    days: [...days].map(([dayLabel, ranges]) => ({ dayLabel, ranges })),
+    toBring: resolveToBring(welcome.toBring, session.toBringExtra),
+  };
+  const contact: ContactView = {
+    formateurs: formateurs
+      .map(({ user }) =>
+        [user.firstName, user.lastName].filter(Boolean).join(" ")
+      )
+      .filter(Boolean),
+    organisme: {
+      name: session.organisme.name,
+      email: session.organisme.email,
+      phone: session.organisme.phone,
+    },
+  };
+
+  // --- Sections, dans l'ordre de lecture sur mobile ---
+  const actionCard = action && (
+    <NextActionCard
+      action={action}
+      phase={phase}
+      inscriptionId={inscription.id}
+      readiness={readiness}
+      firstDayLabel={slotViews[0]?.dayLabel ?? null}
+      remindersEnabled={!inscription.evaluationRemindersOptOut}
+    />
+  );
+  // L'évaluation mise en avant n'est pas répétée plus bas
+  const otherEvaluations = evaluations.filter(
+    (view) =>
+      action?.kind !== "evaluation" || view.type !== action.evaluation.type
+  );
+  const evaluationsCard = otherEvaluations.length > 0 && (
+    <EvaluationsCard
+      inscriptionId={inscription.id}
+      evaluations={otherEvaluations}
+      remindersEnabled={!inscription.evaluationRemindersOptOut}
+      showReminders={action?.kind !== "evaluation"}
+    />
+  );
+  const attestationCard = action?.kind !== "attestation" && (
+    <AttestationCard inscriptionId={inscription.id} state={attestationState} />
+  );
+  const contactCard = <ContactCard contact={contact} />;
+
+  const layout = {
+    before: {
+      main: (
+        <>
+          {actionCard}
+          {welcome.hasTerms && (
+            <TermsBlock
+              inscriptionId={inscription.id}
+              acceptedAtLabel={
+                inscription.termsAcceptedAt
+                  ? formatParisDay(inscription.termsAcceptedAt)
+                  : null
+              }
+            />
+          )}
+          <PracticalInfo info={practical} />
+        </>
+      ),
+      aside: (
+        <>
+          {preReadViews.length > 0 && (
+            <PrereadList
+              inscriptionId={inscription.id}
+              documents={preReadViews}
+            />
+          )}
+          <Attendance slots={slotViews} before defaultOpen={false} />
+          {contactCard}
+        </>
+      ),
+    },
+    during: {
+      main: (
+        <>
+          {actionCard}
+          <Attendance slots={slotViews} before={false} defaultOpen />
+        </>
+      ),
+      aside: (
+        <>
+          {evaluationsCard}
+          <Resources
+            inscriptionId={inscription.id}
+            documents={documentViews}
+            preReads={preReadViews}
+          />
+          <PracticalInfo info={practical} compact />
+          {attestationCard}
+          {contactCard}
+        </>
+      ),
+    },
+    after: {
+      main: (
+        <>
+          {actionCard}
+          {evaluationsCard}
+          {attestationCard}
+          <Attendance slots={slotViews} before={false} defaultOpen={false} />
+        </>
+      ),
+      aside: (
+        <>
+          <Resources
+            inscriptionId={inscription.id}
+            documents={documentViews}
+            preReads={preReadViews}
+          />
+          {contactCard}
+        </>
+      ),
+    },
+  }[phase];
 
   return (
     <>
       <EspaceHeader organisme={session.organisme} />
       <SlotRefresh at={nextChange?.toISOString() ?? null} />
 
-      <main className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-        <div className="space-y-2">
-          {hasOtherSessions && (
-            <Link
-              href="/espace"
-              className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-1 text-sm"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              Mes formations
-            </Link>
-          )}
-          <h1 className="text-2xl font-bold">{session.title}</h1>
-          <div className="text-muted-foreground space-y-1 text-sm">
-            <p className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" aria-hidden="true" />
-              {formatSessionDates(session.startDate, session.endDate)}
-            </p>
-            <p className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" aria-hidden="true" />
-              {session.location}
-            </p>
-          </div>
-        </div>
+      <main className="mx-auto max-w-5xl space-y-6 px-4 pt-4 pb-12 sm:space-y-8 sm:px-6 sm:pt-6">
+        <SessionHeading
+          title={session.title}
+          status={status}
+          datesLabel={formatSessionDates(session.startDate, session.endDate)}
+          place={shortLocation(session.location)}
+          showBackLink={hasOtherSessions}
+        />
 
-        <div className="grid gap-6 md:grid-cols-[3fr_2fr] md:items-start">
-          <div className="space-y-6">
-            {currentSlot && (
-              <SignSlotCard
-                key={currentSlot.id}
-                inscriptionId={inscription.id}
-                slot={currentSlot}
-              />
-            )}
-            <SlotList slots={slotViews} />
-          </div>
-
-          <div className="space-y-6">
-            {evaluations.length > 0 && (
-              <EvaluationsCard
-                inscriptionId={inscription.id}
-                evaluations={evaluations}
-                remindersEnabled={!inscription.evaluationRemindersOptOut}
-              />
-            )}
-            {documentViews.length > 0 && (
-              <DocumentsList
-                inscriptionId={inscription.id}
-                documents={documentViews}
-              />
-            )}
-            <AttestationCard
-              inscriptionId={inscription.id}
-              state={attestationState}
-            />
-          </div>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-8">
+          <div className="space-y-6 lg:space-y-8">{layout.main}</div>
+          <div className="space-y-6 lg:space-y-8">{layout.aside}</div>
         </div>
       </main>
     </>

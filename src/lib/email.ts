@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { logger } from "./logger";
+import { googleMapsDirectionsUrl } from "./directions";
 
 /**
  * Configuration SMTP pour un organisme.
@@ -417,6 +418,7 @@ export const EmailService = {
     sessionLocation,
     accessUrl,
     reason = "access",
+    hasPreparation = false,
     smtp,
   }: {
     to: string;
@@ -428,6 +430,8 @@ export const EmailService = {
     accessUrl: string;
     /** "attestation" : prévient que l'attestation est disponible */
     reason?: "access" | "attestation";
+    /** Kit d'accueil ou CGV : invite à préparer la venue depuis l'espace */
+    hasPreparation?: boolean;
     smtp?: SMTPConfig;
   }) {
     const isAttestation = reason === "attestation";
@@ -440,7 +444,11 @@ export const EmailService = {
       : "Votre espace de formation est prêt";
     const intro = isAttestation
       ? `${organismeName} a publié votre attestation de fin de formation. Vous pouvez la télécharger depuis votre espace.`
-      : `${organismeName} vous ouvre l'accès à votre espace de formation. Vous pourrez y émarger pendant la formation (avec le code affiché en salle), télécharger les supports et, à la fin, votre attestation.`;
+      : `${organismeName} vous ouvre l'accès à votre espace de formation. Vous pourrez y émarger pendant la formation (avec le code affiché en salle), télécharger les supports et, à la fin, votre attestation.${
+          hasPreparation
+            ? " Préparez votre venue : infos pratiques, documents à lire et conditions à accepter vous y attendent."
+            : ""
+        }`;
     const cta = isAttestation
       ? "Télécharger mon attestation"
       : "Accéder à mon espace";
@@ -452,6 +460,10 @@ export const EmailService = {
       sessionTitle,
       sessionDates,
       sessionLocation,
+      // Utile avant la formation, pas pour récupérer l'attestation
+      directionsUrl: isAttestation
+        ? undefined
+        : googleMapsDirectionsUrl(sessionLocation),
       cta,
       accessUrl,
     });
@@ -535,6 +547,8 @@ interface TraineeEmailContent {
   sessionTitle: string;
   sessionDates: string;
   sessionLocation: string;
+  /** Lien d'itinéraire vers le lieu, affiché sous le lieu */
+  directionsUrl?: string;
   cta: string;
   accessUrl: string;
   /** Mention ajoutée sous le lien (ex. désinscription des rappels) */
@@ -550,11 +564,12 @@ function renderTraineeEmail({
   sessionTitle,
   sessionDates,
   sessionLocation,
+  directionsUrl,
   cta,
   accessUrl,
   footnote,
 }: TraineeEmailContent) {
-  const text = `${greeting}\n\n${intro}\n\n${sessionTitle}\n${sessionDates} · ${sessionLocation}\n\n${cta} :\n${accessUrl}\n\nCe lien est personnel : ne le transférez pas. Seul le lien le plus récent fonctionne.${footnote ? `\n\n${footnote}` : ""}\n\n${organismeName}`;
+  const text = `${greeting}\n\n${intro}\n\n${sessionTitle}\n${sessionDates} · ${sessionLocation}${directionsUrl ? `\nItinéraire : ${directionsUrl}` : ""}\n\n${cta} :\n${accessUrl}\n\nCe lien est personnel : ne le transférez pas. Seul le lien le plus récent fonctionne.${footnote ? `\n\n${footnote}` : ""}\n\n${organismeName}`;
 
   const e = escapeHtml;
   const html = `
@@ -567,7 +582,12 @@ function renderTraineeEmail({
           <p style="font-size: 15px; color: #4b5563; margin: 0 0 20px 0;">${e(greeting)}</p>
           <div style="background-color: #f3f4f6; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;">
             <p style="margin: 0; font-size: 16px; font-weight: 700; color: #111827;">${e(sessionTitle)}</p>
-            <p style="margin: 4px 0 0 0; font-size: 14px; color: #4b5563;">${e(sessionDates)} · ${e(sessionLocation)}</p>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #4b5563;">${e(sessionDates)} · ${e(sessionLocation)}</p>${
+              directionsUrl
+                ? `
+            <p style="margin: 8px 0 0 0; font-size: 14px;"><a href="${e(directionsUrl)}" style="color: #111827; font-weight: 600;">Itinéraire →</a></p>`
+                : ""
+            }
           </div>
           <p style="font-size: 15px; color: #4b5563; margin: 0 0 28px 0;">${e(intro)}</p>
           <div style="text-align: center; margin: 28px 0;">

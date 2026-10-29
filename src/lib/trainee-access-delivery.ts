@@ -27,6 +27,8 @@ interface DeliverySession {
   location: string;
   startDate: Date | null;
   endDate: Date | null;
+  /** Kit d'accueil, CGV ou pré-lecture : ligne « Préparez votre venue » */
+  hasPreparation?: boolean;
   organisme: {
     name: string;
     smtpHost: string | null;
@@ -73,6 +75,7 @@ export async function deliverAccess(
       sessionLocation: session.location,
       accessUrl,
       reason,
+      hasPreparation: session.hasPreparation,
       smtp: {
         host: organisme.smtpHost,
         port: organisme.smtpPort,

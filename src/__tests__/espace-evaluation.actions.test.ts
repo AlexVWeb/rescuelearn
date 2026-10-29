@@ -32,6 +32,9 @@ const mockPrisma = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }));
 
+const mockModules = vi.hoisted(() => ({ isModuleActive: vi.fn() }));
+vi.mock("@/lib/organisme-modules/service", () => mockModules);
+
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import {
@@ -56,7 +59,7 @@ const INSCRIPTION = {
   id: "ins-1",
   traineeId: "t-1",
   trainee: { isAnonymized: false },
-  trainingSession: { id: "ts-1", status: "terminée" },
+  trainingSession: { id: "ts-1", status: "terminée", organismeId: "org-1" },
 };
 
 const COMPLETE: [string, string][] = [
@@ -89,6 +92,7 @@ beforeEach(() => {
   mockPrisma.emargement.findMany.mockResolvedValue([{ status: "validé" }]);
   mockPrisma.evaluationResponse.findMany.mockResolvedValue([]);
   mockPrisma.rateLimit.findUnique.mockResolvedValue(null);
+  mockModules.isModuleActive.mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -210,7 +214,7 @@ describe("submitEvaluation", () => {
   it("refuse une session annulée", async () => {
     mockSession.getTraineeInscription.mockResolvedValue({
       ...INSCRIPTION,
-      trainingSession: { id: "ts-1", status: "annulée" },
+      trainingSession: { ...INSCRIPTION.trainingSession, status: "annulée" },
     });
     expect(
       await submitEvaluation(
@@ -220,6 +224,23 @@ describe("submitEvaluation", () => {
         form([...COMPLETE, ["consent", "on"]])
       )
     ).toEqual(NOT_AVAILABLE);
+  });
+
+  it("refuse si le module évaluation de l'organisme est inactif", async () => {
+    mockModules.isModuleActive.mockResolvedValue(false);
+    expect(
+      await submitEvaluation(
+        "ins-1",
+        "chaud",
+        IDLE,
+        form([...COMPLETE, ["consent", "on"]])
+      )
+    ).toEqual(NOT_AVAILABLE);
+    expect(mockModules.isModuleActive).toHaveBeenCalledWith(
+      "org-1",
+      "evaluation"
+    );
+    expect(mockPrisma.evaluationResponse.upsert).not.toHaveBeenCalled();
   });
 
   it("refuse l'évaluation à froid avant son ouverture", async () => {

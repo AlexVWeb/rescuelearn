@@ -15,6 +15,7 @@ export const SESSION_PHASES = {
       programme: "Programme",
       stagiaires: "Stagiaires",
       groupes: "Groupes",
+      accueil: "Accueil",
       supports: "Supports",
     },
   },
@@ -55,8 +56,14 @@ function isPhase(value: string | null): value is SessionPhase {
   return !!value && value in SESSION_PHASES;
 }
 
-export function sectionsOf(phase: SessionPhase): SessionSection[] {
-  return Object.keys(SESSION_PHASES[phase].sections) as SessionSection[];
+/** Sections d'une phase, sans celles masquées (module d'organisme inactif). */
+export function sectionsOf(
+  phase: SessionPhase,
+  hidden: readonly SessionSection[] = []
+): SessionSection[] {
+  return (
+    Object.keys(SESSION_PHASES[phase].sections) as SessionSection[]
+  ).filter((s) => !hidden.includes(s));
 }
 
 export function defaultPhase(status: string): SessionPhase {
@@ -71,17 +78,23 @@ export function resolveView(
     section?: string | null;
     tab?: string | null;
   },
-  status: string
+  status: string,
+  hidden: readonly SessionSection[] = []
 ): SessionView {
   if (isPhase(params.phase ?? null)) {
     const phase = params.phase as SessionPhase;
-    const sections = sectionsOf(phase);
+    const sections = sectionsOf(phase, hidden);
     const section = sections.find((s) => s === params.section) ?? sections[0];
     return { phase, section };
   }
-  if (params.tab && LEGACY_TABS[params.tab]) return LEGACY_TABS[params.tab];
+  const legacy = params.tab ? LEGACY_TABS[params.tab] : undefined;
+  if (legacy) {
+    return hidden.includes(legacy.section)
+      ? { phase: legacy.phase, section: sectionsOf(legacy.phase, hidden)[0] }
+      : legacy;
+  }
   const phase = defaultPhase(status);
-  return { phase, section: sectionsOf(phase)[0] };
+  return { phase, section: sectionsOf(phase, hidden)[0] };
 }
 
 export type OutcomeSuggestion = "suivie" | "a_verifier" | null;

@@ -4,6 +4,7 @@ import { formatParisDay, formatSessionDates } from "@/app/espace/lib/format";
 import { EmailService } from "@/lib/email";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { activeModuleWhere } from "@/lib/organisme-modules/service";
 import { buildAccessUrl, generateAccessToken } from "@/lib/trainee-access";
 import { getBaseUrl } from "@/lib/utils";
 import { checkEvaluationEligibility } from "./eligibility";
@@ -66,6 +67,8 @@ async function findCandidateSessions(now: Date) {
     where: {
       status: { not: SESSION_STATUS.ANNULEE },
       slots: { some: { date: { gte: since } } },
+      // Module désactivé : invitations et relances suspendues, reprise à la réactivation
+      organisme: activeModuleWhere("evaluation"),
     },
     select: {
       status: true,

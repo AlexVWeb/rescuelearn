@@ -19,8 +19,8 @@ import {
 import {
   DOCUMENT_TYPES,
   MAX_DOCUMENT_BYTES,
-  validateDocumentUpload,
 } from "@/app/admin/training/lib/session-documents";
+import { directUpload } from "@/app/admin/training/lib/direct-upload";
 import type { SessionDocument } from "@/app/admin/training/types";
 import { formatFileSize } from "@/app/espace/lib/format";
 import { DocumentRow } from "./document-row";
@@ -31,41 +31,6 @@ const ACCEPT = Object.fromEntries(
     [`.${extension}`],
   ])
 );
-
-async function uploadOne(sessionId: string, file: File) {
-  const error = validateDocumentUpload({
-    mimeType: file.type,
-    size: file.size,
-  });
-  if (error) throw new Error(error);
-
-  const { key, uploadUrl } = await createDocumentUpload(sessionId, {
-    fileName: file.name,
-    mimeType: file.type,
-    size: file.size,
-  });
-
-  let response: Response;
-  try {
-    response = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": file.type },
-      body: file,
-    });
-  } catch {
-    // Échec réseau avant toute réponse : connexion coupée, ou CORS du bucket
-    throw new Error(
-      "Envoi interrompu. Vérifiez votre connexion ; si le problème persiste, le stockage n'accepte pas encore les envois directs (CORS)."
-    );
-  }
-  if (!response.ok) throw new Error("Le stockage a refusé le fichier");
-
-  await confirmDocumentUpload(sessionId, {
-    key,
-    fileName: file.name,
-    mimeType: file.type,
-  });
-}
 
 export function SupportsTab({
   sessionId,
@@ -94,7 +59,11 @@ export function SupportsTab({
     // Un par un : sur une connexion de salle de formation, mieux vaut ne pas saturer
     for (const file of files) {
       try {
-        await uploadOne(sessionId, file);
+        await directUpload(
+          file,
+          (meta) => createDocumentUpload(sessionId, meta),
+          (upload) => confirmDocumentUpload(sessionId, upload)
+        );
         added++;
       } catch (e) {
         toast.error(

@@ -114,10 +114,19 @@ export async function confirmDocumentUpload(
   });
 }
 
+const DOCUMENT_KINDS = ["preparation", "support"] as const;
+
 export async function updateDocument(
   documentId: string,
-  data: { title: string; visibleFrom: Date | null }
+  data: {
+    title: string;
+    visibleFrom: Date | null;
+    kind?: (typeof DOCUMENT_KINDS)[number];
+  }
 ) {
+  if (data.kind !== undefined && !DOCUMENT_KINDS.includes(data.kind)) {
+    throw new Error("Type de document inconnu");
+  }
   const document = await findOwnDocument(documentId);
 
   const title = data.title.trim().slice(0, 120);
@@ -125,7 +134,7 @@ export async function updateDocument(
 
   return prisma.sessionDocument.update({
     where: { id: document.id },
-    data: { title, visibleFrom: data.visibleFrom },
+    data: { title, visibleFrom: data.visibleFrom, kind: data.kind },
   });
 }
 

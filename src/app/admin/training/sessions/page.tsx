@@ -2,14 +2,22 @@ import { getAllSessions, getEvaluationQuality } from "../actions";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
-import { columns, type SessionRow } from "./components/columns";
+import {
+  columns,
+  columnsWithoutSatisfaction,
+  type SessionRow,
+} from "./components/columns";
 import { TrainingSession } from "../types";
 import Link from "next/link";
+import { requireOrganisme } from "@/lib/context";
+import { isModuleActive } from "@/lib/organisme-modules/service";
 
 export default async function SessionsPage() {
-  const [allSessions, quality] = await Promise.all([
+  const user = await requireOrganisme();
+  const [allSessions, quality, evaluationActive] = await Promise.all([
     getAllSessions(),
     getEvaluationQuality(),
+    isModuleActive(user.organismeId, "evaluation"),
   ]);
   const sessions: SessionRow[] = (
     allSessions as unknown as TrainingSession[]
@@ -37,7 +45,7 @@ export default async function SessionsPage() {
       </div>
 
       <DataTable
-        columns={columns}
+        columns={evaluationActive ? columns : columnsWithoutSatisfaction}
         data={sessions}
         searchKey="title"
         searchPlaceholder="Rechercher par titre..."

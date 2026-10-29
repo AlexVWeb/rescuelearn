@@ -6,8 +6,16 @@ export const SESSION_STATUS = {
   ANNULEE: "annulée",
 } as const;
 
-export type SessionType =
-  "PSC" | "PSE1" | "PSE2" | "SST" | "IPS" | "FF" | "FPS";
+export const VALID_SESSION_TYPES = [
+  "PSC",
+  "PSE1",
+  "PSE2",
+  "SST",
+  "IPS",
+  "FF",
+  "FPS",
+] as const;
+export type SessionType = (typeof VALID_SESSION_TYPES)[number];
 
 export type InscriptionStatus = "inscrit" | "présent" | "absent" | "éliminé";
 export const INSCRIPTION_STATUS = {
@@ -137,6 +145,7 @@ export interface SessionDocument {
   mimeType: string;
   size: number;
   visibleFrom: Date | null;
+  kind: "preparation" | "support";
   createdAt: Date;
 }
 
