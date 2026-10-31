@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { logger } from "../logger";
+import { isPermanentGeminiError } from "./errors";
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-pro";
 
@@ -39,7 +40,7 @@ export async function retryWithBackoff<T>(
       String(err?.message).includes("UNAVAILABLE") ||
       String(err?.message).includes("Resource has been exhausted");
 
-    if (retries > 0 && isTransient) {
+    if (retries > 0 && isTransient && !isPermanentGeminiError(error)) {
       logger.warn(
         `Gemini API returned transient error: ${err?.message || error}. Retrying in ${delay}ms... (${retries} retries left)`
       );

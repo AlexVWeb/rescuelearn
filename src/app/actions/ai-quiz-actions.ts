@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
 import { generateQuizFromPdf } from "@/lib/gemini";
+import { getAiErrorMessage } from "@/lib/gemini/errors";
 import { loadReferencielPdf } from "@/lib/referenciel-pdf";
 import { extractPages } from "@/lib/pdf/document";
 import { mergePageRanges } from "@/lib/pdf/chapters";
@@ -156,10 +157,7 @@ export async function generateQuizWithAiAction(jsonData: unknown) {
     logger.error("Failed to generate quiz with AI:", error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Une erreur est survenue lors de la génération par l'IA.",
+      error: getAiErrorMessage(error),
     };
   }
 }

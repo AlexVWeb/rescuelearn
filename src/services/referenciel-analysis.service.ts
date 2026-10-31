@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { getAiErrorMessage } from "@/lib/gemini/errors";
 import {
   analyzeChapterPlan,
   analyzeChapterTopics,
@@ -223,7 +224,7 @@ export async function runReferencielAnalysis(referencielId: number) {
   const failures = results.flatMap((r, i) =>
     r.status === "rejected"
       ? [
-          `${batches[i].title} (${r.reason instanceof Error ? r.reason.message : String(r.reason)})`,
+          `${batches[i].title} (${getAiErrorMessage(r.reason, String(r.reason))})`,
         ]
       : []
   );

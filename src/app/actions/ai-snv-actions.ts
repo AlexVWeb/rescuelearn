@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { checkSuperAdmin } from "@/lib/admin-guard";
 import { generateSNVScenarioFromPdf } from "@/lib/gemini";
+import { getAiErrorMessage } from "@/lib/gemini/errors";
 import { z } from "zod";
 import path from "path";
 
@@ -99,10 +100,7 @@ export async function generateSNVScenarioWithAiAction(jsonData: unknown) {
     logger.error("Failed to generate SNV scenario with AI:", error);
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Une erreur est survenue lors de la génération par l'IA.",
+      error: getAiErrorMessage(error),
     };
   } finally {
     if (tempFileCreated && pdfPath) {

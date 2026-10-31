@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { getAiErrorMessage } from "@/lib/gemini/errors";
 import {
   generateProgressionNodeFromPdf,
   generateEntireTreeFromPdf,
@@ -256,7 +257,7 @@ export async function generateNextTreeNode(
   try {
     await generatePlannedNode(tree, planned);
   } catch (err) {
-    error = err instanceof Error ? err.message : String(err);
+    error = getAiErrorMessage(err, String(err));
     logger.error(`Échec de génération du nœud "${planned.title}":`, err);
     const line = `${planned.title} : ${error}`;
     await prisma.progressionTree.update({
