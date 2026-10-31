@@ -12,16 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Trash2, Upload, UserPlus, UserRoundPlus } from "lucide-react";
 import {
   addTraineeToSession,
+  addTraineesToSession,
   removeTraineeFromSession,
 } from "../../../actions";
 import { useRouter } from "next/navigation";
@@ -34,6 +28,7 @@ import { AccessMenu } from "./access/access-menu";
 import { AccessStatusBadge } from "./access/access-status-badge";
 import { SendAccessButton } from "./access/send-access-button";
 import { ReadinessBadge } from "./welcome/readiness-badge";
+import { TraineeMultiPicker } from "./trainee-multi-picker";
 import type { SessionReadiness } from "../../../actions";
 
 interface InscriptionsTabProps {
@@ -56,23 +51,28 @@ export function InscriptionsTab({
 }: InscriptionsTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [selectedTrainee, setSelectedTrainee] = useState("");
+  const [selectedTrainees, setSelectedTrainees] = useState<string[]>([]);
   const [showTraineeDialog, setShowTraineeDialog] = useState(false);
 
   const isClosed = sessionStatus === "terminée" || sessionStatus === "annulée";
-  const isFull = inscriptions.length >= maxTrainees;
+  const remainingSeats = Math.max(0, maxTrainees - inscriptions.length);
+  const isFull = remainingSeats === 0;
   const inscribedIds = inscriptions.map((i) => i.traineeId);
   const availableTrainees = allTrainees.filter(
     (t) => !inscribedIds.includes(t.id)
   );
 
-  async function handleAddTrainee() {
-    if (!selectedTrainee || isClosed) return;
+  async function handleAddTrainees() {
+    if (selectedTrainees.length === 0 || isClosed) return;
     setLoading(true);
     try {
-      await addTraineeToSession(sessionId, selectedTrainee);
-      setSelectedTrainee("");
-      toast.success("Stagiaire inscrit avec succès");
+      const { count } = await addTraineesToSession(sessionId, selectedTrainees);
+      setSelectedTrainees([]);
+      toast.success(
+        count > 1
+          ? `${count} stagiaires inscrits avec succès`
+          : "Stagiaire inscrit avec succès"
+      );
       router.refresh();
     } catch (e) {
       logger.error(e);
@@ -139,36 +139,20 @@ export function InscriptionsTab({
         <CardContent>
           {!isClosed && (
             <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap">
-              <Select
-                value={selectedTrainee}
-                onValueChange={setSelectedTrainee}
+              <TraineeMultiPicker
+                trainees={availableTrainees}
+                selected={selectedTrainees}
+                onChange={setSelectedTrainees}
+                maxSelectable={remainingSeats}
                 disabled={isFull || loading}
-              >
-                <SelectTrigger
-                  className="w-full sm:w-[300px]"
-                  aria-label="Stagiaire à inscrire"
-                >
-                  <SelectValue placeholder="Sélectionner un stagiaire" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableTrainees.map((trainee) => (
-                    <SelectItem key={trainee.id} value={trainee.id}>
-                      {trainee.firstName} {trainee.lastName}
-                    </SelectItem>
-                  ))}
-                  {availableTrainees.length === 0 && (
-                    <SelectItem value="none" disabled>
-                      Aucun stagiaire disponible
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+              />
               <Button
-                onClick={handleAddTrainee}
-                disabled={!selectedTrainee || isFull || loading}
+                onClick={handleAddTrainees}
+                disabled={selectedTrainees.length === 0 || isFull || loading}
                 className="w-full sm:w-auto"
               >
                 <UserPlus className="mr-2 h-4 w-4" /> Inscrire
+                {selectedTrainees.length > 1 && ` (${selectedTrainees.length})`}
               </Button>
               <Button
                 variant="outline"
