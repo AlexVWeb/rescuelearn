@@ -1,10 +1,5 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  Info,
-  MessageSquareHeart,
-  TriangleAlert,
-} from "lucide-react";
+import { ArrowRight, Info, TriangleAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MIN_RESPONSES_FOR_DETAIL } from "@/lib/evaluation/aggregates";
 import type { PositiveShare, QualityOverview } from "@/lib/evaluation/quality";
@@ -69,20 +64,14 @@ export function QualityCard({ overview }: { overview: QualityOverview }) {
 
   return (
     <section aria-labelledby="quality-title">
-      <div className="mb-3 flex items-center justify-between">
-        <h2
-          id="quality-title"
-          className="flex items-center gap-2 text-sm font-bold tracking-wider text-slate-500 uppercase"
-        >
-          <MessageSquareHeart className="h-4 w-4" aria-hidden="true" />
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2 id="quality-title" className="text-base font-semibold">
           Avis des stagiaires
         </h2>
-        <span className="text-xs font-semibold text-slate-500">
-          12 derniers mois
-        </span>
+        <span className="text-muted-foreground text-sm">12 derniers mois</span>
       </div>
 
-      <Card className="border py-0 shadow-sm">
+      <Card className="rounded-2xl border py-0 shadow-none">
         <CardContent className="space-y-4 p-4">
           {nothingYet ? (
             <p className="text-xs text-slate-500">
@@ -110,9 +99,7 @@ export function QualityCard({ overview }: { overview: QualityOverview }) {
 
               {hasAttention && (
                 <div className="space-y-2 border-t pt-3">
-                  <p className="text-xs font-bold tracking-wider text-slate-500 uppercase">
-                    À regarder
-                  </p>
+                  <p className="text-sm font-semibold">À regarder</p>
                   <ul className="space-y-2 text-sm">
                     {sessionsToReview.map((session) => (
                       <li key={session.id}>

@@ -36,6 +36,7 @@ import {
   isDateWithinSession,
   SlotSuggestion,
 } from "./slot-utils";
+import { ResetSlotsButton } from "./reset-slots-button";
 
 interface SlotsTabProps {
   sessionId: string;
@@ -293,12 +294,20 @@ export function SlotsTab({
           </div>
 
           <div className="mt-8 space-y-3">
-            <h3 className="text-muted-foreground flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
-              Créneaux planifiés{" "}
-              <Badge variant="secondary" className="rounded-full px-2">
-                {slots.length}
-              </Badge>
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-muted-foreground flex items-center gap-2 text-sm font-bold tracking-wider uppercase">
+                Créneaux planifiés{" "}
+                <Badge variant="secondary" className="rounded-full px-2">
+                  {slots.length}
+                </Badge>
+              </h3>
+              {!isClosed && slots.length > 0 && (
+                <ResetSlotsButton
+                  sessionId={sessionId}
+                  slotCount={slots.length}
+                />
+              )}
+            </div>
             <div className="grid gap-3">
               {slots.length === 0 ? (
                 <div className="bg-muted/10 flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-12">

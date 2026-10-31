@@ -1,6 +1,6 @@
-import React from "react";
 import Link from "next/link";
 import { CheckCircle2, Circle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface OnboardingChecklistProps {
   checklist: {
@@ -48,67 +48,64 @@ export function OnboardingChecklist({ checklist }: OnboardingChecklistProps) {
 
   return (
     <section
-      className="bg-card relative overflow-hidden rounded-xl border p-6 shadow-sm"
-      aria-label="Étapes de configuration"
+      className="bg-card rounded-2xl border p-5 sm:p-6"
+      aria-labelledby="onboarding-title"
     >
-      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-            Premiers pas
-          </h2>
-          <p className="text-sm text-slate-500">
-            Configurez au mieux votre organisme de formation.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 sm:text-right">
-          <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
-            {completedCount} / {checklistItems.length} étapes
-          </span>
-          <span className="text-muted-foreground text-xs">
-            ({progressPercentage}%)
-          </span>
-        </div>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="onboarding-title" className="text-base font-semibold">
+          Premiers pas
+        </h2>
+        <p className="text-muted-foreground text-sm tabular-nums">
+          {completedCount} étape{completedCount > 1 ? "s" : ""} sur{" "}
+          {checklistItems.length}
+        </p>
       </div>
 
-      {/* Progress Bar */}
-      <div className="mb-6 h-2.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+      <div
+        className="bg-muted mb-4 h-1.5 w-full overflow-hidden rounded-full"
+        role="progressbar"
+        aria-label="Avancement des premiers pas"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progressPercentage}
+      >
         <div
-          className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
+          className="bg-brand h-full rounded-full"
           style={{ width: `${progressPercentage}%` }}
         />
       </div>
 
-      {/* Checklist Steps Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {checklistItems.map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            className={`hover:bg-muted/50 flex items-center gap-3 rounded-lg border p-3 transition-all ${
-              item.completed
-                ? "border-slate-200 bg-slate-50/50 dark:bg-slate-900/10"
-                : "bg-card border-dashed"
-            }`}
-          >
-            {item.completed ? (
-              <CheckCircle2
-                className="h-5 w-5 shrink-0 text-green-600"
-                aria-label="Complété"
-              />
-            ) : (
-              <Circle
-                className="h-5 w-5 shrink-0 text-slate-300"
-                aria-label="En attente"
-              />
-            )}
-            <span
-              className={`text-sm font-medium ${item.completed ? "text-slate-600 line-through" : "text-slate-900 dark:text-white"}`}
+          <li key={item.id}>
+            <Link
+              href={item.href}
+              className={cn(
+                "focus-visible:ring-ring flex h-full items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                item.completed
+                  ? "text-muted-foreground bg-muted/50 border-transparent"
+                  : "hover:bg-muted text-foreground font-medium"
+              )}
             >
-              {item.label}
-            </span>
-          </Link>
+              {item.completed ? (
+                <CheckCircle2
+                  className="text-success h-5 w-5 shrink-0"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Circle
+                  className="text-muted-foreground/50 h-5 w-5 shrink-0"
+                  aria-hidden="true"
+                />
+              )}
+              <span>
+                {item.label}
+                {item.completed && <span className="sr-only"> (fait)</span>}
+              </span>
+            </Link>
+          </li>
         ))}
-      </div>
+      </ol>
     </section>
   );
 }

@@ -36,6 +36,61 @@ export async function addTraineeToSession(
   });
 }
 
+/**
+ * Inscrit plusieurs stagiaires d'un coup. Ignore ceux déjà inscrits et
+ * refuse si la capacité de la session serait dépassée.
+ */
+export async function addTraineesToSession(
+  sessionId: string,
+  traineeIds: string[]
+) {
+  const uniqueIds = [...new Set(traineeIds)];
+  if (uniqueIds.length === 0) return { count: 0 };
+
+  const tenant = await getTenantPrisma();
+
+  const [session, trainees] = await Promise.all([
+    tenant.trainingSession.findFirst({
+      where: { id: sessionId },
+      include: { inscriptions: { select: { traineeId: true } } },
+    }),
+    tenant.trainee.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true },
+    }),
+  ]);
+
+  if (!session || trainees.length !== uniqueIds.length)
+    throw new Error("Entité introuvable ou non autorisée");
+
+  if (isSessionClosed(session.status)) {
+    throw new Error("Impossible de modifier une session clôturée");
+  }
+  await assertAttestationsNotSigned(sessionId);
+
+  const alreadyInscribed = new Set(
+    session.inscriptions.map((i) => i.traineeId)
+  );
+  const toAdd = uniqueIds.filter((id) => !alreadyInscribed.has(id));
+  if (toAdd.length === 0) return { count: 0 };
+
+  const remaining = session.maxTrainees - session.inscriptions.length;
+  if (toAdd.length > remaining) {
+    throw new Error(
+      remaining <= 0
+        ? "Session complète"
+        : `Il ne reste que ${remaining} place${remaining > 1 ? "s" : ""} dans cette session`
+    );
+  }
+
+  return tenant.inscription.createMany({
+    data: toAdd.map((traineeId) => ({
+      trainingSessionId: sessionId,
+      traineeId,
+    })),
+  });
+}
+
 export async function removeTraineeFromSession(inscriptionId: string) {
   const user = await requireOrganisme();
 

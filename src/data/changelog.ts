@@ -10,6 +10,36 @@ export interface ChangelogItem {
 
 export const changelogData: ChangelogItem[] = [
   {
+    id: "reinitialisation-creneaux",
+    title: "Réinitialisation des Créneaux en un Clic",
+    description:
+      "Le programme d'une session peut être vidé d'un coup pour recréer proprement tous ses créneaux.",
+    date: "2026-11-01",
+    status: "completed",
+    category: "improvement",
+    details: [
+      "Bouton « Réinitialiser les créneaux » dans l'onglet Programme, avec confirmation.",
+      "Le formulaire repart ensuite du premier jour de la session.",
+      "Bloqué dès qu'un émargement est enregistré, pour ne jamais effacer une preuve de présence.",
+    ],
+  },
+  {
+    id: "tableau-de-bord-organisme-semaine",
+    title: "Tableau de Bord Organisme Repensé",
+    description:
+      "Le tableau de bord montre d'abord la semaine à venir et ce qui attend une action, avant les statistiques.",
+    date: "2026-11-01",
+    status: "completed",
+    category: "improvement",
+    details: [
+      "Agenda des 7 prochains jours, jour par jour, avec horaires, lieu et nombre d'inscrits de chaque session.",
+      "Liste « À faire » : sessions terminées à clôturer et sessions proches avec moins de la moitié des places prises.",
+      "Sessions à venir triées par date de début, avec accès direct à chaque session.",
+      "Chiffres clés plus justes : plus de taux affiché à 0 % ou 100 % quand il n'y a pas encore de données.",
+      "Code formateurs et création de session accessibles dès l'en-tête ; jours du planning cliquables.",
+    ],
+  },
+  {
     id: "attestation-signature-formateur",
     title: "Signature des Attestations par le Formateur",
     description:

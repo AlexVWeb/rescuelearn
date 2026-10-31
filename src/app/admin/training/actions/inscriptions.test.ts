@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   addTraineeToSession,
+  addTraineesToSession,
   removeTraineeFromSession,
   updateInscriptionStatus,
   updateAttestationResult,
@@ -17,9 +18,11 @@ const mockPrisma = vi.hoisted(() => ({
   },
   trainee: {
     findFirst: vi.fn(),
+    findMany: vi.fn(),
   },
   inscription: {
     create: vi.fn(),
+    createMany: vi.fn(),
     findUnique: vi.fn(),
     delete: vi.fn(),
     update: vi.fn(),
@@ -97,6 +100,84 @@ describe("Inscription Actions", () => {
       await expect(
         addTraineeToSession("session-1", "trainee-1")
       ).rejects.toThrow("Entité introuvable ou non autorisée");
+    });
+  });
+
+  describe("addTraineesToSession", () => {
+    const openSession = (inscribed: string[] = [], maxTrainees = 10) => ({
+      id: "session-1",
+      status: "planifiée",
+      maxTrainees,
+      inscriptions: inscribed.map((traineeId) => ({ traineeId })),
+    });
+
+    it("inscribes all selected trainees, skipping duplicates", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue(
+        openSession(["t1"])
+      );
+      mockPrisma.trainee.findMany.mockResolvedValue([
+        { id: "t1" },
+        { id: "t2" },
+        { id: "t3" },
+      ]);
+      mockPrisma.inscription.createMany.mockResolvedValue({ count: 2 });
+
+      const result = await addTraineesToSession("session-1", [
+        "t1",
+        "t2",
+        "t3",
+        "t2",
+      ]);
+
+      expect(result).toEqual({ count: 2 });
+      expect(mockPrisma.inscription.createMany).toHaveBeenCalledWith({
+        data: [
+          { trainingSessionId: "session-1", traineeId: "t2" },
+          { trainingSessionId: "session-1", traineeId: "t3" },
+        ],
+      });
+    });
+
+    it("returns early when nothing is selected", async () => {
+      const result = await addTraineesToSession("session-1", []);
+      expect(result).toEqual({ count: 0 });
+      expect(mockPrisma.inscription.createMany).not.toHaveBeenCalled();
+    });
+
+    it("rejects trainees outside the organisme", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue(openSession());
+      mockPrisma.trainee.findMany.mockResolvedValue([{ id: "t1" }]);
+
+      await expect(
+        addTraineesToSession("session-1", ["t1", "foreign"])
+      ).rejects.toThrow("Entité introuvable ou non autorisée");
+    });
+
+    it("rejects when capacity would be exceeded", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue(
+        openSession(["t0"], 2)
+      );
+      mockPrisma.trainee.findMany.mockResolvedValue([
+        { id: "t1" },
+        { id: "t2" },
+      ]);
+
+      await expect(
+        addTraineesToSession("session-1", ["t1", "t2"])
+      ).rejects.toThrow("Il ne reste que 1 place dans cette session");
+      expect(mockPrisma.inscription.createMany).not.toHaveBeenCalled();
+    });
+
+    it("rejects when session is closed", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        ...openSession(),
+        status: "terminée",
+      });
+      mockPrisma.trainee.findMany.mockResolvedValue([{ id: "t1" }]);
+
+      await expect(addTraineesToSession("session-1", ["t1"])).rejects.toThrow(
+        "Impossible de modifier une session clôturée"
+      );
     });
   });
 

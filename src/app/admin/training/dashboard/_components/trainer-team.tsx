@@ -1,6 +1,4 @@
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Users } from "lucide-react";
+import { SectionHeading } from "./section-heading";
 
 interface TrainerData {
   id: string;
@@ -9,53 +7,62 @@ interface TrainerData {
   role: string;
 }
 
-interface TrainerTeamProps {
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+export function TrainerTeam({
+  trainers,
+  teamSize,
+}: {
+  /** Les membres les plus actifs, déjà triés */
   trainers: TrainerData[];
-}
+  teamSize: number;
+}) {
+  const others = teamSize - trainers.length;
 
-export function TrainerTeam({ trainers }: TrainerTeamProps) {
   return (
-    <section aria-label="Équipe des formateurs">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-sm font-bold tracking-wider text-slate-500 uppercase">
-          <Users className="h-4 w-4" />
-          Équipe formateurs
-        </h2>
-        <span className="text-xs font-semibold text-slate-500">
-          {trainers.length} actifs
-        </span>
-      </div>
+    <section aria-labelledby="team-title">
+      <SectionHeading
+        id="team-title"
+        title={`Équipe (${teamSize})`}
+        action={{ href: "/admin/users", label: "Gérer l'équipe" }}
+      />
 
-      <Card className="border shadow-sm">
-        <CardContent className="divide-y p-0">
-          {trainers.length === 0 ? (
-            <div className="p-4 text-center text-xs text-slate-500">
-              Aucun formateur enregistré.
-            </div>
-          ) : (
-            trainers.map((trainer) => (
-              <div
-                key={trainer.id}
-                className="flex items-center justify-between gap-2 p-3"
-              >
-                <div className="space-y-0.5">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">
-                    {trainer.name}
-                  </p>
-                  <p className="text-[11px] font-medium text-slate-400">
-                    {trainer.role}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                    {trainer.sessionsCount} sessions
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      <ul className="bg-card divide-y rounded-2xl border">
+        {trainers.map((trainer) => (
+          <li key={trainer.id} className="flex items-center gap-3 px-4 py-3">
+            <span
+              className="bg-muted text-muted-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+              aria-hidden="true"
+            >
+              {initials(trainer.name) || "?"}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="text-foreground block truncate text-sm font-medium">
+                {trainer.name}
+              </span>
+              <span className="text-muted-foreground block text-xs">
+                {trainer.role}
+              </span>
+            </span>
+            <span className="text-muted-foreground shrink-0 text-sm tabular-nums">
+              {trainer.sessionsCount} session
+              {trainer.sessionsCount > 1 ? "s" : ""}
+            </span>
+          </li>
+        ))}
+        {others > 0 && (
+          <li className="text-muted-foreground px-4 py-2.5 text-sm">
+            et {others} autre{others > 1 ? "s" : ""} membre
+            {others > 1 ? "s" : ""}
+          </li>
+        )}
+      </ul>
     </section>
   );
 }
