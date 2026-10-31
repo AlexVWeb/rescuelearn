@@ -10,6 +10,20 @@ export interface ChangelogItem {
 
 export const changelogData: ChangelogItem[] = [
   {
+    id: "reinitialisation-creneaux",
+    title: "Réinitialisation des Créneaux en un Clic",
+    description:
+      "Le programme d'une session peut être vidé d'un coup pour recréer proprement tous ses créneaux.",
+    date: "2026-11-01",
+    status: "completed",
+    category: "improvement",
+    details: [
+      "Bouton « Réinitialiser les créneaux » dans l'onglet Programme, avec confirmation.",
+      "Le formulaire repart ensuite du premier jour de la session.",
+      "Bloqué dès qu'un émargement est enregistré, pour ne jamais effacer une preuve de présence.",
+    ],
+  },
+  {
     id: "attestation-signature-formateur",
     title: "Signature des Attestations par le Formateur",
     description:

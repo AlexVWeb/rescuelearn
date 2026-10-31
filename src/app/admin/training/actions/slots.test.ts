@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createSlot, deleteSlot } from "./slots";
+import { createSlot, deleteSlot, resetSlots } from "./slots";
 import { requireOrganisme } from "@/lib/context";
 
 // --- Mocks ---
@@ -12,7 +12,12 @@ const mockPrisma = vi.hoisted(() => ({
     create: vi.fn(),
     findUnique: vi.fn(),
     delete: vi.fn(),
+    deleteMany: vi.fn(),
   },
+  emargement: {
+    count: vi.fn(),
+  },
+  $transaction: vi.fn(),
 }));
 
 vi.mock("@/lib/context", () => ({
@@ -129,6 +134,75 @@ describe("Slot Actions", () => {
       await expect(deleteSlot("none")).rejects.toThrow(
         "Créneau introuvable ou non autorisé"
       );
+    });
+  });
+
+  describe("resetSlots", () => {
+    beforeEach(() => {
+      mockPrisma.$transaction.mockImplementation(
+        (fn: (tx: typeof mockPrisma) => unknown) => fn(mockPrisma)
+      );
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        organismeId: "org-1",
+        status: "planifiée",
+      });
+    });
+
+    it("supprime tous les créneaux de la session", async () => {
+      mockPrisma.emargement.count.mockResolvedValue(0);
+      mockPrisma.slot.deleteMany.mockResolvedValue({ count: 4 });
+
+      const result = await resetSlots("s1");
+
+      expect(result).toEqual({ success: true, deleted: 4 });
+      expect(mockPrisma.trainingSession.findFirst).toHaveBeenCalledWith({
+        where: { id: "s1", organismeId: "org-1" },
+      });
+      expect(mockPrisma.slot.deleteMany).toHaveBeenCalledWith({
+        where: { trainingSessionId: "s1" },
+      });
+    });
+
+    it("refuse si des émargements sont enregistrés", async () => {
+      mockPrisma.emargement.count.mockResolvedValue(3);
+
+      const result = await resetSlots("s1");
+
+      expect(result.success).toBe(false);
+      expect(!result.success && result.error).toMatch(
+        /^3 émargements sont déjà enregistrés/
+      );
+      expect(mockPrisma.emargement.count).toHaveBeenCalledWith({
+        where: {
+          slot: { trainingSessionId: "s1" },
+          status: { not: "en_attente" },
+        },
+      });
+      expect(mockPrisma.slot.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("refuse une session clôturée", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue({
+        id: "s1",
+        organismeId: "org-1",
+        status: "terminée",
+      });
+
+      const result = await resetSlots("s1");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Impossible de modifier une session clôturée",
+      });
+      expect(mockPrisma.slot.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("rejette une session d'un autre organisme", async () => {
+      mockPrisma.trainingSession.findFirst.mockResolvedValue(null);
+
+      await expect(resetSlots("s1")).rejects.toThrow("Session introuvable");
+      expect(mockPrisma.slot.deleteMany).not.toHaveBeenCalled();
     });
   });
 });
