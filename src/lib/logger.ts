@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs";
+
 const SENSITIVE_KEYS = [
   "email",
   "password",
@@ -59,7 +61,8 @@ function formatError(error: unknown): unknown {
     return {
       message: error.message,
       name: error.name,
-      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+      // Une stack trace ne contient pas de donnée personnelle : utile en prod.
+      stack: error.stack,
       ...(error as unknown as Record<string, unknown>),
     };
   }
@@ -67,7 +70,48 @@ function formatError(error: unknown): unknown {
 }
 
 /**
+ * Envoie l'erreur à Sentry. Les données passent par `sanitize` ici, puis par
+ * `scrubEvent` (beforeSend) avant de quitter l'application.
+ */
+function reportError(message: unknown, error?: unknown) {
+  if (message instanceof Error) {
+    Sentry.captureException(message);
+    return;
+  }
+  const context = typeof message === "string" ? message : undefined;
+  if (error instanceof Error) {
+    Sentry.captureException(error, { extra: { context } });
+    return;
+  }
+  Sentry.captureMessage(context ?? "logger.error", {
+    level: "error",
+    extra: {
+      details: sanitize(error ?? (context ? undefined : message)),
+    },
+  });
+}
+
+function addBreadcrumb(
+  level: "info" | "warning",
+  message: unknown,
+  data?: unknown
+) {
+  Sentry.addBreadcrumb({
+    category: "logger",
+    level,
+    message: typeof message === "string" ? message : undefined,
+    data: data
+      ? { details: sanitize(data) }
+      : typeof message === "string"
+        ? undefined
+        : { details: sanitize(message) },
+  });
+}
+
+/**
  * Centralized logger that prevents sensitive data leakage (CWE-532).
+ * `error` remonte dans Sentry ; `info`/`warn` deviennent des breadcrumbs
+ * attachés à la prochaine erreur de la même requête.
  */
 export const logger = {
   info: (message: unknown, data?: unknown) => {
@@ -76,6 +120,7 @@ export const logger = {
     } else {
       console.log(`[INFO]`, sanitize(message));
     }
+    addBreadcrumb("info", message, data);
   },
 
   warn: (message: unknown, data?: unknown) => {
@@ -84,6 +129,7 @@ export const logger = {
     } else {
       console.warn(`[WARN]`, sanitize(message));
     }
+    addBreadcrumb("warning", message, data);
   },
 
   error: (message: unknown, error?: unknown) => {
@@ -93,5 +139,6 @@ export const logger = {
     } else {
       console.error(`[ERROR]`, sanitize(formatError(message)));
     }
+    reportError(message, error);
   },
 };

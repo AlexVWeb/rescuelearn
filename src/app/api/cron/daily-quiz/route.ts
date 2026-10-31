@@ -3,12 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { EmailService } from "@/lib/email";
 import { Question, QuestionOption } from "@prisma/client";
+import { withCronMonitor } from "@/lib/sentry/cron";
 
 type QuestionWithOptions = Question & {
   options: QuestionOption[];
 };
 
-export async function GET(req: NextRequest) {
+async function handler(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
 
   if (
@@ -244,3 +245,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withCronMonitor("/api/cron/daily-quiz", handler);

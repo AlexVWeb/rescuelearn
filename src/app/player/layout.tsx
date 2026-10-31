@@ -7,6 +7,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hasRole, UserRole } from "@/lib/roles";
+import { SentryUser } from "@/components/sentry-user";
+import { setSentryUser } from "@/lib/sentry/user";
 import Link from "next/link";
 import { User as UserIcon } from "lucide-react";
 import { PlayerNav } from "./components/PlayerNav";
@@ -83,10 +85,13 @@ export default async function PlayerLayout({
     redirect(`/verify-email?email=${encodeURIComponent(dbUser.email)}`);
   }
 
+  setSentryUser({ id: dbUser.id, roles: userRoles });
+
   const modules = await getPlayerModulesState();
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
+      <SentryUser id={dbUser.id} roles={userRoles} />
       {/* Header / Navbar */}
       <header
         className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white shadow-sm"
