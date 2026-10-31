@@ -7,6 +7,7 @@ import {
   EMARGEMENT_STATUS,
 } from "../types";
 import dayjs from "dayjs";
+import { dayRange } from "../lib/dashboard-agenda";
 
 export async function getDashboardStats() {
   const tenant = await getTenantPrisma();
@@ -20,6 +21,8 @@ export async function getDashboardStats() {
   const upcomingSessions = await tenant.trainingSession.findMany({
     where: {
       status: { in: [SESSION_STATUS.PLANIFIEE, SESSION_STATUS.EN_COURS] },
+      // Dernier jour passé : la session est « à clôturer », plus « à venir »
+      OR: [{ endDate: null }, { endDate: { gte: dayRange().start } }],
     },
     select: {
       id: true,
@@ -31,40 +34,6 @@ export async function getDashboardStats() {
   const upcomingThisMonth = upcomingSessions.filter(
     (s) => s.startDate && s.startDate >= monthStart && s.startDate <= monthEnd
   ).length;
-
-  // Real data for the small bar chart (last 6 months)
-  const last6Months = Array.from({ length: 6 }, (_, i) => {
-    const d = now.subtract(5 - i, "month");
-    return {
-      month: d.month(),
-      year: d.year(),
-      name: d.format("MMM"),
-      total: 0,
-    };
-  });
-
-  const allSessionsForChart = await tenant.trainingSession.findMany({
-    where: {
-      startDate: {
-        gte: now.subtract(6, "month").startOf("month").toDate(),
-      },
-    },
-    select: { startDate: true },
-  });
-
-  allSessionsForChart.forEach((s) => {
-    if (!s.startDate) return;
-    const sDate = dayjs(s.startDate);
-    const monthData = last6Months.find(
-      (m) => m.month === sDate.month() && m.year === sDate.year()
-    );
-    if (monthData) monthData.total++;
-  });
-
-  const sessionChartData = last6Months.map(({ name, total }) => ({
-    name,
-    total,
-  }));
 
   // 2. Trainees Formed
   const completedSessions = await tenant.trainingSession.findMany({
@@ -103,10 +72,11 @@ export async function getDashboardStats() {
     });
   });
 
+  // null : aucune session terminée, rien à afficher plutôt qu'un faux 0 %
   const successRate =
     totalInscriptionsForSuccess > 0
       ? Math.round((totalAcquis / totalInscriptionsForSuccess) * 100)
-      : 0;
+      : null;
 
   // 4. Presence Rate (last 30 days)
   const emargements = await tenant.emargement.findMany({
@@ -135,7 +105,7 @@ export async function getDashboardStats() {
   const presenceRate =
     totalEmargements > 0
       ? Math.round((validatedEmargements / totalEmargements) * 100)
-      : 100; // Default to 100 if no data
+      : null;
 
   // 5. Checklist "Premiers pas"
   const currentUser = await tenant.user.findUnique({
@@ -174,6 +144,7 @@ export async function getDashboardStats() {
         select: { trainingSessions: true },
       },
     },
+    orderBy: { trainingSessions: { _count: "desc" } },
     take: 5,
   });
 
@@ -199,6 +170,7 @@ export async function getDashboardStats() {
       date: true,
       trainingSession: {
         select: {
+          id: true,
           title: true,
         },
       },
@@ -207,13 +179,13 @@ export async function getDashboardStats() {
   const calendarEvents = slots.map((s) => ({
     date: s.date.toISOString().split("T")[0],
     title: s.trainingSession.title,
+    sessionId: s.trainingSession.id,
   }));
 
   return {
     sessions: {
       total: totalUpcoming,
       increase: upcomingThisMonth,
-      chartData: sessionChartData,
     },
     trainees: {
       total: totalTraineesFormed,
@@ -221,7 +193,6 @@ export async function getDashboardStats() {
     },
     successRate: {
       percentage: successRate,
-      year: now.year(),
     },
     presence: {
       percentage: presenceRate,
@@ -230,6 +201,7 @@ export async function getDashboardStats() {
     userName: user.firstName ?? user.name ?? "Formateur",
     checklist,
     trainers: trainersData,
+    teamSize: membersCount,
     calendarEvents,
   };
 }

@@ -6,6 +6,7 @@ export * from "./inscriptions";
 export * from "./emargement";
 export * from "./public";
 export * from "./dashboard";
+export * from "./dashboard-agenda";
 export * from "./groups";
 export * from "./access";
 export * from "./documents";

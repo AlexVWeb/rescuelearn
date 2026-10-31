@@ -1,8 +1,15 @@
-import React from "react";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar as CalendarIcon, ChevronRight, MapPin } from "lucide-react";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import "dayjs/locale/fr";
+import { CalendarPlus, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { SectionHeading } from "./section-heading";
+
+dayjs.extend(utc);
+
+const MAX_ROWS = 6;
 
 interface SessionData {
   id: string;
@@ -16,117 +23,136 @@ interface SessionData {
   };
 }
 
-interface UpcomingSessionsListProps {
-  sessions: SessionData[];
+/** Jour et mois du premier jour, lus en UTC (@db.Date) */
+function DateBlock({ date }: { date: Date | null }) {
+  if (!date) {
+    return (
+      <span className="text-muted-foreground flex w-12 shrink-0 flex-col items-center text-xs leading-tight">
+        Date
+        <br />à fixer
+      </span>
+    );
+  }
+  const day = dayjs.utc(date).locale("fr");
+  return (
+    <time
+      dateTime={day.format("YYYY-MM-DD")}
+      className="flex w-12 shrink-0 flex-col items-center leading-none"
+    >
+      <span className="text-foreground text-xl font-semibold tabular-nums">
+        {day.format("D")}
+      </span>
+      <span className="text-muted-foreground mt-1 text-xs">
+        {day.format("MMM")}
+      </span>
+    </time>
+  );
 }
 
-export function UpcomingSessionsList({ sessions }: UpcomingSessionsListProps) {
+function Fill({ enrolled, max }: { enrolled: number; max: number }) {
+  const ratio = max > 0 ? Math.min(100, (enrolled / max) * 100) : 0;
+  const isFull = max > 0 && enrolled >= max;
   return (
-    <section
-      className="space-y-6 lg:col-span-2"
-      aria-label="Prochaines Sessions de Formation"
-    >
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-          Prochaines sessions
-        </h2>
-        {sessions.length > 0 && (
-          <Link
-            href="/admin/training/sessions"
-            className="group text-primary hover:text-primary/95 inline-flex items-center gap-1 text-sm font-bold transition-colors"
-          >
-            Voir tout
-            <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        )}
-      </div>
+    <span className="hidden w-32 shrink-0 sm:block">
+      <span className="flex items-baseline justify-between text-sm">
+        <span className={cn(isFull ? "text-success font-medium" : "sr-only")}>
+          {isFull ? "Complet" : "Inscrits"}
+        </span>
+        <span className="text-foreground ml-auto tabular-nums">
+          {enrolled} / {max}
+        </span>
+      </span>
+      <span
+        className="bg-muted mt-1.5 block h-1.5 overflow-hidden rounded-full"
+        aria-hidden="true"
+      >
+        <span
+          className={cn(
+            "block h-full rounded-full",
+            isFull ? "bg-success" : "bg-brand"
+          )}
+          style={{ width: `${ratio}%` }}
+        />
+      </span>
+    </span>
+  );
+}
 
-      {sessions.length === 0 ? (
-        <Card className="bg-muted/30 border-dashed py-12 text-center">
-          <CardContent className="flex flex-col items-center justify-center">
-            <CalendarIcon
-              className="mb-4 h-12 w-12 text-slate-400"
-              aria-hidden="true"
-            />
-            <p className="text-lg font-bold text-slate-800 dark:text-slate-200">
-              Aucune session planifiée
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Créez des sessions pour démarrer l'émargement et le suivi de vos
-              stagiaires.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {sessions.map((session) => {
-            const filledRatio =
-              session.maxTrainees > 0
-                ? Math.min(
-                    100,
-                    (session._count.inscriptions / session.maxTrainees) * 100
-                  )
-                : 0;
-            const isFull = session._count.inscriptions >= session.maxTrainees;
+export function UpcomingSessionsList({
+  sessions,
+  className,
+}: {
+  /** Déjà triées par date de début */
+  sessions: SessionData[];
+  className?: string;
+}) {
+  const rows = sessions.slice(0, MAX_ROWS);
 
-            return (
-              <Card
-                key={session.id}
-                className="overflow-hidden transition-shadow hover:shadow-md"
-              >
-                <div className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
-                  {/* Left Block: Basic Details */}
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <span
-                        className={`rounded px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${
-                          isFull
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                            : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                        }`}
-                      >
-                        {isFull ? "Complet" : "Ouvert"}
-                      </span>
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase dark:bg-slate-800 dark:text-slate-200">
-                        {session.type}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs font-semibold text-slate-400">
-                        <MapPin className="h-3 w-3" />
-                        {session.location}
-                      </span>
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      {session.title}
-                    </h3>
-                    <p className="text-xs font-medium text-slate-500">
-                      {session.startDate
-                        ? dayjs(session.startDate).format("DD MMMM YYYY")
-                        : "Date non fixée"}
-                    </p>
-                  </div>
+  return (
+    <section aria-labelledby="upcoming-title" className={className}>
+      <SectionHeading
+        id="upcoming-title"
+        title="Sessions à venir"
+        action={
+          sessions.length > MAX_ROWS
+            ? {
+                href: "/admin/training/sessions",
+                label: `Voir les ${sessions.length} sessions`,
+              }
+            : undefined
+        }
+      />
 
-                  {/* Right Block: Occupation & Progress */}
-                  <div className="w-full shrink-0 space-y-1.5 sm:w-48">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-slate-500">Remplissage</span>
-                      <span className="text-slate-900 dark:text-white">
-                        {session._count.inscriptions} / {session.maxTrainees}
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          isFull ? "bg-green-600" : "bg-primary"
-                        }`}
-                        style={{ width: `${filledRatio}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
+      {rows.length === 0 ? (
+        <div className="bg-card flex flex-col items-start gap-3 rounded-2xl border border-dashed p-6">
+          <p className="font-medium">Aucune session planifiée</p>
+          <p className="text-muted-foreground max-w-prose text-sm">
+            Une session réunit les dates, le lieu et les stagiaires. Créez-la
+            pour lancer les inscriptions et l&apos;émargement.
+          </p>
+          <Button asChild size="sm">
+            <Link href="/admin/training/sessions/new">
+              <CalendarPlus className="h-4 w-4" aria-hidden="true" />
+              Créer une session
+            </Link>
+          </Button>
         </div>
+      ) : (
+        <ul className="bg-card divide-y overflow-hidden rounded-2xl border">
+          {rows.map((session) => (
+            <li key={session.id}>
+              <Link
+                href={`/admin/training/sessions/${session.id}`}
+                className="hover:bg-muted/60 focus-visible:bg-muted flex items-center gap-4 px-4 py-3 transition-colors focus-visible:outline-none"
+              >
+                <DateBlock date={session.startDate} />
+                <span className="min-w-0 flex-1">
+                  <span className="text-foreground block truncate font-medium">
+                    {session.title}
+                  </span>
+                  <span className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-sm">
+                    <span>{session.type}</span>
+                    <span className="inline-flex min-w-0 items-center gap-1">
+                      <MapPin
+                        className="h-3.5 w-3.5 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="truncate">{session.location}</span>
+                    </span>
+                    <span className="tabular-nums sm:hidden">
+                      {session._count.inscriptions} / {session.maxTrainees}{" "}
+                      inscrits
+                    </span>
+                  </span>
+                </span>
+                <Fill
+                  enrolled={session._count.inscriptions}
+                  max={session.maxTrainees}
+                />
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

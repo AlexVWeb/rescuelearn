@@ -1,91 +1,119 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import {
   getUpcomingSessions,
   getMonOrganisme,
   getDashboardStats,
+  getDashboardAgenda,
   getEvaluationQuality,
 } from "../actions";
-import { StatsGrid } from "./_components/stats-grid";
-import { OnboardingChecklist } from "./_components/onboarding-checklist";
-import { UpcomingSessionsList } from "./_components/upcoming-sessions-list";
-import { MiniCalendar } from "./_components/mini-calendar";
-import { InviteCard } from "./_components/invite-card";
-import { TrainerTeam } from "./_components/trainer-team";
-import { QualityCard } from "./_components/quality-card";
-import { Calendar } from "lucide-react";
-import Link from "next/link";
+import { sortByStartDate } from "../lib/dashboard-agenda";
+import { Button } from "@/components/ui/button";
 import { requireOrganisme } from "@/lib/context";
 import { isModuleActive } from "@/lib/organisme-modules/service";
+import { OnboardingChecklist } from "./_components/onboarding-checklist";
+import { WeekAgenda, type NextSessionHint } from "./_components/week-agenda";
+import { TodoPanel } from "./_components/todo-panel";
+import { KeyFigures } from "./_components/key-figures";
+import { UpcomingSessionsList } from "./_components/upcoming-sessions-list";
+import { MiniCalendar } from "./_components/mini-calendar";
+import { TrainerTeam } from "./_components/trainer-team";
+import { QualityCard } from "./_components/quality-card";
+import { InviteCode } from "./_components/invite-code";
+import { SectionHeading } from "./_components/section-heading";
 
 export const dynamic = "force-dynamic";
 
+const todayFormat = new Intl.DateTimeFormat("fr-FR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "Europe/Paris",
+});
+
 export default async function DashboardPage() {
   const user = await requireOrganisme();
-  const [upcomingSessions, organisme, stats, quality, evaluationActive] =
+  const [upcoming, organisme, stats, agenda, quality, evaluationActive] =
     await Promise.all([
       getUpcomingSessions(),
       getMonOrganisme(),
       getDashboardStats(),
+      getDashboardAgenda(),
       getEvaluationQuality(),
       isModuleActive(user.organismeId, "evaluation"),
     ]);
 
+  const today = new Date(`${agenda.todayKey}T00:00:00Z`);
+  // Les sessions dont le dernier jour est passé sont dans « À faire »
+  const sessions = sortByStartDate(
+    upcoming.filter((session) => !session.endDate || session.endDate >= today)
+  );
+  const nextSession: NextSessionHint | null =
+    sessions.flatMap((session) =>
+      session.startDate && session.startDate >= today
+        ? [
+            {
+              id: session.id,
+              title: session.title,
+              startDate: session.startDate,
+            },
+          ]
+        : []
+    )[0] ?? null;
+
   return (
     <main
       className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 lg:px-8"
-      aria-label="Tableau de bord de formation"
+      aria-label="Tableau de bord de l'organisme"
     >
-      {/* Welcome & Context Header */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Bonjour, {stats.userName} 👋
-          </h1>
-          <p className="mt-1 text-slate-500 dark:text-slate-400">
-            Espace de gestion —{" "}
-            <span className="font-semibold">{organisme?.name}</span>
+          <p className="text-muted-foreground text-sm first-letter:uppercase">
+            {todayFormat.format(new Date())}
           </p>
+          <h1 className="text-foreground mt-0.5 text-2xl font-semibold tracking-tight sm:text-3xl">
+            Bonjour {stats.userName}
+          </h1>
+          {organisme && (
+            <p className="text-muted-foreground mt-0.5">{organisme.name}</p>
+          )}
         </div>
 
-        {/* Quick Session CTA */}
-        <Link
-          href="/admin/training/sessions"
-          className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-bold shadow-sm transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          aria-label="Créer une nouvelle session de formation"
-        >
-          + Nouvelle session
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {organisme && <InviteCode code={organisme.inviteCode} />}
+          <Button asChild>
+            <Link href="/admin/training/sessions/new">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Créer une session
+            </Link>
+          </Button>
+        </div>
       </header>
 
-      {/* KPI Stats Cards Grid */}
-      <StatsGrid stats={stats} />
-
-      {/* Checklist "Premiers Pas" */}
       <OnboardingChecklist checklist={stats.checklist} />
 
-      {/* Main Two-Column Layout */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Left Column: Upcoming Sessions (70%) */}
-        <UpcomingSessionsList sessions={upcomingSessions} />
+      {/* Le temps d'abord : la semaine à gauche, le mois et les actions à droite */}
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <WeekAgenda week={agenda.week} nextSession={nextSession} />
+          <KeyFigures stats={stats} />
+        </div>
 
-        {/* Right Column: Invite, Planning, Trainers (30%) */}
-        <aside className="space-y-6" aria-label="Outils et équipe">
-          {/* Évaluations à chaud et à froid (Qualiopi) */}
-          {evaluationActive && <QualityCard overview={quality.overview} />}
-
-          {/* Trainer Invitation Widget */}
-          <InviteCard organisme={organisme} />
-
-          {/* Calendar/Planning Widget */}
-          <section aria-label="Planning mensuel">
-            <h2 className="mb-3 flex items-center gap-2 text-sm font-bold tracking-wider text-slate-500 uppercase">
-              <Calendar className="h-4 w-4" />
-              Planning
-            </h2>
+        <div className="space-y-6">
+          <TodoPanel todos={agenda.todos} />
+          <section aria-labelledby="planning-title">
+            <SectionHeading id="planning-title" title="Planning du mois" />
             <MiniCalendar calendarEvents={stats.calendarEvents} />
           </section>
+        </div>
+      </div>
 
-          {/* Trainer Team Widget */}
-          <TrainerTeam trainers={stats.trainers} />
+      <div className="grid gap-8 lg:grid-cols-3">
+        <UpcomingSessionsList sessions={sessions} className="lg:col-span-2" />
+
+        <aside className="space-y-8" aria-label="Avis des stagiaires et équipe">
+          {evaluationActive && <QualityCard overview={quality.overview} />}
+          <TrainerTeam trainers={stats.trainers} teamSize={stats.teamSize} />
         </aside>
       </div>
     </main>

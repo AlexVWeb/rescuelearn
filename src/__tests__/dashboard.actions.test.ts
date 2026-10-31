@@ -139,6 +139,7 @@ describe("getDashboardStats", () => {
     expect(stats.checklist.trainersInvited).toBe(false);
     expect(stats.checklist.attestationGenerated).toBe(false);
     expect(stats.trainers).toEqual([]);
+    expect(stats.teamSize).toBe(1);
     expect(stats.calendarEvents).toEqual([]);
   });
 
@@ -152,7 +153,7 @@ describe("getDashboardStats", () => {
 
     expect(stats.sessions.total).toBe(0);
     expect(stats.trainees.total).toBe(0);
-    expect(stats.successRate.percentage).toBe(0);
-    expect(stats.presence.percentage).toBe(100); // Default value in my implementation
+    expect(stats.successRate.percentage).toBeNull();
+    expect(stats.presence.percentage).toBeNull();
   });
 });
