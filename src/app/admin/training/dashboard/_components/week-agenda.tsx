@@ -4,10 +4,11 @@ import utc from "dayjs/plugin/utc";
 import "dayjs/locale/fr";
 import { Clock, MapPin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type {
-  AgendaColumn,
-  AgendaRow,
-  WeekAgenda as WeekAgendaData,
+import {
+  attendanceRatio,
+  type AgendaColumn,
+  type AgendaRow,
+  type WeekAgenda as WeekAgendaData,
 } from "../../lib/dashboard-agenda";
 
 dayjs.extend(utc);
@@ -123,6 +124,12 @@ function AgendaLine({
   const activeDays = columns
     .filter((_, i) => row.dayTimes[i] !== null)
     .map((column) => column.fullLabel);
+  const signedDays = columns
+    .filter((_, i) => {
+      const attendance = row.dayAttendance[i];
+      return attendance !== null && attendanceRatio(attendance) === 1;
+    })
+    .map((column) => column.fullLabel);
 
   return (
     <Link
@@ -149,24 +156,45 @@ function AgendaLine({
             {row.enrolled} / {row.maxTrainees} inscrits
           </span>
         </span>
-        <span className="sr-only">. Les jours : {activeDays.join(", ")}.</span>
+        <span className="sr-only">
+          . Les jours : {activeDays.join(", ")}.
+          {signedDays.length > 0 &&
+            ` Émargement complet : ${signedDays.join(", ")}.`}
+        </span>
       </span>
 
       <span className="grid grid-cols-7" aria-hidden="true">
         {columns.map((column, i) => {
           const times = row.dayTimes[i];
+          const attendance = row.dayAttendance[i];
+          const ratio = attendance ? attendanceRatio(attendance) : 0;
+          const signatures =
+            attendance && attendance.expected > 0
+              ? ` (${attendance.signed} / ${attendance.expected} signatures)`
+              : "";
           return (
             <span
               key={column.key}
-              title={times ? `${column.fullLabel} : ${times}` : undefined}
+              title={
+                times
+                  ? `${column.fullLabel} : ${times}${signatures}`
+                  : undefined
+              }
               className="px-0.5"
             >
               <span
                 className={cn(
-                  "block h-6 rounded",
+                  "relative block h-6 overflow-hidden rounded",
                   times ? "bg-brand-foreground" : "bg-white/10"
                 )}
-              />
+              >
+                {ratio > 0 && (
+                  <span
+                    className="bg-success absolute inset-x-0 bottom-0 transition-[height]"
+                    style={{ height: `${ratio * 100}%` }}
+                  />
+                )}
+              </span>
             </span>
           );
         })}

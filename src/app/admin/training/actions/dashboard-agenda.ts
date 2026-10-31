@@ -1,7 +1,7 @@
 "use server";
 
 import { getTenantPrisma } from "@/lib/context";
-import { SESSION_STATUS } from "../types";
+import { EMARGEMENT_STATUS, SESSION_STATUS } from "../types";
 import {
   buildTodos,
   dayRange,
@@ -38,6 +38,11 @@ export async function getDashboardAgenda(): Promise<DashboardAgenda> {
         date: true,
         startTime: true,
         endTime: true,
+        _count: {
+          select: {
+            emargements: { where: { status: EMARGEMENT_STATUS.VALIDE } },
+          },
+        },
         trainingSession: {
           select: {
             id: true,
@@ -83,8 +88,9 @@ export async function getDashboardAgenda(): Promise<DashboardAgenda> {
   ]);
 
   const week = buildWeekAgenda(
-    slots.map(({ trainingSession, ...slot }) => ({
+    slots.map(({ trainingSession, _count, ...slot }) => ({
       ...slot,
+      signed: _count.emargements,
       session: {
         id: trainingSession.id,
         title: trainingSession.title,

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   agendaColumns,
+  attendanceRatio,
   buildTodos,
   buildWeekAgenda,
   dayRange,
@@ -28,6 +29,7 @@ const slot = (
   date: new Date(`${date}T00:00:00Z`),
   startTime,
   endTime,
+  signed: 0,
   session: { ...session, ...overrides },
 });
 
@@ -121,12 +123,40 @@ describe("buildWeekAgenda", () => {
     expect(rows.map((r) => r.sessionId)).toEqual(["s1", "s2"]);
   });
 
+  it("cumule les signatures de chaque jour sur ses créneaux", () => {
+    const { rows } = buildWeekAgenda(
+      [
+        { ...slot("2026-11-01", "09:00", "12:30"), signed: 8 },
+        { ...slot("2026-11-01", "13:30", "17:00"), signed: 5 },
+        slot("2026-11-02", "09:00", "17:00"),
+      ],
+      "2026-11-01"
+    );
+    expect(rows[0].dayAttendance).toEqual([
+      { signed: 13, expected: 16 },
+      { signed: 0, expected: 8 },
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+
   it("ignore les créneaux hors de la semaine", () => {
     const { rows } = buildWeekAgenda(
       [slot("2026-11-09", "09:00", "17:00")],
       "2026-11-01"
     );
     expect(rows).toEqual([]);
+  });
+});
+
+describe("attendanceRatio", () => {
+  it("donne la part signée, bornée à 1", () => {
+    expect(attendanceRatio({ signed: 4, expected: 8 })).toBe(0.5);
+    expect(attendanceRatio({ signed: 9, expected: 8 })).toBe(1);
+    expect(attendanceRatio({ signed: 0, expected: 0 })).toBe(0);
   });
 });
 

@@ -18,6 +18,8 @@ export interface AgendaSlotRow {
   date: Date;
   startTime: string;
   endTime: string;
+  /** Émargements validés sur ce créneau */
+  signed: number;
   session: {
     id: string;
     title: string;
@@ -50,6 +52,20 @@ export interface AgendaRow {
   dayTimes: (string | null)[];
   /** Horaires communs à tous ses jours, null s'ils varient */
   schedule: string | null;
+  /** Signatures du jour (tous créneaux confondus), null si pas de créneau */
+  dayAttendance: (DayAttendance | null)[];
+}
+
+export interface DayAttendance {
+  signed: number;
+  /** Inscrits × créneaux du jour */
+  expected: number;
+}
+
+/** Part signée d'un jour, entre 0 et 1 */
+export function attendanceRatio(attendance: DayAttendance): number {
+  if (attendance.expected <= 0) return 0;
+  return Math.min(1, attendance.signed / attendance.expected);
 }
 
 export interface WeekAgenda {
@@ -122,12 +138,17 @@ export function buildWeekAgenda(
           enrolled: slot.session.enrolled,
           dayTimes: columns.map(() => null),
           schedule: null,
+          dayAttendance: columns.map(() => null),
         },
         ranges: columns.map(() => new Set<string>()),
       };
       rows.set(slot.session.id, entry);
     }
     entry.ranges[index].add(timeRange(slot.startTime, slot.endTime));
+    const day = entry.row.dayAttendance[index] ?? { signed: 0, expected: 0 };
+    day.signed += slot.signed;
+    day.expected += slot.session.enrolled;
+    entry.row.dayAttendance[index] = day;
   }
 
   return {
