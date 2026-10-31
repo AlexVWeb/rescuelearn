@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Trash2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -35,6 +35,7 @@ export function DeleteSessionButton({
   const [confirmTitle, setConfirmTitle] = useState("");
   const [isCopied, setIsCopied] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -42,7 +43,12 @@ export function DeleteSessionButton({
         await deleteTrainingSession(sessionId);
         toast.success("Session supprimée avec succès");
         setOpen(false);
-        router.refresh();
+        // Depuis la fiche de la session, la page n'existe plus : retour à la liste
+        if (pathname.startsWith(`/admin/training/sessions/${sessionId}`)) {
+          router.replace("/admin/training/sessions");
+        } else {
+          router.refresh();
+        }
       } catch (error) {
         logger.error("Failed to delete session", error);
         toast.error("Erreur lors de la suppression de la session");
@@ -72,41 +78,42 @@ export function DeleteSessionButton({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Supprimer la formation ?</AlertDialogTitle>
-          <AlertDialogDescription className="space-y-4">
-            <p>
-              Cette action est irréversible. Cela supprimera définitivement la
-              session <strong>{sessionTitle}</strong> et toutes les données
-              associées (créneaux, inscriptions, émargements).
-            </p>
-            <div className="bg-muted flex items-center justify-between rounded-md p-2 text-sm">
-              <code className="font-mono font-medium">{sessionTitle}</code>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleCopy}
-                type="button"
-              >
-                {isCopied ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <div className="space-y-2">
-              <p className="text-foreground text-sm font-medium">
-                Veuillez saisir le nom de la formation pour confirmer :
-              </p>
-              <Input
-                value={confirmTitle}
-                onChange={(e) => setConfirmTitle(e.target.value)}
-                placeholder={sessionTitle}
-                className="focus-visible:ring-destructive"
-              />
-            </div>
+          {/* Description = <p> : uniquement du texte en ligne à l'intérieur */}
+          <AlertDialogDescription>
+            Cette action est irréversible. Cela supprimera définitivement la
+            session <strong>{sessionTitle}</strong> et toutes les données
+            associées (créneaux, inscriptions, émargements).
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="space-y-4">
+          <div className="bg-muted flex items-center justify-between rounded-md p-2 text-sm">
+            <code className="font-mono font-medium">{sessionTitle}</code>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleCopy}
+              type="button"
+            >
+              {isCopied ? (
+                <Check className="h-4 w-4 text-green-600" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-foreground text-sm font-medium">
+              Veuillez saisir le nom de la formation pour confirmer :
+            </p>
+            <Input
+              value={confirmTitle}
+              onChange={(e) => setConfirmTitle(e.target.value)}
+              placeholder={sessionTitle}
+              className="focus-visible:ring-destructive"
+            />
+          </div>
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => setConfirmTitle("")}>
             Annuler
