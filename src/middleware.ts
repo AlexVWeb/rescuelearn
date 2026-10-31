@@ -25,6 +25,7 @@ export function middleware(request: NextRequest) {
   const isAsset =
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
+    pathname === "/sentry-tunnel" ||
     pathname.startsWith("/favicon.ico") ||
     pathname.includes(".") ||
     pathname === "/maintenance";

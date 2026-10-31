@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { getAiErrorMessage } from "@/lib/gemini/errors";
 import { prisma } from "@/lib/prisma";
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
@@ -68,8 +69,7 @@ export async function startReferencielAnalysisAction(referencielId: number) {
           where: { id: referencielId },
           data: {
             analysisStatus: "FAILED",
-            analysisError:
-              error instanceof Error ? error.message : "Erreur inconnue",
+            analysisError: getAiErrorMessage(error, "Erreur inconnue"),
           },
         });
       })

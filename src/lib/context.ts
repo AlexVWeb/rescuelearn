@@ -3,6 +3,7 @@
 import { prisma, withOrganisme } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { setSentryUser } from "@/lib/sentry/user";
 
 import { UserRole, hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
@@ -27,6 +28,7 @@ export async function getUserContext() {
   });
 
   if (!user) throw new Error("Utilisateur introuvable");
+  setSentryUser(user);
   return user;
 }
 

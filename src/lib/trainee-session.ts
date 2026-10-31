@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { checkInscriptionAccess } from "@/lib/trainee-access";
+import { setSentryTrainee } from "@/lib/sentry/user";
 
 // Session de l'espace stagiaire : un JWT signé dans un cookie httpOnly limité
 // à /espace. Le JWT porte l'empreinte du hash du lien, recomparée à chaque
@@ -93,6 +94,7 @@ export async function getTraineeAccess() {
   if (!inscription) return null;
   if (checkInscriptionAccess(inscription, payload.fp)) return null;
 
+  setSentryTrainee(inscription);
   return inscription;
 }
 

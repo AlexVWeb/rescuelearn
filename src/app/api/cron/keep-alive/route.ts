@@ -1,8 +1,9 @@
 import { logger } from "@/lib/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withCronMonitor } from "@/lib/sentry/cron";
 
-export async function GET(req: NextRequest) {
+async function handler(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
 
   // En production, Vercel injecte CRON_SECRET et passe l'en-tête Authorization: Bearer <CRON_SECRET>
@@ -27,3 +28,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withCronMonitor("/api/cron/keep-alive", handler);

@@ -3,6 +3,7 @@
 import { getUserContext } from "@/lib/context";
 import { hasRole, UserRole } from "@/lib/roles";
 import { logger } from "@/lib/logger";
+import { getAiErrorMessage } from "@/lib/gemini/errors";
 import { ProgressionAdminService } from "@/services/progression.service";
 import { z } from "zod";
 import { MAX_TOPICS_PER_GENERATION } from "@/lib/topic-coverage";
@@ -26,8 +27,7 @@ export async function getProgressionTreesAction() {
     logger.error("Erreur getProgressionTreesAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }
@@ -42,8 +42,7 @@ export async function getProgressionNodeDetailsAction(nodeId: string) {
     logger.error("Erreur getProgressionNodeDetailsAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }
@@ -74,8 +73,7 @@ export async function createProgressionNodeAction(data: unknown) {
     logger.error("Erreur createProgressionNodeAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }
@@ -101,8 +99,7 @@ export async function updateProgressionNodeAction(
     logger.error("Erreur updateProgressionNodeAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }
@@ -117,8 +114,7 @@ export async function deleteProgressionNodeAction(nodeId: string) {
     logger.error("Erreur deleteProgressionNodeAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }
@@ -136,8 +132,7 @@ export async function reorderProgressionNodesAction(
     logger.error("Erreur reorderProgressionNodesAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }
@@ -187,8 +182,7 @@ export async function saveProgressionNodeExercisesAction(
     logger.error("Erreur saveProgressionNodeExercisesAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }
@@ -224,8 +218,7 @@ export async function generateProgressionNodeWithAiAction(jsonData: unknown) {
     logger.error("Erreur generateProgressionNodeWithAiAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }
@@ -253,8 +246,7 @@ export async function generateEntireTreeWithAiAction(jsonData: unknown) {
     logger.error("Erreur generateEntireTreeWithAiAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }
@@ -282,8 +274,7 @@ export async function startTreeGenerationFromTopicsAction(jsonData: unknown) {
     logger.error("Erreur startTreeGenerationFromTopicsAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }
@@ -298,8 +289,7 @@ export async function generateNextTreeNodeAction(treeId: string) {
     logger.error("Erreur generateNextTreeNodeAction:", error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Une erreur est survenue.",
+      error: getAiErrorMessage(error, "Une erreur est survenue."),
     };
   }
 }

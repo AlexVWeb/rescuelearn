@@ -15,6 +15,8 @@ import { redirect } from "next/navigation";
 import { User } from "@/app/actions/user-actions";
 import { prisma } from "@/lib/prisma";
 import { hasRole, UserRole } from "@/lib/roles";
+import { SentryUser } from "@/components/sentry-user";
+import { setSentryUser } from "@/lib/sentry/user";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +68,8 @@ export default async function AdminLayout({
     redirect("/");
   }
 
+  setSentryUser({ ...dbUser, roles: userRoles });
+
   const userSidebarData: User = {
     ...dbUser,
     roles: userRoles,
@@ -73,6 +77,11 @@ export default async function AdminLayout({
 
   return (
     <SidebarProvider>
+      <SentryUser
+        id={dbUser.id}
+        roles={userRoles}
+        organismeId={dbUser.organismeId}
+      />
       <AppSidebar user={userSidebarData} />
       <SidebarInset className="min-w-0">
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
