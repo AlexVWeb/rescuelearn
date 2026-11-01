@@ -24,8 +24,7 @@ import { authClient } from "@/lib/auth-client";
 import { LOGIN_TYPE_HEADER } from "@/lib/login-type";
 import { registerPlayerAction } from "@/app/actions/player-actions";
 import {
-  validateInviteCode,
-  linkUserToOrganisme,
+  registerTrainerAction,
   requestPasswordReset,
   getPostLoginPath,
 } from "./actions";
@@ -227,35 +226,23 @@ export default function LoginClientPage({
           return;
         }
 
-        const validation = await validateInviteCode(values.inviteCode);
-        if (!validation.success) {
-          setError(validation.error!);
-          setLoading(false);
-          return;
-        }
+        // Inscription + rattachement à l'organisme côté serveur : pas de
+        // session avant la vérification de l'email.
+        const res = await registerTrainerAction({
+          name: values.name || "",
+          email: values.email,
+          password: values.password,
+          inviteCode: values.inviteCode,
+        });
 
-        await authClient.signUp.email(
-          {
-            email: values.email,
-            password: values.password,
-            name: values.name || "",
-          },
-          {
-            onSuccess: async () => {
-              const link = await linkUserToOrganisme(values.inviteCode!);
-              if (link.success) {
-                router.push("/admin");
-              } else {
-                setError(link.error!);
-                setLoading(false);
-              }
-            },
-            onError: (ctx) => {
-              setError(ctx.error.message);
-              setLoading(false);
-            },
-          }
-        );
+        if (res.success) {
+          router.push(
+            `/verify-email?email=${encodeURIComponent(values.email)}&type=trainer`
+          );
+        } else {
+          setError(res.error || "Une erreur est survenue.");
+          setLoading(false);
+        }
       } else {
         // Inscription joueur
         const res = await registerPlayerAction({

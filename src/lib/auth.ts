@@ -51,7 +51,7 @@ export const auth = betterAuth({
       ? [process.env.NEXT_PUBLIC_APP_URL]
       : []),
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
-    "http://localhost:3000",
+    ...(process.env.NODE_ENV !== "production" ? ["http://localhost:3000"] : []),
   ],
 
   rateLimit: {
@@ -62,8 +62,10 @@ export const auth = betterAuth({
     customRules: {
       "/sign-in/email": { window: 15 * 60, max: 5 }, // 5 tentatives / 15 min
       "/sign-up/email": { window: 60 * 60, max: 3 }, // 3 inscriptions / heure
-      "/forgot-password": { window: 60 * 60, max: 3 }, // 3 demandes / heure
+      "/request-password-reset": { window: 60 * 60, max: 3 }, // 3 demandes / heure
       "/reset-password": { window: 60 * 60, max: 5 }, // 5 resets / heure
+      "/send-verification-email": { window: 60 * 60, max: 3 }, // 3 renvois / heure
+      "/change-email": { window: 60 * 60, max: 3 }, // 3 changements / heure
       "/passkey/verify-authentication": { window: 15 * 60, max: 10 }, // 10 tentatives / 15 min
     },
   },
@@ -267,6 +269,10 @@ export const auth = betterAuth({
         type: "string",
         required: false,
         defaultValue: "[]",
+        // Jamais modifiable via l'API Better-Auth (/sign-up/email, /update-user) :
+        // sinon n'importe quel compte peut s'attribuer SUPER_ADMIN. Les rôles
+        // ne s'écrivent que côté serveur, via Prisma.
+        input: false,
       },
     },
   },

@@ -17,6 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { hasRole, UserRole } from "@/lib/roles";
 import { SentryUser } from "@/components/sentry-user";
 import { setSentryUser } from "@/lib/sentry/user";
+import { EnvBanner } from "@/components/admin/env-banner";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,7 @@ export default async function AdminLayout({
       />
       <AppSidebar user={userSidebarData} />
       <SidebarInset className="min-w-0">
+        {hasRole(userRoles, UserRole.SUPER_ADMIN) && <EnvBanner />}
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />

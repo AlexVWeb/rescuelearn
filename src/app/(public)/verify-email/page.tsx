@@ -8,13 +8,15 @@ import { authClient } from "@/lib/auth-client";
 import { logger } from "@/lib/logger";
 
 interface PageProps {
-  searchParams: Promise<{ email?: string }>;
+  searchParams: Promise<{ email?: string; type?: string }>;
 }
 
 export default function VerifyEmailPage({ searchParams }: PageProps) {
   const params = use(searchParams);
   const router = useRouter();
   const email = params.email || "";
+  // Après vérification : espace formateur ou espace élève selon l'inscription
+  const destination = params.type === "trainer" ? "/admin" : "/player";
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,11 +32,11 @@ export default function VerifyEmailPage({ searchParams }: PageProps) {
     });
     if (session?.user?.emailVerified) {
       logger.info(
-        "Redirecting player to /player because emailVerified is true"
+        `Redirecting to ${destination} because emailVerified is true`
       );
-      router.push("/player");
+      router.push(destination);
     }
-  }, [session, router]);
+  }, [session, router, destination]);
 
   async function handleResend() {
     if (!email) {
@@ -49,7 +51,7 @@ export default function VerifyEmailPage({ searchParams }: PageProps) {
     await authClient.sendVerificationEmail(
       {
         email,
-        callbackURL: `${window.location.origin}/player`,
+        callbackURL: `${window.location.origin}${destination}`,
       },
       {
         onSuccess: () => {
