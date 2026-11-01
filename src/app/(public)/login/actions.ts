@@ -5,6 +5,16 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { logger } from "@/lib/logger";
 import { hasRole, UserRole } from "@/lib/roles";
+import { APIError } from "better-auth/api";
+import { z } from "zod";
+import { getBaseUrl } from "@/lib/utils";
+import {
+  assertNotRateLimited,
+  getClientIp,
+  RateLimitError,
+  registerFailure,
+  type RateLimitRule,
+} from "@/lib/rate-limit";
 
 export async function requestPasswordReset(email: string) {
   try {
@@ -22,75 +32,77 @@ export async function requestPasswordReset(email: string) {
   return { success: true };
 }
 
-export async function validateInviteCode(inviteCode: string) {
-  if (!inviteCode) {
-    return { success: false, error: "Code d'invitation requis." };
-  }
+const trainerSignupSchema = z.object({
+  name: z.string().trim().min(2, "Le nom doit faire au moins 2 caractères."),
+  email: z.email("Email invalide."),
+  password: z
+    .string()
+    .min(8, "Le mot de passe doit faire au moins 8 caractères."),
+  inviteCode: z.string().trim().min(1, "Code d'invitation requis."),
+});
 
-  const organisme = await prisma.organisme.findUnique({
-    where: { inviteCode },
-  });
-
-  if (!organisme) {
-    return { success: false, error: "Code d'invitation invalide ou expiré." };
-  }
-
+/** Seuls les codes invalides comptent : une salle derrière une même IP peut s'inscrire. */
+async function inviteCodeRateLimitRule(): Promise<RateLimitRule> {
   return {
-    success: true,
-    organismeId: organisme.id,
-    organismeName: organisme.name,
+    key: `invite-code:${await getClientIp()}`,
+    max: 10,
+    windowSeconds: 15 * 60,
   };
 }
 
-export async function linkUserToOrganisme(inviteCode: string) {
-  // Verifie l'authentification
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+/**
+ * Inscription formateur via le code d'invitation d'un organisme.
+ *
+ * Tout se fait côté serveur : avec requireEmailVerification, Better-Auth ne
+ * crée pas de session au sign-up, le rattachement ne peut donc pas dépendre
+ * d'une session. On rattache par l'id renvoyé (jamais par email) : pour un
+ * email déjà inscrit, Better-Auth renvoie un utilisateur fictif, l'update ne
+ * touche aucune ligne et la réponse reste générique (pas d'énumération).
+ */
+export async function registerTrainerAction(values: unknown) {
+  const parsed = trainerSignupSchema.safeParse(values);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  const { name, email, password, inviteCode } = parsed.data;
 
-  if (!session?.user) {
-    return { success: false, error: "Non authentifié" };
+  const rule = await inviteCodeRateLimitRule();
+  try {
+    await assertNotRateLimited(rule);
+  } catch (err) {
+    if (err instanceof RateLimitError) {
+      return { success: false, error: err.message };
+    }
+    throw err;
   }
 
-  // Verifie le code d'invitation
   const organisme = await prisma.organisme.findUnique({
     where: { inviteCode },
+    select: { id: true },
   });
-
   if (!organisme) {
-    return { success: false, error: "Code d'invitation invalide" };
+    await registerFailure(rule);
+    return { success: false, error: "Code d'invitation invalide ou expiré." };
   }
 
-  // Met à jour l'utilisateur et lui donne le role FORMATEUR
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const result = await auth.api.signUpEmail({
+      body: { email, password, name, callbackURL: `${getBaseUrl()}/admin` },
+      headers: await headers(),
     });
 
-    // Si l'utilisateur n'a pas de roles, on initialise un tableau
-    const currentRoles = Array.isArray(user?.roles) ? user.roles : [];
-    const newRoles = [
-      ...new Set([...(currentRoles as string[]), UserRole.FORMATEUR]),
-    ];
-
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        organismeId: organisme.id,
-        roles: newRoles,
-      },
+    await prisma.user.updateMany({
+      where: { id: result.user.id, organismeId: null },
+      data: { organismeId: organisme.id, roles: [UserRole.FORMATEUR] },
     });
 
     return { success: true };
   } catch (error) {
-    logger.error(
-      "Erreur lors de la liaison de l'utilisateur à l'organisme:",
-      error
-    );
-    return {
-      success: false,
-      error: "Une erreur est survenue lors de l'association à l'organisme.",
-    };
+    if (error instanceof APIError) {
+      return { success: false, error: error.message };
+    }
+    logger.error("Erreur lors de l'inscription formateur :", error);
+    return { success: false, error: "Une erreur interne est survenue." };
   }
 }
 
